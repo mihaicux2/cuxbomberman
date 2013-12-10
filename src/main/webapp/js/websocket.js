@@ -43,7 +43,18 @@ function init(){
     log('WebSocket - status '+socket.readyState);
     socket.onopen    = function(msg){ log("Welcome - status "+this.readyState); };
     socket.onmessage = function(msg){
-        log(msg);        
+        try{
+            var x = JSON.parse(msg.data);
+            console.log(x);
+            // process walls
+            //str = "<div style='position:absolute; top:"+x.posY+"px; left:"+x.posX+"px;' alt='"+x.name+"' title='"+x.name+"'><img src='images/walls/"+x.texture+"' width='"+x.width+"' height='"+x.height+"' /></div>";
+            str = "<div style='position:absolute; top:"+x.posY+"px; left:"+x.posX+"px;' alt='"+x.name+"' title='"+x.name+"'><img src='images/characters/"+x.crtTexture+".gif' width='"+x.width+"' height='"+x.height+"' /></div>";
+            $("#world").html(str);
+        }
+        catch (e){
+            log(e.message);
+            //log(msg);
+        }
     };
     socket.onclose   = function(msg){
         log("Disconnected - status "+this.readyState);

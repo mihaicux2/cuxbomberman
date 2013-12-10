@@ -7,10 +7,10 @@
 package com.cux.bomberman;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
+/*import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CoderResult;
+import java.nio.charset.CoderResult;*/
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -23,6 +23,11 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
+//import com.cux.bomberman.world.walls.*;
+import com.cux.bomberman.world.BCharacter;
+import com.cux.bomberman.world.generator.WallGenerator;
+import com.cux.bomberman.world.walls.AbstractWall;
+
 /**
  *
  * @author mihaicux
@@ -34,13 +39,66 @@ public class BombermanWSEndpoint {
     
     private static boolean isFirst = false;
     
+    private static BCharacter myChar = null;
+    
     @OnMessage
-    public String onMessage(String message, Session peer) throws IOException {
+    public String onMessage(String message, Session peer) {
+//        String wall = WallGenerator.getInstance().generateRandomWall().toString();
+//        for (Session peer2 : peers){
+//            try {
+//                //if (!peer.equals(peer2))
+//                peer2.getBasicRemote().sendText(wall); // something...
+//            } catch (IOException ex) {
+//                Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+//        }
+        if (myChar == null){
+            myChar = new BCharacter(peer.getId());
+            myChar.setPosX(0);
+            myChar.setPosY(0);
+            myChar.setWidth(20);
+            myChar.setHeight(30);
+        }
+        switch (message){
+            case "up":
+                myChar.setDirection("Up");
+                myChar.moveUp();
+                break;
+            case "down":
+                myChar.setDirection("Down");
+                myChar.moveDown();
+                break;
+            case "left":
+                myChar.setDirection("Left");
+                myChar.moveLeft();
+                break;
+            case "right":
+                myChar.setDirection("Right");
+                myChar.moveRight();
+                break;
+            case "bomb":
+                myChar.addOrDropBomb();
+                break;
+            case "trap":
+                myChar.makeTrapped();
+                break;
+            case "free":
+                myChar.makeFree();
+                break;
+            case "blow":
+                myChar.setState("Blow");
+                break;
+            case "win":
+                myChar.setState("Win");
+                break;
+            default:
+                break;
+        }
         for (Session peer2 : peers){
-            if (!peer.equals(peer2)){
-                peer2.getBasicRemote().sendText(peer.getId()+" : "+message);
-            } else {
-                peer2.getBasicRemote().sendText("back : "+message);
+            try {
+                peer2.getBasicRemote().sendText(myChar.toString()); // something...
+            } catch (IOException ex) {
+                Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         return null; // any string will be send to the requesting peer
