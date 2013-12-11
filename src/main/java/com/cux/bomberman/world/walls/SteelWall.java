@@ -15,8 +15,8 @@ public class SteelWall extends AbstractWall{
     public SteelWall(int posX, int posY) {
         super("steel");
         this.texture = "steel.png";
-        this.setHeight(20);
-        this.setWidth(20);
+        this.setHeight(30);
+        this.setWidth(30);
         this.setPosX(posX);
         this.setPosY(posY);
         this.makeUnblowable();

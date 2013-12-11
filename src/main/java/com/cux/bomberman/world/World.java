@@ -77,6 +77,28 @@ public class World {
         }
     }
     
+    public synchronized boolean HasMapCollision(BCharacter myChar){
+        if (myChar.getPosX() < 0 ||
+            myChar.getPosY() < 0 ||
+            (myChar.getPosX()+myChar.getWidth() > this.WIDTH) ||
+            (myChar.getPosY()+myChar.getHeight() > this.HEIGHT))
+        {
+            myChar.stepBack(null);
+            return true;
+        }
+        boolean ret = false;
+        if (this.bricks.size() > 0){
+            for (AbstractWall brick : this.bricks){
+                if (myChar.hits(brick) && myChar.walksTo(brick)){
+                    //myChar.stepBack(brick);
+                    ret = true;
+                    break;
+                }
+            }
+        }
+        return ret;
+    }
+    
     @Override
     public String toString(){
         String ret = "";

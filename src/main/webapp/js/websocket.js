@@ -114,6 +114,9 @@ function init(){
             case "char":
                 renderChar(toProc);
                 break;
+            case "bomb":
+                renderBombs(toProc);
+                break;
         }
     };
     socket.onclose   = function(msg){
@@ -126,8 +129,27 @@ function init(){
   $("#msg").focus();
 }
 
+function renderBombs(toProc){
+    //console.log(toProc);
+    $(".bomb").remove();
+    bombs = toProc.split("[#bombSep#]");
+    var last = bombs.length;
+    var idx = 0;
+    for (i in bombs){
+        idx++;
+        if (idx == last) break;
+        try{
+           bomb = JSON.parse(bombs[i]);
+           str = "<div class='bomb' style='position:absolute; top:" + bomb.posY + "px; left:" + bomb.posX + "px;'><img src='images/characters/19.gif' width='" + bomb.width + "' height='" + bomb.height + "' /></div>";
+           $("#world").append(str);
+        }
+        catch(ex){ log(ex); }
+    } 
+}
+
 function renderMap(toProc){
     //console.log(toProc);
+    $(".brick").remove();
     bricks = toProc.split("[#brickSep#]");
     var last = bricks.length;
     var idx = 0;
@@ -186,15 +208,15 @@ function updateStatus(){
         try{ socket.send("up"); } catch(ex){ log(ex); } // request info about the other users
     }
     
-    if (MOVE_DOWN){
+    else if (MOVE_DOWN){
         try{ socket.send("down"); } catch(ex){ log(ex); } // request info about the other users
     }
     
-    if (MOVE_LEFT){
+    else if (MOVE_LEFT){
         try{ socket.send("left"); } catch(ex){ log(ex); } // request info about the other users
     }
     
-    if (MOVE_RIGHT){
+    else if (MOVE_RIGHT){
         try{ socket.send("right"); } catch(ex){ log(ex); } // request info about the other users
     }
     

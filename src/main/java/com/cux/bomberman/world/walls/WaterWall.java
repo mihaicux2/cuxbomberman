@@ -15,8 +15,8 @@ public class WaterWall extends AbstractWall{
     public WaterWall(int posX, int posY) {
         super("water");
         this.texture = "water.jpg";
-        this.setHeight(20);
-        this.setWidth(20);
+        this.setHeight(30);
+        this.setWidth(30);
         this.setPosX(posX);
         this.setPosY(posY);
         this.makeUnblowable();
