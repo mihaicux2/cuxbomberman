@@ -101,17 +101,19 @@ function init(){
         timer = setInterval("updateStatus()", 10); // send requests every 10 miliseconds => limit to 100 FPS (at most)
     };
     socket.onmessage = function(msg){
-        try{
-            var x = JSON.parse(msg.data);
-            //console.log(x);
-            // process walls
-            //str = "<div style='position:absolute; top:"+x.posY+"px; left:"+x.posX+"px;' alt='"+x.name+"' title='"+x.name+"'><img src='images/walls/"+x.texture+"' width='"+x.width+"' height='"+x.height+"' /></div>";
-            str = "<div style='position:absolute; top:"+x.posY+"px; left:"+x.posX+"px;' alt='"+x.name+"' title='"+x.name+"'><img src='images/characters/"+x.crtTexture+".gif' width='"+x.width+"' height='"+x.height+"' /></div>";
-            $("#world").html(str);
-        }
-        catch (e){
-            log(e.message);
-            //log(msg);
+        
+        var op = msg.data.substr(0, msg.data.indexOf(":["));
+        var toProc = msg.data.substr(msg.data.indexOf(":[")+2);
+        //console.log(msg);
+        //socket.close();
+        //var x = JSON.parse(toProc);
+        switch(op){
+            case "map":
+                renderMap(toProc);
+                break;
+            case "char":
+                renderChar(toProc);
+                break;
         }
     };
     socket.onclose   = function(msg){
@@ -122,6 +124,54 @@ function init(){
   }
   catch(ex){ log(ex); }
   $("#msg").focus();
+}
+
+function renderMap(toProc){
+    //console.log(toProc);
+    bricks = toProc.split("[#brickSep#]");
+    var last = bricks.length;
+    var idx = 0;
+    for (i in bricks){
+        idx++;
+        if (idx == last) break;
+        try{
+           brick = JSON.parse(bricks[i]);
+           str = "<div class='brick' style='position:absolute; top:" + brick.posY + "px; left:" + brick.posX + "px;' alt='"+brick.name+"' title='"+brick.name+"'><img src='images/walls/" + brick.texture + "' width='" + brick.width + "' height='" + brick.height + "' /></div>";
+           $("#world").append(str);
+        }
+        catch(ex){ log(ex); }
+    }
+}
+
+function renderChar(toProc){
+    try{
+        var x = JSON.parse(toProc);
+        //console.log(x);
+        if ($("#char_"+x.name).length > 0){
+            var ob = $("#char_"+x.name);
+  
+            if (ob.css("top") != (x.posY+"px")){
+                ob.css("top", x.posY+"px");
+//                console.log("change top");
+            }
+            if (ob.css("left") != (x.posX+"px")){
+                ob.css("left", x.posX+"px");
+//                console.log("change left");
+            }
+            
+            crtImg = ob.find("img").attr("src").substr(ob.find("img").attr("src").lastIndexOf("/")+1);
+            //console.log(crtImg+" | "+x.crtTexture+".gif");
+            if (crtImg != (x.crtTexture+".gif")){
+                ob.find("img").attr("src", "images/characters/"+x.crtTexture+".gif");
+//                console.log("change image");
+            }
+        }
+        else{
+            str = "<div id='char_"+x.name+"' style='position:absolute; top:" + x.posY + "px; left:" + x.posX + "px;' alt='" + x.name + "' title='" + x.name + "'><img src='images/characters/" + x.crtTexture + ".gif' width='" + x.width + "' height='" + x.height + "' /></div>";
+            $("#world").append(str);
+        }
+    }
+    catch(ex){ log(ex); }
 }
 
 function boundNumber(nr, lo, hi){
@@ -150,6 +200,7 @@ function updateStatus(){
     
     if (FIRE){
         try{ socket.send("bomb"); } catch(ex){ log(ex); } // request info about the other users
+        FIRE = !FIRE;
     }
 
     try{ socket.send("STATUS"); } catch(ex){ log(ex); } // request info about the other users

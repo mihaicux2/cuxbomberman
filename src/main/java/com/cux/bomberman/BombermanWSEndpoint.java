@@ -25,6 +25,7 @@ import javax.websocket.server.ServerEndpoint;
 
 //import com.cux.bomberman.world.walls.*;
 import com.cux.bomberman.world.BCharacter;
+import com.cux.bomberman.world.World;
 import com.cux.bomberman.world.generator.WallGenerator;
 import com.cux.bomberman.world.walls.AbstractWall;
 
@@ -40,6 +41,8 @@ public class BombermanWSEndpoint {
     private static boolean isFirst = false;
     
     private static BCharacter myChar = null;
+    
+    private static World map = null;
     
     @OnMessage
     public String onMessage(String message, Session peer) {
@@ -59,6 +62,7 @@ public class BombermanWSEndpoint {
             myChar.setWidth(20);
             myChar.setHeight(30);
         }
+        
         switch (message){
             case "up":
                 myChar.setDirection("Up");
@@ -96,7 +100,7 @@ public class BombermanWSEndpoint {
         }
         for (Session peer2 : peers){
             try {
-                peer2.getBasicRemote().sendText(myChar.toString()); // something...
+                peer2.getBasicRemote().sendText("char:["+myChar.toString()); // something...
             } catch (IOException ex) {
                 Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -112,6 +116,15 @@ public class BombermanWSEndpoint {
     @OnOpen
     public void onOpen(Session peer) {
         peers.add(peer);
+        
+        if (map == null){
+            map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
+        }
+        try { 
+            peer.getBasicRemote().sendText("map:["+map.toString());
+        } catch (IOException ex) {
+            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        }
         if (!isFirst){
             isFirst = true;
             watchPeers();
