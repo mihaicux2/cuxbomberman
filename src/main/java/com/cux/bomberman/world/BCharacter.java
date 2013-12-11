@@ -163,8 +163,10 @@ public class BCharacter {
     }
     
     public boolean hits(AbstractWall brick){
-        return (this.posX + this.width >= brick.getPosX() && this.posX <= brick.getPosX() + brick.getWidth() &&
-                this.posY + this.height >= brick.getPosY() && this.posY <= brick.getPosY() + brick.getHeight());
+       return !(brick.getPosX() > this.posX + this.width || 
+           brick.getPosX() + brick.getWidth() < this.posX || 
+           brick.getPosY() > this.posY + this.height ||
+           brick.getPosY() + brick.getHeight() < this.posY);
     }
     
     public void stepBack(AbstractWall brick){

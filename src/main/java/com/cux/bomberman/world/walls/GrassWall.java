@@ -15,8 +15,8 @@ public class GrassWall extends AbstractWall{
     public GrassWall(int posX, int posY) {
         super("grass");
         this.texture = "grass.gif";
-        this.setHeight(20);
-        this.setWidth(20);
+        this.setHeight(30);
+        this.setWidth(30);
         this.setPosX(posX);
         this.setPosY(posY);
         this.makeBlowable();
