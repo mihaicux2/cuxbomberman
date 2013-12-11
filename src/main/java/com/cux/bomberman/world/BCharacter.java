@@ -6,6 +6,7 @@
 
 package com.cux.bomberman.world;
 
+import com.cux.bomberman.world.walls.AbstractWall;
 import java.io.IOException;
 import java.util.HashMap;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -159,6 +160,33 @@ public class BCharacter {
     
     public void moveRight(){
         this.posX++;
+    }
+    
+    public boolean hits(AbstractWall brick){
+        return (this.posX + this.width >= brick.getPosX() && this.posX <= brick.getPosX() + brick.getWidth() &&
+                this.posY + this.height >= brick.getPosY() && this.posY <= brick.getPosY() + brick.getHeight());
+    }
+    
+    public void stepBack(AbstractWall brick){
+        
+        if (this.direction == "Right") this.posX--;
+        if (this.direction == "Left") this.posX++;
+        if (this.direction == "Down") this.posY--;
+        if (this.direction == "Up") this.posY++;
+        
+//        if (this.posX + this.width > brick.getPosX()) this.posX++;
+//        else this.posX--;
+//        
+//        if (this.posY + this.height > brick.getPosY()) this.posY++;
+//        else this.posY--;
+    }
+    
+    public boolean walksTo(AbstractWall brick){
+        if (this.direction == "Right" && this.posX + this.width <= brick.getPosX()) return true;
+        if (this.direction == "Left" && this.posX >= brick.getPosX() + brick.getWidth()) return true;
+        if (this.direction == "Down" && this.posY +this.height <= brick.getPosY()) return true;
+        if (this.direction == "Up" && this.posY >= brick.getPosY() + brick.getHeight()) return true;
+        return false;
     }
     
     @Override
