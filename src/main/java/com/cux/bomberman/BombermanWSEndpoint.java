@@ -66,19 +66,26 @@ public class BombermanWSEndpoint {
         switch (message){
             case "up":
                 myChar.setDirection("Up");
-                myChar.moveUp();
+                if (!this.MapCollision(myChar, map))
+                    myChar.moveUp();
                 break;
             case "down":
                 myChar.setDirection("Down");
-                myChar.moveDown();
+                if (!this.MapCollision(myChar, map))
+                    myChar.moveDown();
+                //else myChar.moveUp();
                 break;
             case "left":
                 myChar.setDirection("Left");
-                myChar.moveLeft();
+                if (!this.MapCollision(myChar, map))
+                    myChar.moveLeft();
+                //else myChar.moveRight();
                 break;
             case "right":
                 myChar.setDirection("Right");
-                myChar.moveRight();
+                if (!this.MapCollision(myChar, map))
+                    myChar.moveRight();
+                //else myChar.moveLeft();
                 break;
             case "bomb":
                 myChar.addOrDropBomb();
@@ -156,6 +163,20 @@ public class BombermanWSEndpoint {
                 }
             }
         }).start();
+    }
+    
+    public synchronized boolean MapCollision(BCharacter myChar, World map){
+        boolean ret = false;
+        if (map.bricks.size() > 0){
+            for (AbstractWall brick : map.bricks){
+                if (myChar.hits(brick) && myChar.walksTo(brick)){
+                    //myChar.stepBack(brick);
+                    ret = true;
+                    break;
+                }
+            }
+        }
+        return ret;
     }
     
 }

@@ -31,7 +31,7 @@ public class World {
     
     private String mapFile;
     
-    private static Set<AbstractWall> bricks = Collections.synchronizedSet(new HashSet<AbstractWall>());
+    public static Set<AbstractWall> bricks = Collections.synchronizedSet(new HashSet<AbstractWall>());
     
     public static int getWidth(){
         return WIDTH;
@@ -66,7 +66,7 @@ public class World {
                     case "water":
                         brick = new WaterWall(Integer.parseInt(props[1]), Integer.parseInt(props[2]));
                     default:
-                        brick = new WaterWall(0, 0);
+                        //brick = new WaterWall(0, 0);
                         break;
                 }
                 this.bricks.add(brick);
