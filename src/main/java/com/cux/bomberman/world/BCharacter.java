@@ -7,8 +7,11 @@
 package com.cux.bomberman.world;
 
 import com.cux.bomberman.world.walls.AbstractWall;
+import com.sun.org.apache.bcel.internal.util.BCELifier;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 
@@ -28,6 +31,9 @@ public class BCharacter {
     private String state = "Normal"; // can also be "Bomb", "Blow", "Win" and "Trapped"
     private String direction = "Right"; // can also be "Up", "Down" and "Left"
     private String id;
+    protected int bombRange = 2;
+    protected int speed = 1;
+    protected boolean walking = false;
     
     {
         // walk in normal state
@@ -64,6 +70,30 @@ public class BCharacter {
     public BCharacter(String id){
         this.id = id;
         this.name = id;
+    }
+
+    public boolean isWalking() {
+        return walking;
+    }
+
+    public void setWalking(boolean walking) {
+        this.walking = walking;
+    }
+
+    public int getBombRange() {
+        return bombRange;
+    }
+
+    public void setBombRange(int bombRange) {
+        this.bombRange = bombRange;
+    }
+
+    public int getSpeed() {
+        return speed;
+    }
+
+    public void setSpeed(int speed) {
+        this.speed = speed;
     }
 
     public String getName() {
@@ -147,26 +177,82 @@ public class BCharacter {
     }
     
     public void moveUp(){
-        this.posY--;
+        //this.posY-=speed;
+        //this.posY-=speed;
+        walking = true;
+        this.IAmWalking(this, "up");
     }
     
     public void moveDown(){
-        this.posY++;
+        //this.posY+=speed;
+        //this.posY+=speed;
+        walking = true;
+        this.IAmWalking(this, "down");
     }
     
     public void moveLeft(){
-        this.posX--;
+        //this.posX-=speed;
+        //this.posX-=speed;
+        walking = true;
+        this.IAmWalking(this, "left");
     }
     
     public void moveRight(){
-        this.posX++;
+        //this.posX+=speed;
+        //this.posX+=speed;
+        walking = true;
+        this.IAmWalking(this, "right");
+    }
+    
+    private synchronized void IAmWalking(final BCharacter myChar, final String direction){
+        new Thread(new Runnable(){
+            @Override
+            public void run() {
+                for (int i = 0; i < 5; i++){
+                    switch(direction){
+                        case "up":
+                            myChar.posY--;
+                            break;
+                        case "down":
+                            myChar.posY++;
+                            break;
+                        case "left":
+                            myChar.posX--;
+                            break;
+                        case "right":
+                            myChar.posX++;
+                            break;
+                    }
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(BCharacter.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+                myChar.walking = false;
+            }
+        }).start();
+    }
+    
+    public double getDistance(int x1, int y1, int x2, int y2){
+        return Math.sqrt((x2-x1) * (x2-x1) + (y2-y1)*(y2-y1) );
     }
     
     public boolean hits(AbstractWall brick){
-       return !(brick.getPosX() > this.posX + this.width || 
-           brick.getPosX() + brick.getWidth() < this.posX || 
-           brick.getPosY() > this.posY + this.height ||
-           brick.getPosY() + brick.getHeight() < this.posY);
+       int x1 = this.posX;
+       int x2 = x1 + this.width;
+       int y1 = this.posY;
+       int y2 = y1 + this.height;
+       
+       int x11 = brick.getPosX();
+       int x12 = x11 + brick.getWidth();
+       int y11 = brick.getPosY();
+       int y12 = y11 + brick.getHeight();
+       if (this.direction == "Right" && x2 >= x11 && x2 < x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) return true;
+       if (this.direction == "Left" && x1 > x11 && x1 <= x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) return true;
+       if (this.direction == "Up" && y1 > y11 && y1 <= y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) return true;
+       if (this.direction == "Down" && y2 >= y11 && y2 < y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) return true;
+       return false;
     }
     
     public void stepBack(AbstractWall brick){
