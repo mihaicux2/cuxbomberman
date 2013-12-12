@@ -111,8 +111,8 @@ function init(){
             case "map":
                 renderMap(toProc);
                 break;
-            case "char":
-                renderChar(toProc);
+            case "chars":
+                renderChars(toProc);
                 break;
             case "bomb":
                 renderBombs(toProc);
@@ -165,35 +165,50 @@ function renderMap(toProc){
     }
 }
 
-function renderChar(toProc){
-    try{
-        var x = JSON.parse(toProc);
-        //console.log(x);
-        if ($("#char_"+x.name).length > 0){
-            var ob = $("#char_"+x.name);
-  
-            if (ob.css("top") != (x.posY+"px")){
-                ob.css("top", x.posY+"px");
-//                console.log("change top");
+var charNames;
+function renderChars(toProc){
+    
+    chars = toProc.split("[#charSep#]");
+    var last = chars.length;
+    var idx = 0;
+    charNames = new Array();
+    for (i in chars){
+        idx++;
+        if (idx == last) break;
+        try{
+           var x = JSON.parse(chars[i]);
+           if ($("#char_"+x.name).length > 0){
+                var ob = $("#char_"+x.name);
+
+                if (ob.css("top") != (x.posY+"px")){
+                    ob.css("top", x.posY+"px");
+    //                console.log("change top");
+                }
+                if (ob.css("left") != (x.posX+"px")){
+                    ob.css("left", x.posX+"px");
+    //                console.log("change left");
+                }
+
+                crtImg = ob.find("img").attr("src").substr(ob.find("img").attr("src").lastIndexOf("/")+1);
+                //console.log(crtImg+" | "+x.crtTexture+".gif");
+                if (crtImg != (x.crtTexture+".gif")){
+                    ob.find("img").attr("src", "images/characters/"+x.crtTexture+".gif");
+    //                console.log("change image");
+                }
             }
-            if (ob.css("left") != (x.posX+"px")){
-                ob.css("left", x.posX+"px");
-//                console.log("change left");
+            else{
+                str = "<div id='char_"+x.name+"' class='character' style='position:absolute; top:" + x.posY + "px; left:" + x.posX + "px;' alt='" + x.name + "' title='" + x.name + "'><img src='images/characters/" + x.crtTexture + ".gif' width='" + x.width + "' height='" + x.height + "' /></div>";
+                $("#world").append(str);
             }
-            
-            crtImg = ob.find("img").attr("src").substr(ob.find("img").attr("src").lastIndexOf("/")+1);
-            //console.log(crtImg+" | "+x.crtTexture+".gif");
-            if (crtImg != (x.crtTexture+".gif")){
-                ob.find("img").attr("src", "images/characters/"+x.crtTexture+".gif");
-//                console.log("change image");
-            }
+            charNames.push("char_"+x.name);
         }
-        else{
-            str = "<div id='char_"+x.name+"' style='position:absolute; top:" + x.posY + "px; left:" + x.posX + "px;' alt='" + x.name + "' title='" + x.name + "'><img src='images/characters/" + x.crtTexture + ".gif' width='" + x.width + "' height='" + x.height + "' /></div>";
-            $("#world").append(str);
-        }
+        catch(ex){ log(ex); }
     }
-    catch(ex){ log(ex); }
+//    $(".character").each(function(idx){
+//        if (!$.inArray($(this).attr("id"), charNames)){
+//            $(this).remove();
+//        }
+//    });
 }
 
 function boundNumber(nr, lo, hi){

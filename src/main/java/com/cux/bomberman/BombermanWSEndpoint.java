@@ -27,10 +27,13 @@ import javax.websocket.server.ServerEndpoint;
 //import com.cux.bomberman.world.walls.*;
 import com.cux.bomberman.world.BCharacter;
 import com.cux.bomberman.world.World;
-import com.cux.bomberman.world.generator.WallGenerator;
-import com.cux.bomberman.world.walls.AbstractWall;
+//import com.cux.bomberman.world.generator.WallGenerator;
+//import com.cux.bomberman.world.walls.AbstractWall;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  *
@@ -43,119 +46,135 @@ public class BombermanWSEndpoint {
     
     private static Set<BBomb> bombs = Collections.synchronizedSet(new HashSet<BBomb>());
     
+    private static ConcurrentMap<String, BCharacter> chars = new ConcurrentHashMap<String, BCharacter>();
+    
+    private static Set<String> workingThreads = Collections.synchronizedSet(new HashSet<String>());
+    
     private static boolean isFirst = true;
     
-    private static BCharacter myChar = null;
+    //private static BCharacter myChar = null;
     
     private static World map = null;
     
     @OnMessage
-    public String onMessage(String message, Session peer) {
-//        String wall = WallGenerator.getInstance().generateRandomWall().toString();
-//        for (Session peer2 : peers){
-//            try {
-//                //if (!peer.equals(peer2))
-//                peer2.getBasicRemote().sendText(wall); // something...
-//            } catch (IOException ex) {
-//                Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-//        }
+    public synchronized String onMessage(String message, Session peer) {
+        
+        BCharacter crtChar = chars.get(peer.getId());
         
         switch (message){
             case "up":
-                myChar.setDirection("Up");
-                if (!map.HasMapCollision(myChar))
-                    myChar.moveUp();
-                //else myChar.moveDown();
+                crtChar.setDirection("Up");
+                if (!crtChar.isWalking() && !map.HasMapCollision(crtChar)){
+                    crtChar.moveUp();
+                }
+                //else crtChar.moveDown();
                 break;
             case "down":
-                myChar.setDirection("Down");
-                if (!map.HasMapCollision(myChar))
-                    myChar.moveDown();
-                //else myChar.moveUp();
+                crtChar.setDirection("Down");
+                if (!crtChar.isWalking() && !map.HasMapCollision(crtChar)){
+                    crtChar.moveDown();
+                }
+                //else crtChar.moveUp();
                 break;
             case "left":
-                myChar.setDirection("Left");
-                if (!map.HasMapCollision(myChar))
-                    myChar.moveLeft();
-                //else myChar.moveRight();
+                crtChar.setDirection("Left");
+                if (!crtChar.isWalking() && !map.HasMapCollision(crtChar)){
+                    crtChar.moveLeft();
+                }
+                //else crtChar.moveRight();
                 break;
             case "right":
-                myChar.setDirection("Right");
-                if (!map.HasMapCollision(myChar))
-                    myChar.moveRight();
-                //else myChar.moveLeft();
+                crtChar.setDirection("Right");
+                if (!crtChar.isWalking() && !map.HasMapCollision(crtChar)){
+                     crtChar.moveRight();
+                }
+                //else crtChar.moveLeft();
                 break;
             case "bomb":
-                myChar.addOrDropBomb(); // change character state
-                if (myChar.getState() == "Normal"){ // if he dropped the bomb, add the bomb to the screen
-                    this.bombs.add(new BBomb(myChar));
+                crtChar.addOrDropBomb(); // change character state
+                if (crtChar.getState() == "Normal"){ // if he dropped the bomb, add the bomb to the screen
+                    this.bombs.add(new BBomb(crtChar));
                 }
                 break;
             case "trap":
-                myChar.makeTrapped();
+                crtChar.makeTrapped();
                 break;
             case "free":
-                myChar.makeFree();
+                crtChar.makeFree();
                 break;
             case "blow":
-                myChar.setState("Blow");
+                crtChar.setState("Blow");
                 break;
             case "win":
-                myChar.setState("Win");
+                crtChar.setState("Win");
                 break;
             default:
                 break;
         }
         
         //exportEnvironment();
-        if (isFirst){
-            watchPeers();
-        }
+//        if (isFirst){
+//            watchPeers();
+//        }
         return null; // any string will be send to the requesting peer
     }
 
     @OnClose
-    public void onClose(Session peer) {
+    public synchronized void onClose(Session peer) {
+        this.delayedRemove(peer.getId());
+        this.stopThread(peer.getId());
         peers.remove(peer);
+        System.out.println("out...");
     }
 
     @OnOpen
-    public void onOpen(Session peer) {
+    public synchronized void onOpen(Session peer) {
         peers.add(peer);
+        
+        workingThreads.add(peer.getId());
+        
+        BCharacter newChar = new BCharacter(peer.getId());
+        newChar = new BCharacter(peer.getId());
+        newChar.setPosX(0);
+        newChar.setPosY(0);
+        newChar.setWidth(20);
+        newChar.setHeight(30);
+        
+        chars.put(peer.getId(), newChar);
         
         if (map == null){
             map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
         }
         
-        if (myChar == null){
-            myChar = new BCharacter(peer.getId());
-            myChar.setPosX(0);
-            myChar.setPosY(0);
-            myChar.setWidth(20);
-            myChar.setHeight(28);
-        }
-        
-        if (isFirst){
-            watchPeers();
-        }
+//        if (isFirst){
+//            watchPeers();
+//        }
+        watchPeer(peer);
     }
 
     @OnError
-    public void onError(Throwable t) {
+    public synchronized void onError(Throwable t) {
     }
     
-    public synchronized void watchPeers(){
-        System.out.println("da");
+    public synchronized void stopThread(String threadId){
+        workingThreads.remove(threadId);
+    }
+    
+    public synchronized void watchPeer(final Session peer){
+        final BombermanWSEndpoint environment = this;
         new Thread(new Runnable(){
             @Override
             public void run() {
                 isFirst = false;
-                while (true){
+                while (peer.isOpen() && workingThreads.contains(peer.getId())){
                     try {
-                        exportEnvironment();
-                        Thread.sleep(30); // limiteaza la 100FPS comunicarea cu serverul
+                        peer.getBasicRemote().sendText("chars:[" + environment.exportChars()); // something...
+                        peer.getBasicRemote().sendText("map:[" + environment.exportMap());
+                        peer.getBasicRemote().sendText("bomb:[" + environment.exportBombs());
+                        Thread.sleep(10); // limiteaza la 100FPS comunicarea cu serverul
                     } catch (InterruptedException ex) {
+                        Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (IOException ex) {
                         Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
@@ -163,24 +182,49 @@ public class BombermanWSEndpoint {
         }).start();
     }
     
-    protected synchronized void exportEnvironment(){
-        for (Session peer2 : peers) {
-            try {
-                peer2.getBasicRemote().sendText("char:[" + this.exportChars()); // something...
-                peer2.getBasicRemote().sendText("map:[" + this.exportMap());
-                peer2.getBasicRemote().sendText("bomb:[" + this.exportBombs());
-            } catch (IOException ex) {
-                Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+//    public synchronized void watchPeers(){
+//        System.out.println("da");
+//        new Thread(new Runnable(){
+//            @Override
+//            public void run() {
+//                isFirst = false;
+//                while (true){
+//                    try {
+//                        exportEnvironment();
+//                        Thread.sleep(10); // limiteaza la 100FPS comunicarea cu serverul
+//                    } catch (InterruptedException ex) {
+//                        Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+//                    }
+//                }
+//            }
+//        }).start();
+//    }
+//    
+//    protected synchronized void exportEnvironment(){
+//        for (Session peer2 : peers) {
+//            try {
+//                peer2.getBasicRemote().sendText("chars:[" + this.exportChars()); // something...
+//                peer2.getBasicRemote().sendText("map:[" + this.exportMap());
+//                peer2.getBasicRemote().sendText("bomb:[" + this.exportBombs());
+//            } catch (IOException ex) {
+//                Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+//        }
+//    }
+    
+    protected synchronized void delayedRemove(final String peerId){
+        new Thread(new Runnable(){
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000); // wait for a one second before actual removing
+                    chars.remove(peerId);
+                    System.out.println("final");
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                } 
             }
-        }
-    }
-    
-    protected synchronized String exportChars(){
-        return myChar.toString();
-    }
-    
-    protected synchronized String exportMap(){
-        return map.toString();
+        }).start();
     }
     
     protected synchronized void markForRemove(final BBomb bomb){
@@ -195,6 +239,20 @@ public class BombermanWSEndpoint {
                 } 
             }
         }).start();
+    }
+    
+    protected synchronized String exportChars(){
+        //return myChar.toString();
+        String ret = "";
+        for (Session peer : peers) {
+            ret += chars.get(peer.getId()).toString()+"[#charSep#]";
+        }
+        
+        return ret;
+    }
+    
+    protected synchronized String exportMap(){
+        return map.toString();
     }
     
     static String ret = "";

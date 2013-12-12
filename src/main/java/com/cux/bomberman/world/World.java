@@ -78,12 +78,12 @@ public class World {
     }
     
     public synchronized boolean HasMapCollision(BCharacter myChar){
-        if (myChar.getPosX() < 0 ||
-            myChar.getPosY() < 0 ||
-            (myChar.getPosX()+myChar.getWidth() > this.WIDTH) ||
-            (myChar.getPosY()+myChar.getHeight() > this.HEIGHT))
+        if ((myChar.getPosX() == 0 && myChar.getDirection() == "Left") ||
+            (myChar.getPosY()== 0 && myChar.getDirection() == "Up") || 
+            (myChar.getPosX()+myChar.getWidth() == this.WIDTH && myChar.getDirection() == "Right") ||
+            (myChar.getPosY()+myChar.getHeight() == this.HEIGHT && myChar.getDirection() == "Down"))
         {
-            myChar.stepBack(null);
+            //myChar.stepBack(null);
             return true;
         }
         boolean ret = false;
