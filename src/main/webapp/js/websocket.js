@@ -160,29 +160,31 @@ function renderExplosions(toProc){
         try{
            exp = JSON.parse(exps[i]);
            str = "<div class='exp' style='position:absolute; font-size:3px; background:#ff9900; top:" + exp.posY + "px; left:" + exp.posX + "px; width:"+exp.width+"px; height:"+exp.height+"px;'>&nbsp;</div>";
+           var ii = 0;
            for (j in exp.directions){
+               ii++;
                //console.log(exp.directions[j]);
                var posX = exp.posX;
                var posY = exp.posY;
                switch (exp.directions[j]){
                    case "up":
-                       posY -= exp.height;
+                       posY -= exp.height*ii;
                        break;
                    case "down":
-                       posX += exp.height;
+                       posX += exp.height*ii;
                        break;
                    case "left":
-                       posX -= exp.width;
+                       posX -= exp.width*ii;
                        break;
                    case "right":
-                       posX += exp.width;
+                       posX += exp.width*ii;
                        break;
                    default: continue;
                }
                str = "<div class='exp' style='position:absolute; font-size:3px; background:#ff9900; top:" + posY + "px; left:" + posX + "px; width:"+exp.width+"px; height:"+exp.height+"px;'>&nbsp;</div>";
            }
            $("#world").append(str);
-           console.log(exp);
+           //console.log(exp);
         }
         catch(ex){ console.log(ex); }
     } 
