@@ -147,10 +147,15 @@ function renderBombs(toProc){
     } 
 }
 
+var brickLength = 0;
+
 function renderMap(toProc){
     //console.log(toProc);
+    bricks = toProc.split("[#wallSep#]");
+    if (bricks.length && brickLength == bricks.length) return;
+    brickLength = bricks.length;
+    console.log(brickLength);
     $(".brick").remove();
-    bricks = toProc.split("[#brickSep#]");
     var last = bricks.length;
     var idx = 0;
     for (i in bricks){
@@ -166,6 +171,7 @@ function renderMap(toProc){
 }
 
 var charNames;
+var timers = {};
 function renderChars(toProc){
     
     chars = toProc.split("[#charSep#]");
@@ -193,16 +199,34 @@ function renderChars(toProc){
                 //console.log(crtImg+" | "+x.crtTexture+".gif");
                 if (crtImg != (x.crtTexture+".gif")){
                     ob.find("img").attr("src", "images/characters/"+x.crtTexture+".gif");
-    //                console.log("change image");
+                    ob.find("canvas").hide();
+                    ob.find("img").show();
+                }
+                else{
+                    // "stop" image only if character is not walking and it's state is "Normal" or "Bomb"
+                    if (!x.walking && !walking && x.state != "Blow" && x.state != "Trapped"){
+                        ob.find("canvas")[0].getContext("2d").clearRect(0, 0, x.width, x.height);
+                        ob.find("canvas")[0].getContext("2d").drawImage(ob.find("img")[0], 0, 0, x.width, x.height);
+                        //console.log(ob.find("canvas")[0].getContext("2d"));
+                        //socket.close();
+                        ob.find("img").hide();
+                        ob.find("canvas").show();
+                    }
+                    else{
+                        if (ob.find("img").css("display") == "none"){
+                            ob.find("canvas").hide();
+                            ob.find("img").show();
+                        }
+                    }
                 }
             }
             else{
-                str = "<div id='char_"+x.name+"' class='character' style='position:absolute; top:" + x.posY + "px; left:" + x.posX + "px;' alt='" + x.name + "' title='" + x.name + "'><img src='images/characters/" + x.crtTexture + ".gif' width='" + x.width + "' height='" + x.height + "' /></div>";
+                str = "<div id='char_"+x.name+"' class='character' style='position:absolute; top:" + x.posY + "px; left:" + x.posX + "px;' alt='" + x.name + "' title='" + x.name + "'><img src='images/characters/" + x.crtTexture + ".gif' width='" + x.width + "' height='" + x.height + "' /><canvas style='display:none;' width='"+x.width+"' height='"+x.height+"'></canvas></div>";
                 $("#world").append(str);
             }
             charNames.push("char_"+x.name);
         }
-        catch(ex){ log(ex); }
+        catch(ex){ console.log(ex); }
     }
 //    $(".character").each(function(idx){
 //        if (!$.inArray($(this).attr("id"), charNames)){
@@ -217,22 +241,27 @@ function boundNumber(nr, lo, hi){
     return nr;
 }
 
+var walking = false;
 function updateStatus(){
-    
+    walking = false;
     if (MOVE_UP){
         try{ socket.send("up"); } catch(ex){ log(ex); } // request info about the other users
+        walking = true;
     }
     
     else if (MOVE_DOWN){
         try{ socket.send("down"); } catch(ex){ log(ex); } // request info about the other users
+        walking = true;
     }
     
     else if (MOVE_LEFT){
         try{ socket.send("left"); } catch(ex){ log(ex); } // request info about the other users
+        walking = true;
     }
     
     else if (MOVE_RIGHT){
         try{ socket.send("right"); } catch(ex){ log(ex); } // request info about the other users
+        walking = true;
     }
     
     if (FIRE){

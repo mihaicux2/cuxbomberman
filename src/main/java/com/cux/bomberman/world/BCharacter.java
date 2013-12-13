@@ -17,14 +17,10 @@ import org.codehaus.jackson.map.ObjectWriter;
 
 /**
  *
- * @author root
+ * @author mihaicux
  */
-public class BCharacter {
+public class BCharacter extends AbstractBlock{
     
-    private int posX = 0;
-    protected int posY = 0;
-    protected int width = 20;
-    protected int height = 30;
     protected String name;
     private HashMap<String, Integer> textures = new HashMap<String, Integer>(); // direction+state, texture = int(.gif)
     public int crtTexture = 2; // can also be {1, 3, 4, 14, 15, 16, 17, 20, 22, 23, 24}
@@ -104,38 +100,6 @@ public class BCharacter {
         this.name = name;
     }
     
-    public int getPosX() {
-        return posX;
-    }
-
-    public int getPosY() {
-        return posY;
-    }
-
-    public int getWidth() {
-        return width;
-    }
-
-    public int getHeight() {
-        return height;
-    }
-    
-    public void setPosX(int posX) {
-        this.posX = posX;
-    }
-
-    public void setPosY(int posY) {
-        this.posY = posY;
-    }
-
-    public void setWidth(int width) {
-        this.width = width;
-    }
-
-    public void setHeight(int height) {
-        this.height = height;
-    }
-    
     public int addOrDropBomb(){
         if (state == "Normal") state = "Bomb";
         else if (state == "Bomb") state = "Normal";
@@ -208,7 +172,7 @@ public class BCharacter {
         new Thread(new Runnable(){
             @Override
             public void run() {
-                for (int i = 0; i < 5; i++){
+                for (int i = 0; i < World.wallDim; i++){
                     switch(direction){
                         case "up":
                             myChar.posY--;
@@ -238,16 +202,16 @@ public class BCharacter {
         return Math.sqrt((x2-x1) * (x2-x1) + (y2-y1)*(y2-y1) );
     }
     
-    public boolean hits(AbstractWall brick){
+    public boolean hits(AbstractBlock block){
        int x1 = this.posX;
        int x2 = x1 + this.width;
        int y1 = this.posY;
        int y2 = y1 + this.height;
        
-       int x11 = brick.getPosX();
-       int x12 = x11 + brick.getWidth();
-       int y11 = brick.getPosY();
-       int y12 = y11 + brick.getHeight();
+       int x11 = block.getPosX();
+       int x12 = x11 + block.getWidth();
+       int y11 = block.getPosY();
+       int y12 = y11 + block.getHeight();
        if (this.direction == "Right" && x2 >= x11 && x2 < x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) return true;
        if (this.direction == "Left" && x1 > x11 && x1 <= x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) return true;
        if (this.direction == "Up" && y1 > y11 && y1 <= y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) return true;
@@ -255,25 +219,25 @@ public class BCharacter {
        return false;
     }
     
-    public void stepBack(AbstractWall brick){
+    public void stepBack(AbstractBlock block){
         
         if (this.direction == "Right") this.posX--;
         if (this.direction == "Left") this.posX++;
         if (this.direction == "Down") this.posY--;
         if (this.direction == "Up") this.posY++;
         
-//        if (this.posX + this.width > brick.getPosX()) this.posX++;
+//        if (this.posX + this.width > block.getPosX()) this.posX++;
 //        else this.posX--;
 //        
-//        if (this.posY + this.height > brick.getPosY()) this.posY++;
+//        if (this.posY + this.height > block.getPosY()) this.posY++;
 //        else this.posY--;
     }
     
-    public boolean walksTo(AbstractWall brick){
-        if (this.direction == "Right" && this.posX + this.width <= brick.getPosX()) return true;
-        if (this.direction == "Left" && this.posX >= brick.getPosX() + brick.getWidth()) return true;
-        if (this.direction == "Down" && this.posY +this.height <= brick.getPosY()) return true;
-        if (this.direction == "Up" && this.posY >= brick.getPosY() + brick.getHeight()) return true;
+    public boolean walksTo(AbstractBlock block){
+        if (this.direction == "Right" && this.posX + this.width <= block.getPosX()) return true;
+        if (this.direction == "Left" && this.posX >= block.getPosX() + block.getWidth()) return true;
+        if (this.direction == "Down" && this.posY +this.height <= block.getPosY()) return true;
+        if (this.direction == "Up" && this.posY >= block.getPosY() + block.getHeight()) return true;
         return false;
     }
     

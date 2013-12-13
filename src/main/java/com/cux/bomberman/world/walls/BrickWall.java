@@ -15,8 +15,6 @@ public class BrickWall extends AbstractWall{
     public BrickWall(int posX, int posY) {
         super("brick");
         this.texture = "brick.gif";
-        this.setHeight(30);
-        this.setWidth(30);
         this.setPosX(posX);
         this.setPosY(posY);
         this.makeBlowable();
