@@ -27,7 +27,7 @@ public class BCharacter extends AbstractBlock{
     private String state = "Normal"; // can also be "Bomb", "Blow", "Win" and "Trapped"
     private String direction = "Right"; // can also be "Up", "Down" and "Left"
     private String id;
-    protected int bombRange = 2;
+    protected int bombRange = 1;
     protected int speed = 1;
     protected boolean walking = false;
     
@@ -252,6 +252,18 @@ public class BCharacter extends AbstractBlock{
             return ex.getMessage();
            // return "";
         }
+    }
+    
+    @Override
+    public BCharacter clone(){
+        BCharacter ret = new BCharacter(this.id);
+        ret.posX = this.posX;
+        ret.posY = this.posY;
+        ret.width = this.width;
+        ret.height = this.height;
+        ret.direction = this.direction;
+        ret.bombRange = this.bombRange;
+        return ret;
     }
     
 }

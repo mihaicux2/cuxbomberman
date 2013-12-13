@@ -56,7 +56,7 @@ public class World {
                 AbstractWall wall = null;
                 int x = Integer.parseInt(props[1]);
                 int y = Integer.parseInt(props[2]);
-                System.out.println(line);
+                //System.out.println(line);
                 switch(props[0]){
                     case "brick":
                         wall = new BrickWall(x, y);

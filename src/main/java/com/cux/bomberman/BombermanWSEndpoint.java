@@ -27,7 +27,11 @@ import javax.websocket.server.ServerEndpoint;
 
 //import com.cux.bomberman.world.walls.*;
 import com.cux.bomberman.world.BCharacter;
+import com.cux.bomberman.world.Explosion;
 import com.cux.bomberman.world.World;
+import com.cux.bomberman.world.walls.AbstractWall;
+import com.cux.bomberman.world.walls.BrickWall;
+import java.util.Collection;
 //import com.cux.bomberman.world.generator.WallGenerator;
 //import com.cux.bomberman.world.walls.AbstractWall;
 import java.util.ConcurrentModificationException;
@@ -50,6 +54,8 @@ public class BombermanWSEndpoint {
     private static ConcurrentMap<String, BCharacter> chars = new ConcurrentHashMap<String, BCharacter>();
     
     private static Set<String> workingThreads = Collections.synchronizedSet(new HashSet<String>());
+    
+    private static Set<Explosion> explosions = Collections.synchronizedSet(new HashSet<Explosion>());
     
     private static boolean isFirst = true;
     
@@ -111,14 +117,19 @@ public class BombermanWSEndpoint {
             case "win":
                 crtChar.setState("Win");
                 break;
+            case "QUIT":
+                chars.remove(peer.getId());
+                if (peer.isOpen()){
+                    try {
+                        peer.close();
+                    } catch (IOException ex) {
+                        Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
             default:
                 break;
         }
         
-        //exportEnvironment();
-//        if (isFirst){
-//            watchPeers();
-//        }
         return null; // any string will be send to the requesting peer
     }
 
@@ -164,14 +175,38 @@ public class BombermanWSEndpoint {
         final BombermanWSEndpoint environment = this;
         new Thread(new Runnable(){
             @Override
-            public void run() {
+            public synchronized void run() {
                 isFirst = false;
-                while (peer.isOpen()){
+                String precCharStr = "";
+                String precBombStr = "";
+                String precExplStr = "";
+                String precWallStr = "";
+                while (peer.isOpen() && workingThreads.contains(peer.getId())){
                     try {
-                        peer.getBasicRemote().sendText("chars:[" + environment.exportChars()); // something...
-                        peer.getBasicRemote().sendText("map:[" + environment.exportMap());
-                        peer.getBasicRemote().sendText("bomb:[" + environment.exportBombs());
-                        Thread.sleep(10); // limiteaza la 100FPS comunicarea cu serverul
+                        String exportCharStr = environment.exportChars();
+                        if (!exportCharStr.equals(precCharStr)){
+                            peer.getBasicRemote().sendText("chars:[" + exportCharStr);
+                            precCharStr = exportCharStr;
+                        }
+                        
+                        String exportWallStr = environment.exportMap();
+                        if (!exportWallStr.equals(precWallStr)){
+                            peer.getBasicRemote().sendText("map:[" + exportWallStr);
+                            precWallStr = exportWallStr;
+                        }
+                        
+                        String exportBombStr = environment.exportBombs();
+                        if (!exportBombStr.equals(precBombStr)){
+                            peer.getBasicRemote().sendText("bombs:[" + exportBombStr);
+                            precBombStr = exportBombStr;
+                            //System.out.println(exportBombStr);
+                        }
+                        String exportExplStr = environment.exportExplosions();
+                        if (!exportExplStr.equals(precExplStr)){
+                            peer.getBasicRemote().sendText("explosions:[" + exportExplStr);
+                            precExplStr = exportExplStr;
+                        }
+                        Thread.sleep(10); // limiteaza la 100FPS comunicarea cu clientul
                     } catch (InterruptedException ex) {
                         Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
                     } catch (IOException ex) {
@@ -197,13 +232,62 @@ public class BombermanWSEndpoint {
         }).start();
     }
     
+    public static boolean elementExists(AbstractBlock[][] data, int i, int j){
+        try{
+          AbstractBlock x = data[i][j];
+          if (data[i][j] == null) return false;
+          if (!AbstractWall.class.isAssignableFrom(data[i][j].getClass())) return false;
+          return true;
+        } catch(ArrayIndexOutOfBoundsException e){
+          return false;
+        }
+    }
+    
     protected synchronized void markForRemove(final BBomb bomb){
         new Thread(new Runnable(){
             @Override
-            public void run() {
+            public synchronized void run() {
                 try {
+                    Explosion exp = new Explosion(bomb.getOwner());
                     map.blockMatrix[bomb.getPosX()/World.wallDim][bomb.getPosY()/World.wallDim] = null;
-                    Thread.sleep(1000); // wait for a one second before actual removing
+                    int charRange = bomb.getOwner().getBombRange();
+                    for (int i = 1; i <= charRange; i++){
+                        if (BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim) && ((AbstractWall)map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]).isBlowable()){
+                            map.walls.remove(map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]);
+                            map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim] = null;
+                            exp.directions.add("right");
+                        }
+                        else if (!BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim)){
+                            exp.directions.add("right");
+                        }
+                        if (BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim) && ((AbstractWall)map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]).isBlowable()){
+                            map.walls.remove(map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]);
+                            map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim] = null;
+                            exp.directions.add("left");
+                        }
+                        else  if (!BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim)){
+                            exp.directions.add("left");
+                        }
+                        if (BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i) && ((AbstractWall)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]).isBlowable()){
+                            map.walls.remove(map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]);
+                            map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i] = null;
+                            exp.directions.add("down");
+                        }
+                        else if (!BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i)){
+                            exp.directions.add("down");
+                        }
+                        if (BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i) && ((AbstractWall)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i]).isBlowable()){
+                            map.walls.remove(map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i]);
+                            map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i] = null;
+                            exp.directions.add("up");
+                        }
+                        else if (!BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i)){
+                            exp.directions.add("up");
+                        }
+                    }
+                    explosions.add(exp);
+                    Thread.sleep(1000); // wait one second before actual removing
+                    explosions.remove(exp);
                     bombs.remove(bomb);
                 } catch (InterruptedException ex) {
                     Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
@@ -215,8 +299,13 @@ public class BombermanWSEndpoint {
     protected synchronized String exportChars(){
         //return myChar.toString();
         String ret = "";
-        for (Session peer : peers) {
-            ret += chars.get(peer.getId()).toString()+"[#charSep#]";
+        try{
+            for (Session peer : peers) {
+                ret += chars.get(peer.getId()).toString()+"[#charSep#]";
+            }
+        }
+        catch (ConcurrentModificationException ex){
+            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
         }
         
         return ret;
@@ -226,31 +315,70 @@ public class BombermanWSEndpoint {
         return map.toString();
     }
     
-    static String ret = "";
+    //static String ret = "";
     
     protected synchronized String exportBombs(){
         
-        new Thread(new Runnable(){
-            @Override
-            public void run() {
-                ret = "";
-                 for (BBomb bomb : bombs){
-                    try{
-                        if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime())/1000 >= bomb.getLifeTime()){
-                            markForRemove(bomb);
-                            continue;
-                        }
-                        else{
-                            ret += bomb.toString()+"[#bombSep#]";
-                        }
-                    }
-                    catch (ConcurrentModificationException ex){
-                        Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-                } 
-            }
-        }).start();
+//        new Thread(new Runnable(){
+//            @Override
+//            public void run() {
+//                ret = "";
+//                 for (BBomb bomb : bombs){
+//                    try{
+//                        if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime())/1000 >= bomb.getLifeTime()){
+//                            markForRemove(bomb);
+//                            continue;
+//                        }
+//                        else{
+//                            ret += bomb.toString()+"[#bombSep#]";
+//                        }
+//                    }
+//                    catch (ConcurrentModificationException ex){
+//                        Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+//                    }
+//                } 
+//            }
+//        }).start();
+        String ret = "";
+        try{
+            for (BBomb bomb : bombs){
+                if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime())/1000 >= bomb.getLifeTime()){
+                   markForRemove(bomb);
+                   continue;
+               }
+               else{
+                   ret += bomb.toString()+"[#bombSep#]";
+               }
+           }
+        }
+        catch (ConcurrentModificationException ex){
+            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return ret;
+    }
+    
+    protected synchronized String exportExplosions(){
+        
+//        new Thread(new Runnable(){
+//            @Override
+//            public void run() {
+//                ret = "";
+//                 for (BBomb bomb : explosions){
+//                    ret += bomb.toString()+"[#explosionSep#]";
+//                } 
+//            }
+//        }).start();
        
+        String ret = "";
+        try{
+            for (BBomb bomb : explosions){
+               ret += bomb.toString()+"[#explosionSep#]";
+            }
+        }
+        catch (ConcurrentModificationException ex){
+            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
         return ret;
     }
     

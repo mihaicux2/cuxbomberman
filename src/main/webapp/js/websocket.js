@@ -114,8 +114,11 @@ function init(){
             case "chars":
                 renderChars(toProc);
                 break;
-            case "bomb":
+            case "bombs":
                 renderBombs(toProc);
+                break;
+            case "explosions":
+                renderExplosions(toProc);
                 break;
         }
     };
@@ -125,12 +128,11 @@ function init(){
         clearInterval(timer);
     };
   }
-  catch(ex){ log(ex); }
+  catch(ex){ console.log(ex); }
   $("#msg").focus();
 }
 
 function renderBombs(toProc){
-    //console.log(toProc);
     $(".bomb").remove();
     bombs = toProc.split("[#bombSep#]");
     var last = bombs.length;
@@ -143,7 +145,46 @@ function renderBombs(toProc){
            str = "<div class='bomb' style='position:absolute; top:" + bomb.posY + "px; left:" + bomb.posX + "px;'><img src='images/characters/19.gif' width='" + bomb.width + "' height='" + bomb.height + "' /></div>";
            $("#world").append(str);
         }
-        catch(ex){ log(ex); }
+        catch(ex){ console.log(ex); }
+    } 
+}
+
+function renderExplosions(toProc){
+    $(".exp").remove();
+    exps = toProc.split("[#explosionSep#]");
+    var last = exps.length;
+    var idx = 0;
+    for (i in exps){
+        idx++;
+        if (idx == last) break;
+        try{
+           exp = JSON.parse(exps[i]);
+           str = "<div class='exp' style='position:absolute; font-size:3px; background:#ff9900; top:" + exp.posY + "px; left:" + exp.posX + "px; width:"+exp.width+"px; height:"+exp.height+"px;'>&nbsp;</div>";
+           for (j in exp.directions){
+               //console.log(exp.directions[j]);
+               var posX = exp.posX;
+               var posY = exp.posY;
+               switch (exp.directions[j]){
+                   case "up":
+                       posY -= exp.height;
+                       break;
+                   case "down":
+                       posX += exp.height;
+                       break;
+                   case "left":
+                       posX -= exp.width;
+                       break;
+                   case "right":
+                       posX += exp.width;
+                       break;
+                   default: continue;
+               }
+               str = "<div class='exp' style='position:absolute; font-size:3px; background:#ff9900; top:" + posY + "px; left:" + posX + "px; width:"+exp.width+"px; height:"+exp.height+"px;'>&nbsp;</div>";
+           }
+           $("#world").append(str);
+           console.log(exp);
+        }
+        catch(ex){ console.log(ex); }
     } 
 }
 
@@ -154,7 +195,7 @@ function renderMap(toProc){
     bricks = toProc.split("[#wallSep#]");
     if (bricks.length && brickLength == bricks.length) return;
     brickLength = bricks.length;
-    console.log(brickLength);
+    //console.log(brickLength);
     $(".brick").remove();
     var last = bricks.length;
     var idx = 0;
@@ -166,7 +207,7 @@ function renderMap(toProc){
            str = "<div class='brick' style='position:absolute; top:" + brick.posY + "px; left:" + brick.posX + "px;' alt='"+brick.name+"' title='"+brick.name+"'><img src='images/walls/" + brick.texture + "' width='" + brick.width + "' height='" + brick.height + "' /></div>";
            $("#world").append(str);
         }
-        catch(ex){ log(ex); }
+        catch(ex){ console.log(ex); }
     }
 }
 
@@ -269,7 +310,7 @@ function updateStatus(){
         FIRE = !FIRE;
     }
 
-    try{ socket.send("STATUS"); } catch(ex){ log(ex); } // request info about the other users
+    //try{ socket.send("STATUS"); } catch(ex){ log(ex); } // request info about the other users
 
 }
 
@@ -277,28 +318,12 @@ function canFire(){
     IS_FIRING = false;
 }
 
-function send(){
-  var txt,msg;
-  txt = $("#msg");
-  msg = txt.val();
-  if(!msg){ alert("Message can not be empty"); return; }
-  txt.val("");
-  txt.focus();
-  try{ socket.send("TEXT " + msg); /*log('Sent: '+msg);*/ } catch(ex){ log(ex); }
-}
 function quit(){
   log("Goodbye!");
   try{
 	socket.send("QUIT");
   	socket.close();
   	socket=null;
-  	init();
-  	$("#text").attr("disabled", "disabled");
-	$("#quit").attr("disabled", "disabled");
-	$("#msg").attr("disabled", "disabled");
-        $("#upload").attr("disabled", "disabled");
-	$("#join").removeAttr("disabled");
-	$("#name").removeAttr("disabled");
   }
   catch(ex){ log(ex); }
 }
