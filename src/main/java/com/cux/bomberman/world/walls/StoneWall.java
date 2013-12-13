@@ -15,8 +15,6 @@ public class StoneWall extends AbstractWall{
     public StoneWall(int posX, int posY) {
         super("stone");
         this.texture = "stone.gif";
-        this.setHeight(30);
-        this.setWidth(30);
         this.setPosX(posX);
         this.setPosY(posY);
         this.makeUnblowable();

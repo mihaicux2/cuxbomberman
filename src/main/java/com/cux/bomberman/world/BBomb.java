@@ -16,12 +16,8 @@ import org.codehaus.jackson.map.ObjectWriter;
  * @author root
  * @todo check if owner has remote for bomb => will set isVolatile : false & lifeTime = -1
  */
-public class BBomb {
+public class BBomb extends AbstractBlock {
 
-    private int posX = 0;
-    protected int posY = 0;
-    protected int width = 18;
-    protected int height = 18;
     //protected String charId = "";
     protected BCharacter owner;
     protected Date creationTime = null;
@@ -29,43 +25,10 @@ public class BBomb {
     protected boolean volatileB = true;
     
     public BBomb(BCharacter owner){
-        this.owner = owner;
-        this.posX = owner.getPosX();
-        this.posY = owner.getPosY();
+        this.owner = owner;        
+        this.posX = (owner.getPosX()/World.wallDim)*World.wallDim;
+        this.posY = (owner.getPosY()/World.wallDim)*World.wallDim;
         this.creationTime = new Date();
-        
-    }
-    
-    public int getPosX() {
-        return posX;
-    }
-
-    public void setPosX(int posX) {
-        this.posX = posX;
-    }
-
-    public int getPosY() {
-        return posY;
-    }
-
-    public void setPosY(int posY) {
-        this.posY = posY;
-    }
-
-    public int getWidth() {
-        return width;
-    }
-
-    public void setWidth(int width) {
-        this.width = width;
-    }
-
-    public int getHeight() {
-        return height;
-    }
-
-    public void setHeight(int height) {
-        this.height = height;
     }
 
     public String getCharId() {

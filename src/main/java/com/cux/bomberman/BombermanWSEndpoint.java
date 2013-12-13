@@ -6,6 +6,7 @@
 
 package com.cux.bomberman;
 
+import com.cux.bomberman.world.AbstractBlock;
 import com.cux.bomberman.world.BBomb;
 import java.io.IOException;
 /*import java.nio.ByteBuffer;
@@ -93,7 +94,9 @@ public class BombermanWSEndpoint {
             case "bomb":
                 crtChar.addOrDropBomb(); // change character state
                 if (crtChar.getState() == "Normal"){ // if he dropped the bomb, add the bomb to the screen
-                    this.bombs.add(new BBomb(crtChar));
+                    BBomb b = new BBomb(crtChar);
+                    this.bombs.add(b);
+                    map.blockMatrix[b.getPosX()/World.wallDim][b.getPosY()/World.wallDim] = b;
                 }
                 break;
             case "trap":
@@ -137,8 +140,8 @@ public class BombermanWSEndpoint {
         newChar = new BCharacter(peer.getId());
         newChar.setPosX(0);
         newChar.setPosY(0);
-        newChar.setWidth(20);
-        newChar.setHeight(30);
+        newChar.setWidth(World.wallDim);
+        newChar.setHeight(World.wallDim);
         
         chars.put(peer.getId(), newChar);
         
@@ -146,9 +149,6 @@ public class BombermanWSEndpoint {
             map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
         }
         
-//        if (isFirst){
-//            watchPeers();
-//        }
         watchPeer(peer);
     }
 
@@ -166,7 +166,7 @@ public class BombermanWSEndpoint {
             @Override
             public void run() {
                 isFirst = false;
-                while (peer.isOpen() && workingThreads.contains(peer.getId())){
+                while (peer.isOpen()){
                     try {
                         peer.getBasicRemote().sendText("chars:[" + environment.exportChars()); // something...
                         peer.getBasicRemote().sendText("map:[" + environment.exportMap());
@@ -181,36 +181,6 @@ public class BombermanWSEndpoint {
             }
         }).start();
     }
-    
-//    public synchronized void watchPeers(){
-//        System.out.println("da");
-//        new Thread(new Runnable(){
-//            @Override
-//            public void run() {
-//                isFirst = false;
-//                while (true){
-//                    try {
-//                        exportEnvironment();
-//                        Thread.sleep(10); // limiteaza la 100FPS comunicarea cu serverul
-//                    } catch (InterruptedException ex) {
-//                        Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
-//                    }
-//                }
-//            }
-//        }).start();
-//    }
-//    
-//    protected synchronized void exportEnvironment(){
-//        for (Session peer2 : peers) {
-//            try {
-//                peer2.getBasicRemote().sendText("chars:[" + this.exportChars()); // something...
-//                peer2.getBasicRemote().sendText("map:[" + this.exportMap());
-//                peer2.getBasicRemote().sendText("bomb:[" + this.exportBombs());
-//            } catch (IOException ex) {
-//                Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-//        }
-//    }
     
     protected synchronized void delayedRemove(final String peerId){
         new Thread(new Runnable(){
@@ -232,6 +202,7 @@ public class BombermanWSEndpoint {
             @Override
             public void run() {
                 try {
+                    map.blockMatrix[bomb.getPosX()/World.wallDim][bomb.getPosY()/World.wallDim] = null;
                     Thread.sleep(1000); // wait for a one second before actual removing
                     bombs.remove(bomb);
                 } catch (InterruptedException ex) {

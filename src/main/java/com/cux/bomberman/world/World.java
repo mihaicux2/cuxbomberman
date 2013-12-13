@@ -21,17 +21,22 @@ import org.codehaus.jackson.map.ObjectWriter;
 
 /**
  *
- * @author root
+ * @author mihaicux
  */
 public class World {
     
     private final static int WIDTH = 640;
     private final static int HEIGHT = 480;
+    public final static int wallDim = 30; // width = height
     private String mapContent = "";
     
     private String mapFile;
     
-    public static Set<AbstractWall> bricks = Collections.synchronizedSet(new HashSet<AbstractWall>());
+    // used for iterating
+    public static Set<AbstractWall> walls = Collections.synchronizedSet(new HashSet<AbstractWall>());
+    
+    // used for mapping and collisions
+    public static AbstractBlock[][] blockMatrix = new AbstractBlock[100][100];
     
     public static int getWidth(){
         return WIDTH;
@@ -48,33 +53,41 @@ public class World {
             String line = null; //not declared within while loop
             while (( line = input.readLine()) != null){
                 String[] props = line.split("##");
-                AbstractWall brick = null;
-                //mapContent += props[0]+"[kk]";
+                AbstractWall wall = null;
+                int x = Integer.parseInt(props[1]);
+                int y = Integer.parseInt(props[2]);
+                System.out.println(line);
                 switch(props[0]){
                     case "brick":
-                        brick = new BrickWall(Integer.parseInt(props[1]), Integer.parseInt(props[2]));
+                        wall = new BrickWall(x, y);
                         break;
                     case "steel":
-                        brick = new SteelWall(Integer.parseInt(props[1]), Integer.parseInt(props[2]));
+                        wall = new SteelWall(x, y);
                         break;
                     case "grass":
-                        brick = new GrassWall(Integer.parseInt(props[1]), Integer.parseInt(props[2]));
+                        wall = new GrassWall(x, y);
                         break;
                     case "stone":
-                        brick = new StoneWall(Integer.parseInt(props[1]), Integer.parseInt(props[2]));
+                        wall = new StoneWall(x, y);
                         break;
                     case "water":
-                        brick = new WaterWall(Integer.parseInt(props[1]), Integer.parseInt(props[2]));
+                        wall = new WaterWall(Integer.parseInt(props[1]), Integer.parseInt(props[2]));
                     default:
-                        //brick = new WaterWall(0, 0);
+                        //wall = new WaterWall(0, 0);
                         break;
                 }
-                this.bricks.add(brick);
+                if (wall != null){
+                    wall.setHeight(World.wallDim);
+                    wall.setWidth(World.wallDim);
+                    this.walls.add(wall);
+                    blockMatrix[x/World.wallDim][y/World.wallDim] = wall;
+                }
             }
             input.close();
         } catch (IOException ex) {
             Logger.getLogger(World.class.getName()).log(Level.SEVERE, null, ex);
         }
+        
     }
     
     public synchronized boolean HasMapCollision(BCharacter myChar){
@@ -86,25 +99,29 @@ public class World {
             //myChar.stepBack(null);
             return true;
         }
-        boolean ret = false;
-        if (this.bricks.size() > 0){
-            for (AbstractWall brick : this.bricks){
-                if (myChar.hits(brick) && myChar.walksTo(brick)){
-                    //myChar.stepBack(brick);
-                    ret = true;
-                    break;
-                }
-            }
-        }
-        return ret;
+        
+        int x1 = myChar.getPosX()/World.wallDim;
+        int y1 = myChar.getPosY()/World.wallDim;
+        
+        //if (blockMatrix[x1][y1] != null && myChar.hits(blockMatrix[x1][y1]) && myChar.walksTo(blockMatrix[x1][y1])) return true;
+        if (x1 > 0 && blockMatrix[x1-1][y1] != null && myChar.hits(blockMatrix[x1-1][y1]) && myChar.walksTo(blockMatrix[x1-1][y1])) return true;
+        if (y1 > 0 && blockMatrix[x1][y1-1] != null && myChar.hits(blockMatrix[x1][y1-1]) && myChar.walksTo(blockMatrix[x1][y1-1])) return true;
+        if (x1 > 0 && y1 > 0 && blockMatrix[x1-1][y1-1] != null && myChar.hits(blockMatrix[x1-1][y1-1]) && myChar.walksTo(blockMatrix[x1-1][y1-1])) return true;
+        if (x1 < 99 && blockMatrix[x1+1][y1] != null && myChar.hits(blockMatrix[x1+1][y1]) && myChar.walksTo(blockMatrix[x1+1][y1])) return true;
+        if (y1 < 99 && blockMatrix[x1][y1+1] != null && myChar.hits(blockMatrix[x1][y1+1]) && myChar.walksTo(blockMatrix[x1][y1+1])) return true;
+        if (x1 < 99 && y1 < 99 && blockMatrix[x1+1][y1+1] != null && myChar.hits(blockMatrix[x1+1][y1+1]) && myChar.walksTo(blockMatrix[x1+1][y1+1])) return true;
+        if (x1 > 0 && y1 < 99 && blockMatrix[x1-1][y1+1] != null && myChar.hits(blockMatrix[x1-1][y1+1]) && myChar.walksTo(blockMatrix[x1-1][y1+1])) return true;
+        if (x1 < 99 && y1 > 0 && blockMatrix[x1+1][y1-1] != null && myChar.hits(blockMatrix[x1+1][y1-1]) && myChar.walksTo(blockMatrix[x1+1][y1-1])) return true;
+        
+        return false;
     }
     
     @Override
     public String toString(){
         String ret = "";
-        for (AbstractWall brick : bricks){
-            ret += brick.toString()+"[#brickSep#]";
-            //ret += brick.getName()+"[#brickSep#]";
+        for (AbstractWall wall : walls){
+            ret += wall.toString()+"[#wallSep#]";
+            //ret += wall.getName()+"[#wallSep#]";
         }
         return ret;
         //return mapContent;
