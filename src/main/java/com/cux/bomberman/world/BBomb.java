@@ -25,12 +25,16 @@ public class BBomb extends AbstractBlock {
     protected boolean volatileB = true;
     
     public BBomb(BCharacter owner){
-        this.owner = owner;        
+        this.owner = owner.clone();        
         this.posX = (owner.getPosX()/World.wallDim)*World.wallDim;
         this.posY = (owner.getPosY()/World.wallDim)*World.wallDim;
         this.creationTime = new Date();
     }
 
+    public BCharacter getOwner(){
+        return this.owner;
+    }
+    
     public String getCharId() {
         return this.owner.getName();
     }
