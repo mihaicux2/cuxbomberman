@@ -120,6 +120,9 @@ function init(){
             case "explosions":
                 renderExplosions(toProc);
                 break;
+            case "items":
+                renderItems(toProc);
+                break;
         }
     };
     socket.onclose   = function(msg){
@@ -130,6 +133,25 @@ function init(){
   }
   catch(ex){ console.log(ex); }
   $("#msg").focus();
+}
+
+function renderItems(toProc){
+    $(".item").remove();
+    //console.log(toProc);
+    items = toProc.split("[#itemSep#]");
+    var last = items.length;
+    var idx = 0;
+    for (i in items){
+        idx++;
+        if (idx == last) break;
+        try{
+           item = JSON.parse(items[i]);
+           str = "<div class='item' style='position:absolute; top:" + item.posY + "px; left:" + item.posX + "px;'><img src='images/items/"+item.texture+"' width='" + item.width + "' height='" + item.height + "' /></div>";
+           $("#world").append(str);
+           //console.log(item);
+        }
+        catch(ex){ console.log(ex); }
+    } 
 }
 
 function renderBombs(toProc){
@@ -150,7 +172,7 @@ function renderBombs(toProc){
 }
 
 function renderExplosions(toProc){
-    $(".exp").remove();
+    //$(".exp").remove();
     exps = toProc.split("[#explosionSep#]");
     var last = exps.length;
     var idx = 0;
@@ -159,7 +181,7 @@ function renderExplosions(toProc){
         if (idx == last) break;
         try{
            exp = JSON.parse(exps[i]);
-           str = "<div class='exp' style='position:absolute; font-size:3px; background:#ff9900; top:" + exp.posY + "px; left:" + exp.posX + "px; width:"+exp.width+"px; height:"+exp.height+"px;'>&nbsp;</div>";
+           str = "<div class='exp' style='z-index:999; position:absolute; font-size:3px; background:#ff9900; top:" + exp.posY + "px; left:" + exp.posX + "px; width:"+exp.width+"px; height:"+exp.height+"px;'>&nbsp;</div>";
            var ii = 0;
            for (j in exp.directions){
                ii++;
@@ -168,23 +190,89 @@ function renderExplosions(toProc){
                var posY = exp.posY;
                switch (exp.directions[j]){
                    case "up":
-                       posY -= exp.height*ii;
+                       posY -= exp.height*exp.owner.bombRange;
                        break;
                    case "down":
-                       posX += exp.height*ii;
+                       posY += exp.height;
                        break;
                    case "left":
-                       posX -= exp.width*ii;
+                       posX -= exp.width*exp.owner.bombRange;
                        break;
                    case "right":
-                       posX += exp.width*ii;
+                       posX += exp.width;
                        break;
                    default: continue;
                }
-               str = "<div class='exp' style='position:absolute; font-size:3px; background:#ff9900; top:" + posY + "px; left:" + posX + "px; width:"+exp.width+"px; height:"+exp.height+"px;'>&nbsp;</div>";
+               str += "<div class='exp extra' direction='"+exp.directions[j]+"' style='border:1px solid #ff9900; z-index:999; position:absolute; font-size:3px; background:#ff9900; top:" + posY + "px; left:" + posX + "px; width:"+exp.width+"px; height:"+exp.height+"px;'>&nbsp;</div>";
            }
            $("#world").append(str);
            //console.log(exp);
+           $(".extra").each(function(index){
+               var op    = "";
+               var sign  = ""; // retract
+               var sign2 = ""; // expand
+               var scale = "";
+               switch ($(this).attr("direction")){
+                   case "up":
+                       op = "top";
+                       sign = "+="+exp.height*(exp.ranges.up)+"px";
+                       sign2 = "-="+exp.height*(exp.ranges.up)+"px";
+                       scale = "height";
+                       break;
+                   case "down":
+                       op = "top";
+                       sign = "-="+exp.height*(exp.ranges.down-1)+"px";
+                       sign2 = "+="+exp.height*(exp.ranges.down-1)+"px";
+                       scale = "height";
+                       break;
+                   case "left":
+                       op = "left";
+                       sign = "+="+exp.width*(exp.ranges.left)+"px";
+                       sign2 = "-="+exp.width*(exp.ranges.left)+"px";
+                       scale = "width";
+                       break;
+                   case "right":
+                       op = "left";
+                       sign = "-="+exp.width*(exp.ranges.right-1)+"px";
+                       sign2 = "+="+exp.width*(exp.ranges.right-1)+"px";;
+                       scale = "width";
+                       break;
+               }
+               var animation = "";
+               if (scale == "height"){
+                   if ($(this).attr("direction") == "up"){
+                       $(this).css("border-top-left-radius", "10px");
+                       $(this).css("border-top-right-radius", "10px");
+                       $(this).css("height", exp.height*(exp.ranges.up)+"px");
+                   }
+                   else{ // down
+                       $(this).css("border-bottom-left-radius", "10px");
+                       $(this).css("border-bottom-right-radius", "10px");
+                       $(this).css("height", exp.height*(exp.ranges.down)+"px");
+                   }
+                   $(this).css("width", exp.width+"px");
+                   //animation  = '$(this).animate({"'+scale+'":"'+exp.height*exp.owner.bombRange+'px", "'+op+'":"'+sign2+'"}, 200)';
+               }
+               else{
+                   if ($(this).attr("direction") == "left"){
+                       $(this).css("border-top-left-radius", "10px");
+                       $(this).css("border-bottom-left-radius", "10px");
+                       $(this).css("width", exp.width*(exp.ranges.left)+"px");
+                   }
+                   else{ // right
+                       $(this).css("border-top-right-radius", "10px");
+                       $(this).css("border-bottom-right-radius", "10px");
+                       $(this).css("width", exp.width*(exp.ranges.right)+"px");
+                   }
+                   $(this).css("height", exp.height+"px");
+                   //animation  = '$(this).animate({"'+scale+'":"'+exp.width*exp.owner.bombRange+'px", "'+op+'":"'+sign2+'"}, 600)';
+               }
+               var animation2 = '$(this).animate({"'+scale+'":"0px", "'+op+'":"'+sign+'"}, 300)';
+               //eval(animation);
+               eval(animation2);
+               setTimeout('$(".exp").remove();', 300);
+               //console.log(animation2);
+           });
         }
         catch(ex){ console.log(ex); }
     } 

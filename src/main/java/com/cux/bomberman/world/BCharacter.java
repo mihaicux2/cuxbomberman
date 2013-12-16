@@ -6,9 +6,12 @@
 
 package com.cux.bomberman.world;
 
+import com.cux.bomberman.BombermanWSEndpoint;
+import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
 import com.sun.org.apache.bcel.internal.util.BCELifier;
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,8 +31,9 @@ public class BCharacter extends AbstractBlock{
     private String direction = "Right"; // can also be "Up", "Down" and "Left"
     private String id;
     protected int bombRange = 1;
-    protected int speed = 1;
+    protected int speed = 1; // first gear :)
     protected boolean walking = false;
+    protected boolean triggered = false; // checks if the character has a trigger for the "planted" bombs
     
     {
         // walk in normal state
@@ -68,6 +72,14 @@ public class BCharacter extends AbstractBlock{
         this.name = id;
     }
 
+    public boolean isTriggered() {
+        return triggered;
+    }
+
+    public void setTriggered(boolean triggered) {
+        this.triggered = triggered;
+    }
+    
     public boolean isWalking() {
         return walking;
     }
@@ -89,6 +101,7 @@ public class BCharacter extends AbstractBlock{
     }
 
     public void setSpeed(int speed) {
+        if (speed > 9) speed = 9;
         this.speed = speed;
     }
 
@@ -188,7 +201,8 @@ public class BCharacter extends AbstractBlock{
                             break;
                     }
                     try {
-                        Thread.sleep(10);
+                        //Thread.sleep(10);
+                        Thread.sleep(10-speed);
                     } catch (InterruptedException ex) {
                         Logger.getLogger(BCharacter.class.getName()).log(Level.SEVERE, null, ex);
                     }
@@ -202,7 +216,10 @@ public class BCharacter extends AbstractBlock{
         return Math.sqrt((x2-x1) * (x2-x1) + (y2-y1)*(y2-y1) );
     }
     
-    public boolean hits(AbstractBlock block){
+    public boolean hits(AbstractBlock block){ 
+        
+       boolean ret = false; 
+        
        int x1 = this.posX;
        int x2 = x1 + this.width;
        int y1 = this.posY;
@@ -212,11 +229,67 @@ public class BCharacter extends AbstractBlock{
        int x12 = x11 + block.getWidth();
        int y11 = block.getPosY();
        int y12 = y11 + block.getHeight();
-       if (this.direction == "Right" && x2 >= x11 && x2 < x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) return true;
-       if (this.direction == "Left" && x1 > x11 && x1 <= x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) return true;
-       if (this.direction == "Up" && y1 > y11 && y1 <= y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) return true;
-       if (this.direction == "Down" && y2 >= y11 && y2 < y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) return true;
-       return false;
+       if (this.direction == "Right" && x2 >= x11 && x2 < x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) ret = true;
+       if (this.direction == "Left" && x1 > x11 && x1 <= x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) ret = true;
+       if (this.direction == "Up" && y1 > y11 && y1 <= y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) ret = true;
+       if (this.direction == "Down" && y2 >= y11 && y2 < y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) ret = true;
+       
+       if (ret == true && AbstractItem.class.isAssignableFrom(block.getClass())){
+           this.attachEvent((AbstractItem)block);
+           World.blockMatrix[(block.getPosX() / World.wallDim)][block.getPosY() / World.wallDim] = null;
+           BombermanWSEndpoint.items.remove((AbstractItem)block);
+           ret = false;
+       }
+       
+       return ret;
+    }
+    
+    public void attachEvent(AbstractItem item){
+        item.setCreationTime(new Date());
+        switch (item.getName()) {
+            case "trigger":
+                this.setTriggered(true);
+                break;
+            case "skate":
+                this.setSpeed(this.getSpeed() + item.getScale());
+                break;
+            case "slow":
+                this.setSpeed(this.getSpeed() - -item.getScale());
+                break;
+            case "flame":
+                this.setBombRange(this.getBombRange() + item.getScale());
+                break;
+        }
+        if (item.isTimed()){
+            cycleEvent(this, item);
+        }
+    }
+    
+    private synchronized void cycleEvent(final BCharacter myChar, final AbstractItem item){
+        new Thread(new Runnable(){
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000*item.getLifeTime());
+                    switch(item.getName()){
+                        case "trigger":
+                            myChar.setTriggered(false);
+                            break;
+                        case "skate":
+                            myChar.setSpeed(myChar.getSpeed()-item.getScale());
+                            break;
+                        case "slow":
+                            myChar.setSpeed(myChar.getSpeed()+-item.getScale());
+                            break;
+                        case "flame":
+                            myChar.setBombRange(myChar.getBombRange()-item.getScale());
+                            break;
+                    }
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(BCharacter.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }).start();
     }
     
     public void stepBack(AbstractBlock block){

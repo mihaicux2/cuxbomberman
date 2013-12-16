@@ -25,8 +25,8 @@ import org.codehaus.jackson.map.ObjectWriter;
  */
 public class World {
     
-    private final static int WIDTH = 640;
-    private final static int HEIGHT = 480;
+    private final static int WIDTH = 660;
+    private final static int HEIGHT = 510;
     public final static int wallDim = 30; // width = height
     private String mapContent = "";
     
