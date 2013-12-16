@@ -15,8 +15,7 @@ public class TriggerItem extends AbstractItem{
     public TriggerItem(int posX, int posY) {
         super("trigger");
         this.texture = "item-trig.PNG";
-        this.setTimed(true);
-        this.setLifeTime(5);
+        this.setTimed(false);
         this.setPosX(posX);
         this.setPosY(posY);
     }

@@ -341,6 +341,8 @@ public class BCharacter extends AbstractBlock{
         ret.height = this.height;
         ret.direction = this.direction;
         ret.bombRange = this.bombRange;
+        ret.triggered = this.triggered;
+        ret.id = this.id;
         return ret;
     }
     

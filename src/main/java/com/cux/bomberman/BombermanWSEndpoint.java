@@ -111,6 +111,9 @@ public class BombermanWSEndpoint {
                     map.blockMatrix[b.getPosX()/World.wallDim][b.getPosY()/World.wallDim] = b;
                 }
                 break;
+            case "detonate":
+                detonateBomb(crtChar);
+                break;
             case "trap":
                 crtChar.makeTrapped();
                 break;
@@ -231,6 +234,19 @@ public class BombermanWSEndpoint {
                 }
             }
         }).start();
+    }
+    
+    protected void detonateBomb(BCharacter myChar){
+        try{
+            for (BBomb bomb : bombs){
+                if (bomb.getCharId().equals(myChar.getName())){
+                    bomb.setVolatileB(true);
+                    break;
+                }
+            }
+        } catch (ConcurrentModificationException ex){
+            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
     protected synchronized void delayedRemove(final String peerId){
