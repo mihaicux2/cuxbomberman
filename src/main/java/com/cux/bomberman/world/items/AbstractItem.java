@@ -4,8 +4,9 @@
  * and open the template in the editor.
  */
 
-package com.cux.bomberman.world;
+package com.cux.bomberman.world.items;
 
+import com.cux.bomberman.world.AbstractBlock;
 import java.io.IOException;
 import java.util.Date;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -13,35 +14,31 @@ import org.codehaus.jackson.map.ObjectWriter;
 
 /**
  *
- * @author root
- * @todo check if owner has remote for bomb => will set isVolatile : false & lifeTime = -1
+ * @author mihaicux
  */
-public class BBomb extends AbstractBlock {
-
-    //protected String charId = "";
-    protected BCharacter owner;
+public abstract class AbstractItem extends AbstractBlock{
+    
+    public String texture;
+    public String name;
+    public boolean timed = true;
     protected Date creationTime = null;
     protected int lifeTime = 3;
-    protected boolean volatileB = true;
+    protected int scale = 1; // used for speed, bomb range, etc.
     
-    public BBomb(BCharacter owner){
-        this.owner = owner.clone();        
-        this.posX = (owner.getPosX()/World.wallDim)*World.wallDim;
-        this.posY = (owner.getPosY()/World.wallDim)*World.wallDim;
-        this.creationTime = new Date();
-        if (this.owner.isTriggered()){
-            this.volatileB = false;
-        }
+    protected AbstractItem(String name){
+        this.name = name;
     }
 
-    public BCharacter getOwner(){
-        return this.owner;
-    }
-    
-    public String getCharId() {
-        return this.owner.getName();
+    public int getScale() {
+        return scale;
     }
 
+    public void setScale(int scale) {
+        this.scale = scale;
+    }
+
+    
+    
     public Date getCreationTime() {
         return creationTime;
     }
@@ -57,14 +54,26 @@ public class BBomb extends AbstractBlock {
     public void setLifeTime(int lifeTime) {
         this.lifeTime = lifeTime;
     }
-
-    public boolean isVolatileB() {
-        return volatileB;
+            
+    public boolean isTimed() {
+        return timed;
     }
 
-    public void setVolatileB(boolean volatileB) {
-        this.volatileB = volatileB;
-    }   
+    public void setTimed(boolean timed) {
+        this.timed = timed;
+    }    
+    
+    public void setTexture(String texture) {
+        this.texture = texture;
+    }
+
+    public String getName() {
+        return name;
+    }
+    
+    public String getTexture() {
+        return texture;
+    }
     
     @Override
     public String toString(){
