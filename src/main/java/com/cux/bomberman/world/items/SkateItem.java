@@ -15,7 +15,8 @@ public class SkateItem extends AbstractItem{
     public SkateItem(int posX, int posY) {
         super("skate");
         this.setTimed(true);
-        this.setLifeTime(5);
+        this.setLifeTime(10);
+        this.setScale(3);
         this.texture = "item-skate.PNG";
         this.setPosX(posX);
         this.setPosY(posY);
