@@ -259,7 +259,7 @@ public class BCharacter extends AbstractBlock{
                 this.setSpeed(this.getSpeed() + item.getScale());
                 break;
             case "slow":
-                this.setSpeed(this.getSpeed() - -item.getScale());
+                this.setSpeed(this.getSpeed() - item.getScale());
                 break;
             case "flame":
                 this.setBombRange(this.getBombRange() + item.getScale());
