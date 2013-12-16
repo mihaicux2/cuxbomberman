@@ -11,6 +11,7 @@ import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
 import com.sun.org.apache.bcel.internal.util.BCELifier;
 import java.io.IOException;
+import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.logging.Level;
@@ -237,7 +238,11 @@ public class BCharacter extends AbstractBlock{
        if (ret == true && AbstractItem.class.isAssignableFrom(block.getClass())){
            this.attachEvent((AbstractItem)block);
            World.blockMatrix[(block.getPosX() / World.wallDim)][block.getPosY() / World.wallDim] = null;
-           BombermanWSEndpoint.items.remove((AbstractItem)block);
+           try{
+               BombermanWSEndpoint.items.remove((AbstractItem)block);
+           } catch (ConcurrentModificationException ex) {
+               Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+           }
            ret = false;
        }
        

@@ -16,6 +16,7 @@ public class FlameItem extends AbstractItem{
         super("flame");
         this.texture = "item-flame.PNG";
         this.scale = 1;
+        this.setTimed(false);
         this.setPosX(posX);
         this.setPosY(posY);
     }
