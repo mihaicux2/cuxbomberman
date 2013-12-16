@@ -44,6 +44,7 @@ var MOVE_LEFT = false;
 var MOVE_RIGHT = false;
 var INC_SPEED  = false;
 var FIRE = false;
+var DETONATE = false;
 
 function init(){
   var host = "ws://" + document.location.host + document.location.pathname + "bombermanendpoint";
@@ -76,6 +77,9 @@ function init(){
                 case 13: // ENTER
                     FIRE = true;
                     break;
+                case 32: // SPACE
+                    DETONATE = true;
+                    break;
             }
         });
         $(window).keyup(function(e){
@@ -94,8 +98,13 @@ function init(){
                     break;
                 case 16: // SHIFT
                     INC_SPEED = false;
+                    break;
                 case 13: // ENTER
                     FIRE = false;
+                    break;
+                case 32: // SPACE
+                    DETONATE = false;
+                    break;
             }
         });
         timer = setInterval("updateStatus()", 10); // send requests every 10 miliseconds => limit to 100 FPS (at most)
@@ -393,6 +402,10 @@ function updateStatus(){
     else if (MOVE_RIGHT){
         try{ socket.send("right"); } catch(ex){ log(ex); } // request info about the other users
         walking = true;
+    }
+    
+    if (DETONATE){
+        try{ socket.send("detonate"); } catch(ex){ log(ex); } // request info about the other users
     }
     
     if (FIRE){
