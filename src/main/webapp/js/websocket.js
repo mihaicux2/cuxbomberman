@@ -368,11 +368,13 @@ function renderChars(toProc){
         }
         catch(ex){ console.log(ex); }
     }
-//    $(".character").each(function(idx){
-//        if (!$.inArray($(this).attr("id"), charNames)){
-//            $(this).remove();
-//        }
-//    });
+    //console.log(charNames);
+    $(".character").each(function(idx){
+        if ($.inArray($(this).attr("id"), charNames) == -1){
+            $(this).remove();
+            //console.log($(this).attr("id"));
+        }
+    });
 }
 
 function boundNumber(nr, lo, hi){
@@ -406,6 +408,7 @@ function updateStatus(){
     
     if (DETONATE){
         try{ socket.send("detonate"); } catch(ex){ log(ex); } // request info about the other users
+        DETONATE = !DETONATE;
     }
     
     if (FIRE){

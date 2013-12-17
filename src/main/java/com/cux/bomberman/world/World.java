@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -33,7 +34,7 @@ public class World {
     private String mapFile;
     
     // used for iterating
-    public static Set<AbstractWall> walls = Collections.synchronizedSet(new HashSet<AbstractWall>());
+    public static Vector<AbstractWall> walls = new Vector<AbstractWall>();
     
     // used for mapping and collisions
     public static AbstractBlock[][] blockMatrix = new AbstractBlock[100][100];
