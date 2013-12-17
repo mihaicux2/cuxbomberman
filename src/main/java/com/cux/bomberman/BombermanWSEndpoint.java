@@ -39,6 +39,7 @@ import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -49,19 +50,19 @@ import java.util.concurrent.ConcurrentMap;
 @ServerEndpoint("/bombermanendpoint")
 public class BombermanWSEndpoint {
 
-    private static Set<Session> peers = Collections.synchronizedSet(new HashSet<Session>());
+    private static Vector<Session> peers = new Vector<Session>();
     
-    private static Set<BBomb> bombs = Collections.synchronizedSet(new HashSet<BBomb>());
+    private static Vector<BBomb> bombs = new Vector<BBomb>();
     
-    private static Set<BBomb> markedBombs = Collections.synchronizedSet(new HashSet<BBomb>());
+    private static Vector<BBomb> markedBombs = new Vector<BBomb>();
     
-    private static ConcurrentMap<String, BCharacter> chars = new ConcurrentHashMap<String, BCharacter>();
+    private static HashMap<String, BCharacter> chars = new HashMap<String, BCharacter>();
     
-    private static Set<String> workingThreads = Collections.synchronizedSet(new HashSet<String>());
+    private static Vector<String> workingThreads =new Vector<String>();
     
-    private static Set<Explosion> explosions = Collections.synchronizedSet(new HashSet<Explosion>());
+    private static Vector<Explosion> explosions = new Vector<Explosion>();
     
-    public static Set<AbstractItem> items = Collections.synchronizedSet(new HashSet<AbstractItem>());
+    public static Vector<AbstractItem> items = new Vector<AbstractItem>();
     
     private static boolean isFirst = true;
     
@@ -112,7 +113,9 @@ public class BombermanWSEndpoint {
                 }
                 break;
             case "detonate":
-                detonateBomb(crtChar);
+                if(crtChar.isTriggered()){
+                    detonateBomb(crtChar);
+                }
                 break;
             case "trap":
                 crtChar.makeTrapped();
@@ -241,6 +244,7 @@ public class BombermanWSEndpoint {
             for (BBomb bomb : bombs){
                 if (bomb.getCharId().equals(myChar.getName())){
                     bomb.setVolatileB(true);
+                    markForRemove(bomb);
                     break;
                 }
             }
