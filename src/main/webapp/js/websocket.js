@@ -139,6 +139,11 @@ function init(){
         $("#chatUsers").html("");
         clearInterval(timer);
     };
+    
+    $(window).onclose(function(){
+        socket.send("QUIT");
+    });
+    
   }
   catch(ex){ console.log(ex); }
   $("#msg").focus();
