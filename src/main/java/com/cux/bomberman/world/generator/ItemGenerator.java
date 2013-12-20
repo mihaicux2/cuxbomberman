@@ -12,7 +12,6 @@ import com.cux.bomberman.world.items.FlameItem;
 import com.cux.bomberman.world.items.SkateItem;
 import com.cux.bomberman.world.items.SlowItem;
 import com.cux.bomberman.world.items.TriggerItem;
-import com.cux.bomberman.world.walls.*;
 import java.util.Random;
 
 /**

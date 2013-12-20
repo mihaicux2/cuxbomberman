@@ -11,7 +11,10 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Vector;
@@ -34,10 +37,12 @@ public class World {
     private String mapFile;
     
     // used for iterating
-    public static Vector<AbstractWall> walls = new Vector<AbstractWall>();
+    public static ArrayList<AbstractWall> walls = new ArrayList<>();
     
     // used for mapping and collisions
     public static AbstractBlock[][] blockMatrix = new AbstractBlock[100][100];
+    
+    public static HashMap<String, BCharacter>[][] chars = new HashMap[100][100];
     
     public static int getWidth(){
         return WIDTH;
@@ -50,6 +55,11 @@ public class World {
     public World(String map){
         this.mapFile = map;
         try {
+            for (int i = 0; i < 100; i++){
+                for (int j = 0; j < 100; j++){
+                    chars[i][j] = new HashMap<String, BCharacter>();
+                }
+            }
             BufferedReader input =  new BufferedReader(new FileReader(map));
             String line = null; //not declared within while loop
             while (( line = input.readLine()) != null){

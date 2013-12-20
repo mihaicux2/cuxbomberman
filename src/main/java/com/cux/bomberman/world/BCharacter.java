@@ -26,7 +26,7 @@ import org.codehaus.jackson.map.ObjectWriter;
 public class BCharacter extends AbstractBlock{
     
     protected String name;
-    private HashMap<String, Integer> textures = new HashMap<String, Integer>(); // direction+state, texture = int(.gif)
+    private HashMap<String, Integer> textures = new HashMap<>(); // direction+state, texture = int(.gif)
     public int crtTexture = 2; // can also be {1, 3, 4, 14, 15, 16, 17, 20, 22, 23, 24}
     private String state = "Normal"; // can also be "Bomb", "Blow", "Win" and "Trapped"
     private String direction = "Right"; // can also be "Up", "Down" and "Left"
@@ -182,10 +182,12 @@ public class BCharacter extends AbstractBlock{
         this.IAmWalking(this, "right");
     }
     
+    // change occupied block in the world matrix mapping
     private synchronized void IAmWalking(final BCharacter myChar, final String direction){
         new Thread(new Runnable(){
             @Override
             public void run() {
+                World.chars[myChar.posX / World.wallDim][myChar.posY / World.wallDim].remove(myChar.name);
                 for (int i = 0; i < World.wallDim; i++){
                     switch(direction){
                         case "up":
@@ -208,6 +210,7 @@ public class BCharacter extends AbstractBlock{
                         Logger.getLogger(BCharacter.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
+                World.chars[myChar.posX / World.wallDim][myChar.posY / World.wallDim].put(myChar.name, myChar);
                 myChar.walking = false;
             }
         }).start();

@@ -9,10 +9,6 @@ package com.cux.bomberman;
 import com.cux.bomberman.world.AbstractBlock;
 import com.cux.bomberman.world.BBomb;
 import java.io.IOException;
-/*import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CoderResult;*/
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,21 +21,19 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
-//import com.cux.bomberman.world.walls.*;
 import com.cux.bomberman.world.BCharacter;
 import com.cux.bomberman.world.Explosion;
 import com.cux.bomberman.world.World;
 import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
-import com.cux.bomberman.world.walls.BrickWall;
 import java.util.Collection;
-//import com.cux.bomberman.world.generator.WallGenerator;
-//import com.cux.bomberman.world.walls.AbstractWall;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Vector;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -50,19 +44,19 @@ import java.util.concurrent.ConcurrentMap;
 @ServerEndpoint("/bombermanendpoint")
 public class BombermanWSEndpoint {
 
-    private static Vector<Session> peers = new Vector<Session>();
+    private static final ArrayList<Session> peers = new ArrayList<>();
     
-    private static Vector<BBomb> bombs = new Vector<BBomb>();
+    private static final ArrayList<BBomb> bombs = new ArrayList<>();
     
-    private static Vector<BBomb> markedBombs = new Vector<BBomb>();
+    private static final ArrayList<BBomb> markedBombs = new ArrayList<>();
     
-    private static HashMap<String, BCharacter> chars = new HashMap<String, BCharacter>();
+    private static final HashMap<String, BCharacter> chars = new HashMap<>();
     
-    private static Vector<String> workingThreads =new Vector<String>();
+    private static final ArrayList<String> workingThreads =new ArrayList<>();
     
-    private static Vector<Explosion> explosions = new Vector<Explosion>();
+    private static final ArrayList<Explosion> explosions = new ArrayList<>();
     
-    public static Vector<AbstractItem> items = new Vector<AbstractItem>();
+    public static ArrayList<AbstractItem> items = new ArrayList<>();
     
     private static boolean isFirst = true;
     
@@ -149,6 +143,13 @@ public class BombermanWSEndpoint {
     public synchronized void onClose(Session peer) {
         this.delayedRemove(peer.getId());
         this.stopThread(peer.getId());
+        if (peer.isOpen()){
+            try {
+                peer.close();
+            } catch (IOException ex) {
+                Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
         peers.remove(peer);
         System.out.println("out...");
     }
@@ -172,6 +173,8 @@ public class BombermanWSEndpoint {
             map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
         }
         
+        map.chars[0][0].put(newChar.getName(), newChar);
+        
         watchPeer(peer);
     }
 
@@ -183,18 +186,37 @@ public class BombermanWSEndpoint {
         workingThreads.remove(threadId);
     }
     
+    public synchronized boolean isTrapped(BCharacter crtChar){
+        int x     = crtChar.getPosX();
+        int y     = crtChar.getPosY();
+        int w     = crtChar.getWidth();
+        int h     = crtChar.getHeight();
+        int left  = (x/World.wallDim -1);
+        int right = (x/World.wallDim +1);
+        int up    = (y/World.wallDim -1);
+        int down  = (y/World.wallDim +1);
+        return ((x<=0 || wallExists(map.blockMatrix, left, y/World.wallDim) || bombExists(map.blockMatrix, left, y/World.wallDim)) &&
+                (x+w >= World.getWidth() || wallExists(map.blockMatrix, right, y/World.wallDim) || bombExists(map.blockMatrix, right, y/World.wallDim)) &&
+                (y <= 0 || wallExists(map.blockMatrix, x/World.wallDim, up) || bombExists(map.blockMatrix, x/World.wallDim, up)) &&
+                (y+h >= World.getHeight() || wallExists(map.blockMatrix, x/World.wallDim, down) || bombExists(map.blockMatrix, x/World.wallDim, down)));
+    }
+    
     public synchronized void watchPeer(final Session peer){
         final BombermanWSEndpoint environment = this;
         new Thread(new Runnable(){
             @Override
             public synchronized void run() {
-                isFirst = false;
                 String precCharStr = "";
                 String precBombStr = "";
                 String precExplStr = "";
                 String precWallStr = "";
                 String precItemStr = "";
                 while (peer.isOpen() && workingThreads.contains(peer.getId())){
+                    isFirst = false;
+                    BCharacter crtChar = chars.get(peer.getId());
+                    if (isTrapped(crtChar)){
+                        crtChar.setState("Trapped"); // will be automated reverted when a bomb kills him >:)
+                    }
                     try {
                         String exportCharStr = environment.exportChars();
                         if (!exportCharStr.equals(precCharStr)){
@@ -268,7 +290,7 @@ public class BombermanWSEndpoint {
         }).start();
     }
     
-    public static boolean elementExists(AbstractBlock[][] data, int i, int j){
+    public static boolean wallExists(AbstractBlock[][] data, int i, int j){
         try{
           AbstractBlock x = data[i][j];
           if (data[i][j] == null) return false;
@@ -277,6 +299,56 @@ public class BombermanWSEndpoint {
         } catch(ArrayIndexOutOfBoundsException e){
           return false;
         }
+    }
+    
+    public static boolean bombExists(AbstractBlock[][] data, int i, int j){
+        try{
+          AbstractBlock x = data[i][j];
+          if (data[i][j] == null) return false;
+          if (!BBomb.class.isAssignableFrom(data[i][j].getClass())) return false;
+          return true;
+        } catch(ArrayIndexOutOfBoundsException e){
+          return false;
+        }
+        
+    }
+    
+    public static boolean characterExists(int i, int j){
+        return !map.chars[i][j].isEmpty();
+    }
+    
+    protected synchronized void triggerBlewCharacter(final int x, final int y){
+        new Thread(new Runnable(){
+            @Override
+            public synchronized void run() {
+                Iterator it = map.chars[x][y].entrySet().iterator();
+                while (it.hasNext()) {
+                    Map.Entry pairs = (Map.Entry)it.next();
+                    revertState((BCharacter)pairs.getValue());
+                    it.remove(); // avoids a ConcurrentModificationException
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }).start();
+    }
+    
+    protected synchronized void revertState(final BCharacter myChar){
+        new Thread(new Runnable(){
+            @Override
+            public synchronized void run() {
+                myChar.setState("Blow");
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                myChar.setState("Normal");
+            }
+        }).start();
     }
     
     protected synchronized void markForRemove(final BBomb bomb){
@@ -288,20 +360,26 @@ public class BombermanWSEndpoint {
                     Set<String> wallHits = Collections.synchronizedSet(new HashSet<String>());
                     map.blockMatrix[bomb.getPosX()/World.wallDim][bomb.getPosY()/World.wallDim] = null;
                     int charRange = bomb.getOwner().getBombRange();
+                    
                     for (int i = 1; i <= charRange; i++){
-                        if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim)){
+                        
+                        // right
+                        if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.bombExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim)){
+                             markForRemove((BBomb)map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]);
+                             System.out.println("hit one");
+                        }
+                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.characterExists((bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim)){
+                            triggerBlewCharacter((bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim);
+                        }
+                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim)){
                             exp.directions.add("right");
                             if (!wallHits.contains("right")){
                                 if (((AbstractWall)map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]).isBlowable()){
                                     map.walls.remove(map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]);
                                     exp.ranges.put("right", exp.ranges.get("right")+1);
+                                    //map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim] = null;
+                                    flipForItems((bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim);
                                     
-                                    AbstractItem item = ItemGenerator.getInstance().generateRandomItem();
-                                    item.setPosX(map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim].getPosX());
-                                    item.setPosY(map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim].getPosY());
-                                    map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim] = null;
-                                    map.blockMatrix[(bomb.getPosX() / World.wallDim) + i][bomb.getPosY() / World.wallDim] = item;
-                                    items.add(item);
                                 }
                                 else{
                                     //exp.ranges.put("right", exp.ranges.get("right")-1);
@@ -312,23 +390,27 @@ public class BombermanWSEndpoint {
                                 //exp.ranges.put("right", exp.ranges.get("right")-1);
                             }
                         }
-                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && !BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim)){
+                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim)){
                             exp.directions.add("right");
                             exp.ranges.put("right", exp.ranges.get("right")+1);
                         }
-                        if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim)){
+                        
+                        // left
+                        if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.bombExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim)){
+                            markForRemove((BBomb)map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]);
+                        }
+                        else if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.characterExists((bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim)){
+                            triggerBlewCharacter((bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim);
+                        }
+                        else if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim)){
                             exp.directions.add("left");
                             if (!wallHits.contains("left")){
                                 if (((AbstractWall)map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]).isBlowable()){
                                     map.walls.remove(map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]);
                                     exp.ranges.put("left", exp.ranges.get("left")+1);
+                                    //map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim] = null;
+                                    flipForItems((bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim);
                                     
-                                    AbstractItem item = ItemGenerator.getInstance().generateRandomItem();
-                                    item.setPosX(map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim].getPosX());
-                                    item.setPosY(map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim].getPosY());
-                                    map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim] = null;
-                                    map.blockMatrix[(bomb.getPosX() / World.wallDim) -i][bomb.getPosY() / World.wallDim] = item;
-                                    items.add(item);
                                 }
                                 else{
                                     //exp.ranges.put("left", exp.ranges.get("left")-1);
@@ -339,23 +421,27 @@ public class BombermanWSEndpoint {
                                 //exp.ranges.put("left", exp.ranges.get("left")-1);
                             }
                         }
-                        else  if (bomb.getPosX() - bomb.getWidth()*i >= 0 && !BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim)){
+                        else  if (bomb.getPosX() - bomb.getWidth()*i >= 0 && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim)){
                             exp.directions.add("left");
                             exp.ranges.put("left", exp.ranges.get("left")+1);
                         }
-                        if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i)){
+                        
+                        // down
+                        if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.bombExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i)){
+                            markForRemove((BBomb)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]);
+                        }
+                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.characterExists((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i)){
+                            triggerBlewCharacter((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i);
+                        }
+                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i)){
                             exp.directions.add("down");
                             if (!wallHits.contains("down")){
                                 if (((AbstractWall)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]).isBlowable()){
                                     map.walls.remove(map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]);
                                     exp.ranges.put("down", exp.ranges.get("down")+1);
+                                    //map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i] = null;
+                                    flipForItems((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i);
                                     
-                                    AbstractItem item = ItemGenerator.getInstance().generateRandomItem();
-                                    item.setPosX(map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i].getPosX());
-                                    item.setPosY(map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i].getPosY());
-                                    map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i] = null;
-                                    map.blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim + i] = item;
-                                    items.add(item);
                                 }
                                 else{
                                     //exp.ranges.put("down", exp.ranges.get("down")-1);
@@ -366,23 +452,27 @@ public class BombermanWSEndpoint {
                                 //exp.ranges.put("down", exp.ranges.get("down")-1);
                             }
                         }
-                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && !BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i)){
+                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i)){
                             exp.directions.add("down");
                             exp.ranges.put("down", exp.ranges.get("down")+1);
                         }
-                        if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i)){
+                        
+                        
+                        // up
+                        if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.bombExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i)){
+                            markForRemove((BBomb)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i]);
+                        }
+                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.characterExists((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i)){
+                            triggerBlewCharacter((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i);
+                        }
+                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i)){
                             exp.directions.add("up");
                             if (!wallHits.contains("up")){
                                 if(((AbstractWall)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i]).isBlowable()){
                                     map.walls.remove(map.blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim - i]);
                                     exp.ranges.put("up", exp.ranges.get("up")+1);
-                                    
-                                    AbstractItem item = ItemGenerator.getInstance().generateRandomItem();
-                                    item.setPosX(map.blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim - i].getPosX());
-                                    item.setPosY(map.blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim - i].getPosY());
-                                    map.blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim - i] = null;
-                                    map.blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim - i] = item;
-                                    items.add(item);
+                                    //map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i] = null;
+                                    flipForItems((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i);
                                     
                                 }
                                 else{
@@ -394,7 +484,7 @@ public class BombermanWSEndpoint {
                                 //exp.ranges.put("up", exp.ranges.get("up")-1);
                             }
                         }
-                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && !BombermanWSEndpoint.elementExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i)){
+                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i)){
                             exp.directions.add("up");
                             exp.ranges.put("up", exp.ranges.get("up")+1);
                         }
@@ -412,16 +502,33 @@ public class BombermanWSEndpoint {
         }).start();
     }
     
-    protected synchronized String exportChars(){
-        //return myChar.toString();
-        String ret = "";
-        try{
-            for (Session peer : peers) {
-                ret += chars.get(peer.getId()).toString()+"[#charSep#]";
-            }
+    protected synchronized void flipForItems(int x, int y){
+        
+        int rand = (int) (Math.random()*1000000);
+        if (rand % 5 == 0){
+            AbstractItem item = ItemGenerator.getInstance().generateRandomItem();
+            item.setPosX(map.blockMatrix[x][y].getPosX());
+            item.setPosY(map.blockMatrix[x][y].getPosY());
+            map.blockMatrix[x][y] = null;
+            map.blockMatrix[x][y] = item;
+            items.add(item);
         }
-        catch (ConcurrentModificationException ex){
-            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        else{
+            map.blockMatrix[x][y] = null; // remove the block
+        }
+    }
+    
+    protected boolean alreadyMarked(BBomb bomb){
+        return markedBombs.contains(bomb);
+    }
+    
+    protected synchronized String exportChars(){
+        
+        String ret = "";
+        ArrayList<Session> peers2 = (ArrayList<Session>)peers.clone();
+        
+        for (Session peer : peers2) {
+            ret += chars.get(peer.getId()).toString()+"[#charSep#]";
         }
         
         return ret;
@@ -431,90 +538,60 @@ public class BombermanWSEndpoint {
         return map.toString();
     }
     
-    //static String ret = "";
-    
-    protected boolean alreadyMarked(BBomb bomb){
-        return markedBombs.contains(bomb);
-    }
-    
     protected synchronized String exportBombs(){
         
-//        new Thread(new Runnable(){
-//            @Override
-//            public void run() {
-//                ret = "";
-//                 for (BBomb bomb : bombs){
-//                    try{
-//                        if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime())/1000 >= bomb.getLifeTime()){
-//                            markForRemove(bomb);
-//                            continue;
-//                        }
-//                        else{
-//                            ret += bomb.toString()+"[#bombSep#]";
-//                        }
-//                    }
-//                    catch (ConcurrentModificationException ex){
-//                        Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
-//                    }
-//                } 
-//            }
-//        }).start();
         String ret = "";
-        try{
-            for (BBomb bomb : bombs){
-                if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime())/1000 >= bomb.getLifeTime() && !alreadyMarked(bomb)){
-                   markForRemove(bomb);
-                   continue;
-               }
-               else{
-                   ret += bomb.toString()+"[#bombSep#]";
-               }
-           }
+        ArrayList<BBomb> bombs2 = (ArrayList<BBomb>)bombs.clone();
+        
+        for (BBomb bomb : bombs2){
+            if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime())/1000 >= bomb.getLifeTime() && !alreadyMarked(bomb)){
+               markForRemove(bomb);
+               continue;
+            }
+            else{
+                ret += bomb.toString()+"[#bombSep#]";
+            }
         }
-        catch (ConcurrentModificationException ex){
-            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        
         return ret;
     }
     
     protected synchronized String exportExplosions(){
-        
-//        new Thread(new Runnable(){
-//            @Override
-//            public void run() {
-//                ret = "";
-//                 for (BBomb bomb : explosions){
-//                    ret += bomb.toString()+"[#explosionSep#]";
-//                } 
-//            }
-//        }).start();
        
         String ret = "";
-        try{
-            for (Explosion exp : explosions){
-               ret += exp.toString()+"[#explosionSep#]";
-            }
-        }
-        catch (ConcurrentModificationException ex){
-            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        ArrayList<Explosion> explosions2 = (ArrayList<Explosion>)explosions.clone();
+        
+        for (Explosion exp : explosions2){
+            ret += exp.toString()+"[#explosionSep#]";
         }
         
         return ret;
     }
     
     protected synchronized String exportItems(){
-       
+        
         String ret = "";
-        try{
-            for (AbstractItem item : items){
-               ret += item.toString()+"[#itemSep#]";
-            }
-        }
-        catch (ConcurrentModificationException ex){
-            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        ArrayList<AbstractItem> items2 = (ArrayList<AbstractItem>)items.clone();
+     
+        for (AbstractItem item : items2){
+            ret += item.toString()+"[#itemSep#]";
         }
         
         return ret;
+    }
+    
+    public static String checkWorldMatrix(AbstractBlock[][] data, int i, int j){
+        String ret = "";
+        try{
+            AbstractBlock x = data[i][j];
+            if (data[i][j] == null) return "blank";
+            else if (AbstractWall.class.isAssignableFrom(data[i][j].getClass())) return "wall";
+            else if (BBomb.class.isAssignableFrom(data[i][j].getClass())) return "bomb";
+            else if (BCharacter.class.isAssignableFrom(data[i][j].getClass())) return "char";
+            return "else";
+        } catch(ArrayIndexOutOfBoundsException e){
+          return "out of bounds";
+        }
     }
     
 }
