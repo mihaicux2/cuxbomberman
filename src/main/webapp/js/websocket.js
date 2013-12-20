@@ -53,6 +53,7 @@ function init(){
     log('WebSocket - status '+socket.readyState);
     socket.onopen    = function(msg){
         log("Welcome - status "+this.readyState);
+        setTimeout("getMap()", 100);
         $(window).keydown(function(e){
             switch (e.keyCode){
                 case 38:  // KEY_UP
@@ -425,8 +426,16 @@ function updateStatus(){
 
 }
 
+function resetMap(){
+    try{ socket.send("reset"); } catch(ex){ log(ex); } // request info about the other users
+}
+
 function canFire(){
     IS_FIRING = false;
+}
+
+function getMap(){
+    try{ socket.send("getEnvironment"); } catch(ex){ log(ex); } // request info about the other users
 }
 
 function quit(){
@@ -435,6 +444,8 @@ function quit(){
 	socket.send("QUIT");
   	socket.close();
   	socket=null;
+        $("#world").html("");
+        log("connection closed");
   }
   catch(ex){ log(ex); }
 }

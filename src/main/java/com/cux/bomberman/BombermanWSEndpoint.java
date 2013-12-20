@@ -60,7 +60,11 @@ public class BombermanWSEndpoint {
     
     private static boolean isFirst = true;
     
-    //private static BCharacter myChar = null;
+    private static String precCharStr = "";
+    private static String precBombStr = "";
+    private static String precExplStr = "";
+    private static String precWallStr = "";
+    private static String precItemStr = "";
     
     private static World map = null;
     
@@ -123,6 +127,12 @@ public class BombermanWSEndpoint {
             case "win":
                 crtChar.setState("Win");
                 break;
+            case "reset":
+                resetMap();
+                break;
+            case "getEnvironment":
+                exportEnvironment(peer);
+                break;
             case "QUIT":
                 chars.remove(peer.getId());
                 if (peer.isOpen()){
@@ -182,6 +192,34 @@ public class BombermanWSEndpoint {
     public synchronized void onError(Throwable t) {
     }
     
+    public synchronized void exportEnvironment(Session peer){
+        try {
+            peer.getBasicRemote().sendText("chars:[" + exportChars());
+            peer.getBasicRemote().sendText("map:[" + exportMap());
+            peer.getBasicRemote().sendText("bombs:[" + exportBombs());
+            peer.getBasicRemote().sendText("explosions:[" + exportExplosions());
+            peer.getBasicRemote().sendText("items:[" + exportItems());
+        } catch (IOException ex) {
+            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalStateException ex){
+            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ConcurrentModificationException ex) {
+            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public synchronized void resetMap(){
+        map.walls = new ArrayList<>();
+        map.blockMatrix = new AbstractBlock[100][100];
+        map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
+        items = new ArrayList<>();
+        //precCharStr = "";
+        //precBombStr = "";
+        //precExplStr = "";
+        precWallStr = "";
+        //precItemStr = "";
+    }
+    
     public synchronized void stopThread(String threadId){
         workingThreads.remove(threadId);
     }
@@ -206,17 +244,12 @@ public class BombermanWSEndpoint {
         new Thread(new Runnable(){
             @Override
             public synchronized void run() {
-                String precCharStr = "";
-                String precBombStr = "";
-                String precExplStr = "";
-                String precWallStr = "";
-                String precItemStr = "";
                 while (peer.isOpen() && workingThreads.contains(peer.getId())){
                     isFirst = false;
                     BCharacter crtChar = chars.get(peer.getId());
                     if (isTrapped(crtChar)){
                         crtChar.setState("Trapped"); // will be automated reverted when a bomb kills him >:)
-                    }
+                    }   
                     try {
                         String exportCharStr = environment.exportChars();
                         if (!exportCharStr.equals(precCharStr)){
