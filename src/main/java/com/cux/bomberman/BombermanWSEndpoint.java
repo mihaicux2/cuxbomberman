@@ -9,10 +9,6 @@ package com.cux.bomberman;
 import com.cux.bomberman.world.AbstractBlock;
 import com.cux.bomberman.world.BBomb;
 import java.io.IOException;
-/*import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CoderResult;*/
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,21 +21,19 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
-//import com.cux.bomberman.world.walls.*;
 import com.cux.bomberman.world.BCharacter;
 import com.cux.bomberman.world.Explosion;
 import com.cux.bomberman.world.World;
 import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
-import com.cux.bomberman.world.walls.BrickWall;
 import java.util.Collection;
-//import com.cux.bomberman.world.generator.WallGenerator;
-//import com.cux.bomberman.world.walls.AbstractWall;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Vector;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -50,19 +44,19 @@ import java.util.concurrent.ConcurrentMap;
 @ServerEndpoint("/bombermanendpoint")
 public class BombermanWSEndpoint {
 
-    private static Vector<Session> peers = new Vector<Session>();
+    private static final ArrayList<Session> peers = new ArrayList<>();
     
-    private static Vector<BBomb> bombs = new Vector<BBomb>();
+    private static final ArrayList<BBomb> bombs = new ArrayList<>();
     
-    private static Vector<BBomb> markedBombs = new Vector<BBomb>();
+    private static final ArrayList<BBomb> markedBombs = new ArrayList<>();
     
-    private static HashMap<String, BCharacter> chars = new HashMap<String, BCharacter>();
+    private static final HashMap<String, BCharacter> chars = new HashMap<>();
     
-    private static Vector<String> workingThreads =new Vector<String>();
+    private static final ArrayList<String> workingThreads =new ArrayList<>();
     
-    private static Vector<Explosion> explosions = new Vector<Explosion>();
+    private static final ArrayList<Explosion> explosions = new ArrayList<>();
     
-    public static Vector<AbstractItem> items = new Vector<AbstractItem>();
+    public static ArrayList<AbstractItem> items = new ArrayList<>();
     
     private static boolean isFirst = true;
     
@@ -179,6 +173,8 @@ public class BombermanWSEndpoint {
             map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
         }
         
+        map.chars[0][0].put(newChar.getName(), newChar);
+        
         watchPeer(peer);
     }
 
@@ -190,18 +186,37 @@ public class BombermanWSEndpoint {
         workingThreads.remove(threadId);
     }
     
+    public synchronized boolean isTrapped(BCharacter crtChar){
+        int x     = crtChar.getPosX();
+        int y     = crtChar.getPosY();
+        int w     = crtChar.getWidth();
+        int h     = crtChar.getHeight();
+        int left  = (x/World.wallDim -1);
+        int right = (x/World.wallDim +1);
+        int up    = (y/World.wallDim -1);
+        int down  = (y/World.wallDim +1);
+        return ((x<=0 || wallExists(map.blockMatrix, left, y/World.wallDim) || bombExists(map.blockMatrix, left, y/World.wallDim)) &&
+                (x+w >= World.getWidth() || wallExists(map.blockMatrix, right, y/World.wallDim) || bombExists(map.blockMatrix, right, y/World.wallDim)) &&
+                (y <= 0 || wallExists(map.blockMatrix, x/World.wallDim, up) || bombExists(map.blockMatrix, x/World.wallDim, up)) &&
+                (y+h >= World.getHeight() || wallExists(map.blockMatrix, x/World.wallDim, down) || bombExists(map.blockMatrix, x/World.wallDim, down)));
+    }
+    
     public synchronized void watchPeer(final Session peer){
         final BombermanWSEndpoint environment = this;
         new Thread(new Runnable(){
             @Override
             public synchronized void run() {
-                isFirst = false;
                 String precCharStr = "";
                 String precBombStr = "";
                 String precExplStr = "";
                 String precWallStr = "";
                 String precItemStr = "";
                 while (peer.isOpen() && workingThreads.contains(peer.getId())){
+                    isFirst = false;
+                    BCharacter crtChar = chars.get(peer.getId());
+                    if (isTrapped(crtChar)){
+                        crtChar.setState("Trapped"); // will be automated reverted when a bomb kills him >:)
+                    }
                     try {
                         String exportCharStr = environment.exportChars();
                         if (!exportCharStr.equals(precCharStr)){
@@ -295,6 +310,45 @@ public class BombermanWSEndpoint {
         } catch(ArrayIndexOutOfBoundsException e){
           return false;
         }
+        
+    }
+    
+    public static boolean characterExists(int i, int j){
+        return !map.chars[i][j].isEmpty();
+    }
+    
+    protected synchronized void triggerBlewCharacter(final int x, final int y){
+        new Thread(new Runnable(){
+            @Override
+            public synchronized void run() {
+                Iterator it = map.chars[x][y].entrySet().iterator();
+                while (it.hasNext()) {
+                    Map.Entry pairs = (Map.Entry)it.next();
+                    revertState((BCharacter)pairs.getValue());
+                    it.remove(); // avoids a ConcurrentModificationException
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }).start();
+    }
+    
+    protected synchronized void revertState(final BCharacter myChar){
+        new Thread(new Runnable(){
+            @Override
+            public synchronized void run() {
+                myChar.setState("Blow");
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                myChar.setState("Normal");
+            }
+        }).start();
     }
     
     protected synchronized void markForRemove(final BBomb bomb){
@@ -306,9 +360,16 @@ public class BombermanWSEndpoint {
                     Set<String> wallHits = Collections.synchronizedSet(new HashSet<String>());
                     map.blockMatrix[bomb.getPosX()/World.wallDim][bomb.getPosY()/World.wallDim] = null;
                     int charRange = bomb.getOwner().getBombRange();
+                    
                     for (int i = 1; i <= charRange; i++){
+                        
+                        // right
                         if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.bombExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim)){
                              markForRemove((BBomb)map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]);
+                             System.out.println("hit one");
+                        }
+                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.characterExists((bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim)){
+                            triggerBlewCharacter((bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim);
                         }
                         else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim)){
                             exp.directions.add("right");
@@ -334,8 +395,12 @@ public class BombermanWSEndpoint {
                             exp.ranges.put("right", exp.ranges.get("right")+1);
                         }
                         
+                        // left
                         if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.bombExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim)){
                             markForRemove((BBomb)map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]);
+                        }
+                        else if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.characterExists((bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim)){
+                            triggerBlewCharacter((bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim);
                         }
                         else if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim)){
                             exp.directions.add("left");
@@ -361,8 +426,12 @@ public class BombermanWSEndpoint {
                             exp.ranges.put("left", exp.ranges.get("left")+1);
                         }
                         
+                        // down
                         if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.bombExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i)){
                             markForRemove((BBomb)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]);
+                        }
+                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.characterExists((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i)){
+                            triggerBlewCharacter((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i);
                         }
                         else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i)){
                             exp.directions.add("down");
@@ -388,8 +457,13 @@ public class BombermanWSEndpoint {
                             exp.ranges.put("down", exp.ranges.get("down")+1);
                         }
                         
+                        
+                        // up
                         if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.bombExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i)){
                             markForRemove((BBomb)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i]);
+                        }
+                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.characterExists((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i)){
+                            triggerBlewCharacter((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i);
                         }
                         else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i)){
                             exp.directions.add("up");
@@ -451,7 +525,7 @@ public class BombermanWSEndpoint {
     protected synchronized String exportChars(){
         
         String ret = "";
-        Vector<Session> peers2 = (Vector<Session>)peers.clone();
+        ArrayList<Session> peers2 = (ArrayList<Session>)peers.clone();
         
         for (Session peer : peers2) {
             ret += chars.get(peer.getId()).toString()+"[#charSep#]";
@@ -467,7 +541,7 @@ public class BombermanWSEndpoint {
     protected synchronized String exportBombs(){
         
         String ret = "";
-        Vector<BBomb> bombs2 = (Vector<BBomb>)bombs.clone();
+        ArrayList<BBomb> bombs2 = (ArrayList<BBomb>)bombs.clone();
         
         for (BBomb bomb : bombs2){
             if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime())/1000 >= bomb.getLifeTime() && !alreadyMarked(bomb)){
@@ -485,7 +559,7 @@ public class BombermanWSEndpoint {
     protected synchronized String exportExplosions(){
        
         String ret = "";
-        Vector<Explosion> explosions2 = (Vector<Explosion>)explosions.clone();
+        ArrayList<Explosion> explosions2 = (ArrayList<Explosion>)explosions.clone();
         
         for (Explosion exp : explosions2){
             ret += exp.toString()+"[#explosionSep#]";
@@ -497,13 +571,27 @@ public class BombermanWSEndpoint {
     protected synchronized String exportItems(){
         
         String ret = "";
-        Vector<AbstractItem> items2 = (Vector<AbstractItem>)items.clone();
+        ArrayList<AbstractItem> items2 = (ArrayList<AbstractItem>)items.clone();
      
         for (AbstractItem item : items2){
             ret += item.toString()+"[#itemSep#]";
         }
         
         return ret;
+    }
+    
+    public static String checkWorldMatrix(AbstractBlock[][] data, int i, int j){
+        String ret = "";
+        try{
+            AbstractBlock x = data[i][j];
+            if (data[i][j] == null) return "blank";
+            else if (AbstractWall.class.isAssignableFrom(data[i][j].getClass())) return "wall";
+            else if (BBomb.class.isAssignableFrom(data[i][j].getClass())) return "bomb";
+            else if (BCharacter.class.isAssignableFrom(data[i][j].getClass())) return "char";
+            return "else";
+        } catch(ArrayIndexOutOfBoundsException e){
+          return "out of bounds";
+        }
     }
     
 }
