@@ -10,13 +10,13 @@ package com.cux.bomberman.world.items;
  *
  * @author root
  */
-public class SkateItem extends AbstractItem{
+public class RandomItem extends AbstractItem{
 
-    public SkateItem(int posX, int posY) {
-        super("skate");
-        this.setLifeTime(10);
-        this.setScale(3);
-        this.texture = "item-skate.PNG";
+    public RandomItem(int posX, int posY) {
+        super("random");
+        this.texture = "item-random.PNG";
+        this.scale = 1;
+        this.setTimed(false);
         this.setPosX(posX);
         this.setPosY(posY);
     }

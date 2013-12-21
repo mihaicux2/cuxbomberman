@@ -129,13 +129,14 @@ public class World {
     
     @Override
     public String toString(){
+        
+        ArrayList<AbstractWall> walls2 = (ArrayList<AbstractWall>)walls.clone();
+        
         String ret = "";
-        for (AbstractWall wall : walls){
+        for (AbstractWall wall : walls2){
             ret += wall.toString()+"[#wallSep#]";
-            //ret += wall.getName()+"[#wallSep#]";
         }
         return ret;
-        //return mapContent;
     }
     
 }

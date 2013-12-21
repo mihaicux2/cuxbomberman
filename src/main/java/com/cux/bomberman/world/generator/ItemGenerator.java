@@ -9,8 +9,10 @@ package com.cux.bomberman.world.generator;
 import com.cux.bomberman.world.World;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.items.FlameItem;
+import com.cux.bomberman.world.items.RandomItem;
 import com.cux.bomberman.world.items.SkateItem;
 import com.cux.bomberman.world.items.SlowItem;
+import com.cux.bomberman.world.items.SpoogItem;
 import com.cux.bomberman.world.items.TriggerItem;
 import java.util.Random;
 
@@ -49,7 +51,9 @@ public class ItemGenerator {
         
         AbstractItem ret = null;
         
-        if (rand % 4 == 0)      ret = new TriggerItem(initialX, initialY);
+        if      (rand % 6 == 0) ret = new RandomItem(initialX, initialY);
+        else if (rand % 5 == 0) ret = new SpoogItem(initialX, initialY);
+        else if (rand % 4 == 0) ret = new TriggerItem(initialX, initialY);
         else if (rand % 3 == 0) ret = new SkateItem(initialX, initialY);
         else if (rand % 2 == 0) ret = new SlowItem(initialX, initialY);
         else                    ret = new FlameItem(initialX, initialY);

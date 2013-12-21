@@ -14,7 +14,6 @@ public class SlowItem extends AbstractItem{
 
     public SlowItem(int posX, int posY) {
         super("slow");
-        this.setTimed(true);
         this.setLifeTime(10);
         this.setScale(3);
         this.texture = "item-slow.PNG";

@@ -7,6 +7,7 @@
 package com.cux.bomberman.world;
 
 import com.cux.bomberman.BombermanWSEndpoint;
+import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
 import com.sun.org.apache.bcel.internal.util.BCELifier;
@@ -33,6 +34,7 @@ public class BCharacter extends AbstractBlock{
     private String id;
     protected int bombRange = 1;
     protected int speed = 1; // first gear :)
+    protected int maxBombs = 1; 
     protected boolean walking = false;
     protected boolean triggered = false; // checks if the character has a trigger for the "planted" bombs
     
@@ -73,6 +75,22 @@ public class BCharacter extends AbstractBlock{
         this.name = id;
     }
 
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public int getMaxBombs() {
+        return maxBombs;
+    }
+
+    public void setMaxBombs(int maxBombs) {
+        this.maxBombs = maxBombs;
+    }
+    
     public boolean isTriggered() {
         return triggered;
     }
@@ -267,6 +285,12 @@ public class BCharacter extends AbstractBlock{
             case "flame":
                 this.setBombRange(this.getBombRange() + item.getScale());
                 break;
+            case "spoog":
+                this.setMaxBombs(this.getMaxBombs() + item.getScale());
+                break;
+            case "random":
+                this.attachEvent(ItemGenerator.getInstance().generateRandomItem());
+                break;
         }
         if (item.isTimed()){
             cycleEvent(this, item);
@@ -287,10 +311,13 @@ public class BCharacter extends AbstractBlock{
                             myChar.setSpeed(myChar.getSpeed()-item.getScale());
                             break;
                         case "slow":
-                            myChar.setSpeed(myChar.getSpeed()+-item.getScale());
+                            myChar.setSpeed(myChar.getSpeed()+item.getScale());
                             break;
                         case "flame":
                             myChar.setBombRange(myChar.getBombRange()-item.getScale());
+                            break;
+                        case "spoog":
+                            myChar.setMaxBombs(myChar.getMaxBombs() - item.getScale());
                             break;
                     }
                 } catch (InterruptedException ex) {
@@ -346,6 +373,13 @@ public class BCharacter extends AbstractBlock{
         ret.bombRange = this.bombRange;
         ret.triggered = this.triggered;
         ret.id = this.id;
+        ret.name = this.name;
+        ret.state = this.state;
+        ret.crtTexture = this.crtTexture;
+        ret.speed = this.speed;
+        ret.maxBombs = this.maxBombs;
+        ret.walking = this.walking;
+        
         return ret;
     }
     
