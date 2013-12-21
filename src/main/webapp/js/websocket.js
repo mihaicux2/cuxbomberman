@@ -133,6 +133,9 @@ function init(){
             case "items":
                 renderItems(toProc);
                 break;
+            case "sound":
+                $.playSound(toProc);
+                break;
         }
     };
     socket.onclose   = function(msg){
