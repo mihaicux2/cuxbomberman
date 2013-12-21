@@ -4,20 +4,21 @@
  * and open the template in the editor.
  */
 
-package com.cux.bomberman.world.walls;
+package com.cux.bomberman.world.items;
 
 /**
  *
  * @author root
  */
-public class SteelWall extends AbstractWall{
+public class RandomItem extends AbstractItem{
 
-    public SteelWall(int posX, int posY) {
-        super("steel");
-        this.texture = "steel.png";
+    public RandomItem(int posX, int posY) {
+        super("random");
+        this.texture = "item-random.PNG";
+        this.scale = 1;
+        this.setTimed(false);
         this.setPosX(posX);
         this.setPosY(posY);
-        this.makeUnblowable();
     }
     
 }

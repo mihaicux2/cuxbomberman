@@ -6,6 +6,7 @@
 
 package com.cux.bomberman.world.walls;
 
+import com.cux.bomberman.world.AbstractBlock;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -18,34 +19,15 @@ import org.codehaus.jackson.map.ObjectWriter;
  *
  * @author mihaicux
  */
-public abstract class AbstractWall {
+public abstract class AbstractWall extends AbstractBlock{
 
-    protected int posX = 0;
-    protected int posY = 0;
-    protected int width = 20;
-    protected int height = 20;
-    protected String texture;
-    protected String name;
-    protected boolean blowable = false;
+    
+    public String texture;
+    public String name;
+    public boolean blowable = false;
     
     protected AbstractWall(String name){
         this.name = name;
-    }
-    
-    public void setPosX(int posX) {
-        this.posX = posX;
-    }
-
-    public void setPosY(int posY) {
-        this.posY = posY;
-    }
-
-    public void setWidth(int width) {
-        this.width = width;
-    }
-
-    public void setHeight(int height) {
-        this.height = height;
     }
 
     public void setTexture(String texture) {
@@ -58,22 +40,6 @@ public abstract class AbstractWall {
     
     public void makeUnblowable(){
         this.blowable = false;
-    }
-    
-    public int getPosX() {
-        return posX;
-    }
-
-    public int getPosY() {
-        return posY;
-    }
-
-    public int getWidth() {
-        return width;
-    }
-
-    public int getHeight() {
-        return height;
     }
 
     public String getName() {
