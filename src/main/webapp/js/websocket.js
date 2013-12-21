@@ -205,13 +205,13 @@ function renderExplosions(toProc){
                var posY = exp.posY;
                switch (exp.directions[j]){
                    case "up":
-                       posY -= exp.height*exp.owner.bombRange;
+                       posY -= exp.height*exp.ranges.up;
                        break;
                    case "down":
                        posY += exp.height;
                        break;
                    case "left":
-                       posX -= exp.width*exp.owner.bombRange;
+                       posX -= exp.width*exp.ranges.left;
                        break;
                    case "right":
                        posX += exp.width;
