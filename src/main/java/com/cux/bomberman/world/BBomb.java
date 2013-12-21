@@ -21,7 +21,7 @@ public class BBomb extends AbstractBlock {
     //protected String charId = "";
     protected BCharacter owner;
     protected Date creationTime = null;
-    protected int lifeTime = 3;
+    protected double lifeTime = 1.5;
     protected boolean volatileB = true;
     
     public BBomb(BCharacter owner){
@@ -50,11 +50,11 @@ public class BBomb extends AbstractBlock {
         this.creationTime = creationTime;
     }
 
-    public int getLifeTime() {
+    public double getLifeTime() {
         return lifeTime;
     }
 
-    public void setLifeTime(int lifeTime) {
+    public void setLifeTime(double lifeTime) {
         this.lifeTime = lifeTime;
     }
 

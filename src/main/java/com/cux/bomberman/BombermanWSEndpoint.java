@@ -421,11 +421,10 @@ public class BombermanWSEndpoint {
                                 exp.ranges.put("right", exp.ranges.get("right")+1);
                                 //map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim] = null;
                                 flipForItems((bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim);
-
                             }
                             objectHits.add("right");
                         }
-                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim)){
+                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim) && !objectHits.contains("right")){
                             exp.directions.add("right");
                             exp.ranges.put("right", exp.ranges.get("right")+1);
                             //System.out.println("empty right");
@@ -450,11 +449,10 @@ public class BombermanWSEndpoint {
                                 exp.ranges.put("left", exp.ranges.get("left")+1);
                                 //map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim] = null;
                                 flipForItems((bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim);
-
                             }
                             objectHits.add("left");
                         }
-                        else  if (bomb.getPosX() - bomb.getWidth()*i >= 0 && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim)){
+                        else  if (bomb.getPosX() - bomb.getWidth()*i >= 0 && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim) && !objectHits.contains("left")){
                             exp.directions.add("left");
                             exp.ranges.put("left", exp.ranges.get("left")+1);
                             //System.out.println("empty left");
@@ -482,7 +480,7 @@ public class BombermanWSEndpoint {
                             }
                             objectHits.add("down");
                         }
-                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i)){
+                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i) && !objectHits.contains("down")){
                             exp.directions.add("down");
                             exp.ranges.put("down", exp.ranges.get("down")+1);
                             //System.out.println("empty down");
@@ -510,7 +508,7 @@ public class BombermanWSEndpoint {
                             }
                             objectHits.add("up");
                         }
-                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i)){
+                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i) && !objectHits.contains("up")){
                             exp.directions.add("up");
                             exp.ranges.put("up", exp.ranges.get("up")+1);
                             //System.out.println("empty up");
