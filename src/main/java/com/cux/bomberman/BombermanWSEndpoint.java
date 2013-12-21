@@ -379,6 +379,7 @@ public class BombermanWSEndpoint {
         new Thread(new Runnable(){
             @Override
             public synchronized void run() {
+                playSoundAll("sounds/burn.wav");
                 myChar.setState("Blow");
                 try {
                     Thread.sleep(1000);
@@ -395,6 +396,7 @@ public class BombermanWSEndpoint {
             @Override
             public synchronized void run() {
                 try {
+                    playSoundAll("sounds/explosion.wav");
                     Explosion exp = new Explosion(bomb.getOwner());
                     Set<String> objectHits = Collections.synchronizedSet(new HashSet<String>());
                     map.blockMatrix[bomb.getPosX()/World.wallDim][bomb.getPosY()/World.wallDim] = null;
@@ -565,7 +567,6 @@ public class BombermanWSEndpoint {
     }
     
     protected synchronized String exportBombs(){
-        
         String ret = "";
         ArrayList<BBomb> bombs2 = (ArrayList<BBomb>)bombs.clone();
         
@@ -583,7 +584,6 @@ public class BombermanWSEndpoint {
     }
     
     protected synchronized String exportExplosions(){
-       
         String ret = "";
         ArrayList<Explosion> explosions2 = (ArrayList<Explosion>)explosions.clone();
         
@@ -595,7 +595,6 @@ public class BombermanWSEndpoint {
     }
     
     protected synchronized String exportItems(){
-        
         String ret = "";
         ArrayList<AbstractItem> items2 = (ArrayList<AbstractItem>)items.clone();
      
@@ -630,6 +629,26 @@ public class BombermanWSEndpoint {
             return "else";
         } catch(ArrayIndexOutOfBoundsException e){
           return "out of bounds";
+        }
+    }
+    
+    public synchronized void playSound(String sound, Session peer){
+        try {
+            peer.getBasicRemote().sendText("sound:[" + sound);
+        } catch (IOException ex) {
+            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalStateException ex){
+            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ConcurrentModificationException ex) {
+            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public synchronized void playSoundAll(String sound){
+        ArrayList<Session> peers2 = (ArrayList<Session>)peers.clone();
+        
+        for (Session peer : peers2) {
+            playSound(sound, peer);
         }
     }
     
