@@ -194,7 +194,7 @@ function init(){
     
   }
   catch(ex){ console.log(ex); }
-  $("#msg").focus();
+  //$("#msg").focus();
 }
 
 function renderItems(toProc){
