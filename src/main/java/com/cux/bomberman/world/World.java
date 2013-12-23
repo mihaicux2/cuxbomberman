@@ -29,8 +29,8 @@ import org.codehaus.jackson.map.ObjectWriter;
  */
 public class World {
     
-    private final static int WIDTH = 660;
-    private final static int HEIGHT = 510;
+    private static int WIDTH = 660;
+    private static int HEIGHT = 510;
     public final static int wallDim = 30; // width = height
     private String mapContent = "";
     
@@ -62,7 +62,17 @@ public class World {
             }
             BufferedReader input =  new BufferedReader(new FileReader(map));
             String line = null; //not declared within while loop
+            Boolean firstLine = true;
             while (( line = input.readLine()) != null){
+                if (firstLine == true){
+                    String[] dims = line.split("x");
+                    World.WIDTH = (Integer.parseInt(dims[0])/World.wallDim) * World.wallDim;
+                    if (World.WIDTH == 0) World.WIDTH = 660;
+                    World.HEIGHT = (Integer.parseInt(dims[1])/World.wallDim) * World.wallDim;
+                    if (World.HEIGHT == 0) World.WIDTH = 510;
+                    firstLine = false;
+                    continue;
+                }
                 String[] props = line.split("##");
                 AbstractWall wall = null;
                 int x = Integer.parseInt(props[1]);
@@ -133,6 +143,7 @@ public class World {
         ArrayList<AbstractWall> walls2 = (ArrayList<AbstractWall>)walls.clone();
         
         String ret = "";
+        ret += World.WIDTH+"x"+World.HEIGHT+"[#walls#]";
         for (AbstractWall wall : walls2){
             ret += wall.toString()+"[#wallSep#]";
         }

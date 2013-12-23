@@ -184,8 +184,8 @@ public class BombermanWSEndpoint {
         chars.put(peer.getId(), newChar);
         
         if (map == null){
-            //map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
-            map = new World("D:\\Programe\\hobby\\bomberman_java\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt");
+            map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
+            //map = new World("D:\\Programe\\hobby\\bomberman_java\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt");
         }
         
         map.chars[0][0].put(newChar.getName(), newChar);
@@ -199,7 +199,7 @@ public class BombermanWSEndpoint {
     
     public synchronized void exportEnvironment(Session peer){
         try {
-            peer.getBasicRemote().sendText("chars:[" + exportChars());
+            peer.getBasicRemote().sendText("chars:[" + exportChars(peer));
             peer.getBasicRemote().sendText("map:[" + exportMap());
             peer.getBasicRemote().sendText("bombs:[" + exportBombs());
             peer.getBasicRemote().sendText("explosions:[" + exportExplosions());
@@ -216,8 +216,8 @@ public class BombermanWSEndpoint {
     public synchronized void resetMap(){
         map.walls = new ArrayList<>();
         map.blockMatrix = new AbstractBlock[100][100];
-        //map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
-        map = new World("D:\\Programe\\hobby\\bomberman_java\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt");
+        map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
+        //map = new World("D:\\Programe\\hobby\\bomberman_java\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt");
         items = new ArrayList<>();
         //precCharStr = "";
         //precBombStr = "";
@@ -257,7 +257,7 @@ public class BombermanWSEndpoint {
                         crtChar.setState("Trapped"); // will be automated reverted when a bomb kills him >:)
                     }   
                     try {
-                        String exportCharStr = environment.exportChars();
+                        String exportCharStr = environment.exportChars(peer);
                         if (!exportCharStr.equals(precCharStr)){
                             peer.getBasicRemote().sendText("chars:[" + exportCharStr);
                             precCharStr = exportCharStr;
@@ -550,13 +550,14 @@ public class BombermanWSEndpoint {
         return markedBombs.contains(bomb);
     }
     
-    protected synchronized String exportChars(){
+    protected synchronized String exportChars(Session peer){
         
         String ret = "";
+        ret += peer.getId()+"[#chars#]";
         ArrayList<Session> peers2 = (ArrayList<Session>)peers.clone();
         
-        for (Session peer : peers2) {
-            ret += chars.get(peer.getId()).toString()+"[#charSep#]";
+        for (Session peer2 : peers2) {
+            ret += chars.get(peer2.getId()).toString()+"[#charSep#]";
         }
         
         return ret;

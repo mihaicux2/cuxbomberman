@@ -33,8 +33,49 @@ function get_random_color() {
 
 function log(msg){
     console.log(msg);
-    $("#output").append(msg+"<hr />");
+    //$("#output").append(msg+"<hr />");
 }
+
+// left: 37, up: 38, right: 39, down: 40,
+// spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
+//var keys = [37, 38, 39, 40];
+//
+//function keydown(e) {
+//    for (var i = keys.length; i--;) {
+//        if (e.keyCode === keys[i]) {
+//            preventDefault(e);
+//            return;
+//        }
+//    }
+//}
+//
+//function preventDefault(e) {
+//    e = e || window.event;
+//    if (e.preventDefault)
+//        e.preventDefault();
+//    e.returnValue = false;
+//}
+//
+//function wheel(e) {
+//    preventDefault(e);
+//}
+//
+//function disable_scroll() {
+//    if (window.addEventListener) {
+//        window.addEventListener('DOMMouseScroll', wheel, false);
+//    }
+//    window.onmousewheel = document.onmousewheel = wheel;
+//    document.onkeydown = keydown;
+//}
+//
+//function enable_scroll() {
+//    if (window.removeEventListener) {
+//        window.removeEventListener('DOMMouseScroll', wheel, false);
+//    }
+//    window.onmousewheel = document.onmousewheel = document.onkeydown = null;
+//}
+
+//$("body").scrollLeft("40px");
 
 var posX = 0;
 var posY = 0;
@@ -109,6 +150,9 @@ function init(){
             }
         });
         timer = setInterval("updateStatus()", 10); // send requests every 10 miliseconds => limit to 100 FPS (at most)
+        
+        //disable_scroll();
+        
     };
     socket.onmessage = function(msg){
         
@@ -300,6 +344,15 @@ var brickLength = 0;
 
 function renderMap(toProc){
     //console.log(toProc);
+    var dims = toProc.substr(0, toProc.indexOf("[#walls#]")).split("x");
+    var worldWidth = parseInt(dims[0]);
+    if (!worldWidth) worldWidth = 660;
+    var worldHeight = parseInt(dims[1]);
+    if (!worldWidth) worldHeight = 510;
+    $("#world").css("width", worldWidth+"px");
+    $("#world").css("height", worldHeight+"px");
+    //console.log(dims);
+    toProc = toProc.substr(toProc.indexOf("[#walls#]") + 9 /*"[#walls#]".length*/);
     bricks = toProc.split("[#wallSep#]");
     if (bricks.length && brickLength == bricks.length) return;
     brickLength = bricks.length;
@@ -321,8 +374,11 @@ function renderMap(toProc){
 
 var charNames;
 var timers = {};
+var charID = "";
 function renderChars(toProc){
-    
+    charID = toProc.substr(0, toProc.indexOf("[#chars#]"));
+    //console.log(charID);
+    toProc = toProc.substr(toProc.indexOf("[#chars#]") + 9 /*"[#chars#]".length*/);
     chars = toProc.split("[#charSep#]");
     var last = chars.length;
     var idx = 0;
@@ -392,6 +448,18 @@ function boundNumber(nr, lo, hi){
     return nr;
 }
 
+function centerMap(id){
+    var viewportWidth = jQuery(window).width(),
+    viewportHeight = jQuery(window).height(),
+    $foo = jQuery('#char_'+id),
+    elWidth = $foo.width(),
+    elHeight = $foo.height(),
+    elOffset = $foo.offset();
+    jQuery(window)
+        .scrollTop(elOffset.top + (elHeight/2) - (viewportHeight/2))
+        .scrollLeft(elOffset.left + (elWidth/2) - (viewportWidth/2));
+}
+
 var walking = false;
 function updateStatus(){
     walking = false;
@@ -426,6 +494,8 @@ function updateStatus(){
     }
 
     //try{ socket.send("STATUS"); } catch(ex){ log(ex); } // request info about the other users
+
+    centerMap(charID);
 
 }
 
