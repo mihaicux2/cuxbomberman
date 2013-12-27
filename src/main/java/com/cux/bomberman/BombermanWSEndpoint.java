@@ -248,6 +248,11 @@ public class BombermanWSEndpoint {
             String precExplStr = "";
             String precWallStr = "";
             String precItemStr = "";
+            String exportCharStr = "";
+            String exportWallStr = "";
+            String exportBombStr = "";
+            String exportExplStr = "";
+            String exportItemStr = "";
             
             @Override
             public void run() {
@@ -259,30 +264,30 @@ public class BombermanWSEndpoint {
                         crtChar.setState("Trapped"); // will be automated reverted when a bomb kills him >:)
                     }   
                     try {
-                        String exportCharStr = environment.exportChars(peer);
+                        exportCharStr = environment.exportChars(peer);
                         if (!exportCharStr.equals(precCharStr)){
                             peer.getBasicRemote().sendText("chars:[" + exportCharStr);
                             precCharStr = exportCharStr;
                         }
                         
-                        String exportWallStr = environment.exportMap();
+                        exportWallStr = environment.exportMap();
                         if (!exportWallStr.equals(precWallStr)){
                             peer.getBasicRemote().sendText("map:[" + exportWallStr);
                             precWallStr = exportWallStr;
                         }
                         
-                        String exportBombStr = environment.exportBombs();
+                        exportBombStr = environment.exportBombs();
                         if (!exportBombStr.equals(precBombStr)){
                             peer.getBasicRemote().sendText("bombs:[" + exportBombStr);
                             precBombStr = exportBombStr;
                             //System.out.println(exportBombStr);
                         }
-                        String exportExplStr = environment.exportExplosions();
+                        exportExplStr = environment.exportExplosions();
                         if (!exportExplStr.equals(precExplStr)){
                             peer.getBasicRemote().sendText("explosions:[" + exportExplStr);
                             precExplStr = exportExplStr;
                         }
-                        String exportItemStr = environment.exportItems();
+                        exportItemStr = environment.exportItems();
                         if (!exportExplStr.equals(precItemStr)){
                             peer.getBasicRemote().sendText("items:[" + exportItemStr);
                             precItemStr = exportItemStr;
