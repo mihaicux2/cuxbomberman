@@ -44,27 +44,21 @@ import java.util.concurrent.ConcurrentMap;
 @ServerEndpoint("/bombermanendpoint")
 public class BombermanWSEndpoint {
 
-    private static final ArrayList<Session> peers = new ArrayList<>();
+    private static final Set<Session> peers = Collections.synchronizedSet(new HashSet<Session>());
     
-    private static final ArrayList<BBomb> bombs = new ArrayList<>();
+    private static final Set<BBomb> bombs = Collections.synchronizedSet(new HashSet<BBomb>());
     
-    private static final ArrayList<BBomb> markedBombs = new ArrayList<>();
+    private static final Set<BBomb> markedBombs = Collections.synchronizedSet(new HashSet<BBomb>());
     
-    private static final HashMap<String, BCharacter> chars = new HashMap<>();
+    private static final Map<String, BCharacter> chars = Collections.synchronizedMap(new HashMap<String, BCharacter>());
     
-    private static final ArrayList<String> workingThreads =new ArrayList<>();
+    private static final Set<String> workingThreads =Collections.synchronizedSet(new HashSet<String>());
     
-    private static final ArrayList<Explosion> explosions = new ArrayList<>();
+    private static final Set<Explosion> explosions = Collections.synchronizedSet(new HashSet<Explosion>());
     
-    public static ArrayList<AbstractItem> items = new ArrayList<>();
+    public static Set<AbstractItem> items = Collections.synchronizedSet(new HashSet<AbstractItem>());
     
     private static boolean isFirst = true;
-    
-    private static String precCharStr = "";
-    private static String precBombStr = "";
-    private static String precExplStr = "";
-    private static String precWallStr = "";
-    private static String precItemStr = "";
     
     private static World map = null;
     
@@ -184,8 +178,8 @@ public class BombermanWSEndpoint {
         chars.put(peer.getId(), newChar);
         
         if (map == null){
-            //map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
-            map = new World("D:\\Programe\\hobby\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt");
+            map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
+            //map = new World("D:\\Programe\\hobby\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt");
         }
         
         map.chars[0][0].put(newChar.getName(), newChar);
@@ -216,13 +210,13 @@ public class BombermanWSEndpoint {
     public synchronized void resetMap(){
         map.walls = new ArrayList<>();
         map.blockMatrix = new AbstractBlock[100][100];
-        //map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
-        map = new World("D:\\Programe\\hobby\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt");
-        items = new ArrayList<>();
-        //precCharStr = "";
+        map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
+        //map = new World("D:\\Programe\\hobby\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt");
+       // items = new ArrayList<>();
+        //precCharStr = "";.
         //precBombStr = "";
         //precExplStr = "";
-        precWallStr = "";
+        //precWallStr = "";
         //precItemStr = "";
     }
     
@@ -245,11 +239,19 @@ public class BombermanWSEndpoint {
                 (y+h >= World.getHeight() || wallExists(map.blockMatrix, x/World.wallDim, down) || bombExists(map.blockMatrix, x/World.wallDim, down)));
     }
     
-    public synchronized void watchPeer(final Session peer){
+    public void watchPeer(final Session peer){
         final BombermanWSEndpoint environment = this;
         new Thread(new Runnable(){
+                        
+            String precCharStr = "";
+            String precBombStr = "";
+            String precExplStr = "";
+            String precWallStr = "";
+            String precItemStr = "";
+            
             @Override
-            public synchronized void run() {
+            public void run() {
+                
                 while (peer.isOpen() && workingThreads.contains(peer.getId())){
                     isFirst = false;
                     BCharacter crtChar = chars.get(peer.getId());
@@ -597,7 +599,7 @@ public class BombermanWSEndpoint {
         
         String ret = "";
         ret += peer.getId()+"[#chars#]";
-        ArrayList<Session> peers2 = (ArrayList<Session>)peers.clone();
+        HashSet<Session> peers2 = new HashSet<Session>(peers);
         
         for (Session peer2 : peers2) {
             ret += chars.get(peer2.getId()).toString()+"[#charSep#]";
@@ -612,7 +614,7 @@ public class BombermanWSEndpoint {
     
     protected synchronized String exportBombs(){
         String ret = "";
-        ArrayList<BBomb> bombs2 = (ArrayList<BBomb>)bombs.clone();
+        HashSet<BBomb> bombs2 = new HashSet<BBomb>(bombs);
         
         for (BBomb bomb : bombs2){
             if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime())/1000 >= bomb.getLifeTime() && !alreadyMarked(bomb)){
@@ -629,7 +631,7 @@ public class BombermanWSEndpoint {
     
     protected synchronized String exportExplosions(){
         String ret = "";
-        ArrayList<Explosion> explosions2 = (ArrayList<Explosion>)explosions.clone();
+        HashSet<Explosion> explosions2 = new HashSet<Explosion>(explosions);
         
         for (Explosion exp : explosions2){
             ret += exp.toString()+"[#explosionSep#]";
@@ -640,7 +642,7 @@ public class BombermanWSEndpoint {
     
     protected synchronized String exportItems(){
         String ret = "";
-        ArrayList<AbstractItem> items2 = (ArrayList<AbstractItem>)items.clone();
+        HashSet<AbstractItem> items2 = new HashSet<AbstractItem>(items);
      
         for (AbstractItem item : items2){
             ret += item.toString()+"[#itemSep#]";
@@ -652,7 +654,7 @@ public class BombermanWSEndpoint {
     public synchronized boolean canPlantNewBomb(BCharacter crtChar){
         int maxBombs = crtChar.getMaxBombs();
         int plantedBombs = 0;
-        ArrayList<BBomb> bombs2 = (ArrayList<BBomb>)bombs.clone();
+        HashSet<BBomb> bombs2 = new HashSet<BBomb>(bombs);
         
         for (BBomb bomb : bombs2){
             if (bomb.getOwner().getId() == crtChar.getId())
@@ -689,7 +691,7 @@ public class BombermanWSEndpoint {
     }
     
     public synchronized void playSoundAll(String sound){
-        ArrayList<Session> peers2 = (ArrayList<Session>)peers.clone();
+        HashSet<Session> peers2 = new HashSet<Session>(peers);
         
         for (Session peer : peers2) {
             playSound(sound, peer);
