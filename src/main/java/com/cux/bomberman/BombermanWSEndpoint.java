@@ -69,7 +69,7 @@ public class BombermanWSEndpoint {
     
     private static boolean isFirst = true;
     
-    private static Map<Integer, World> map = Collections.synchronizedMap(new HashMap<Integer, World>());
+    public static Map<Integer, World> map = Collections.synchronizedMap(new HashMap<Integer, World>());
     
     private final static int MAX_PLAYERS = 2;
     
@@ -227,7 +227,7 @@ public class BombermanWSEndpoint {
         
         //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected2 ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
         
-        BCharacter newChar = new BCharacter(peer.getId(), map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())));
+        BCharacter newChar = new BCharacter(peer.getId(), Integer.parseInt(peer.getUserProperties().get("room").toString()));
         newChar.setPosX(0);
         newChar.setPosY(0);
         newChar.setWidth(World.wallDim);

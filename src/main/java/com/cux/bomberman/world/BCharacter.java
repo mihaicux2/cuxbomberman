@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
+import javax.websocket.Session;
 //import java.util.logging.Level;
 //import java.util.logging.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -38,7 +39,7 @@ public class BCharacter extends AbstractBlock{
     protected int maxBombs = 1; 
     protected boolean walking = false;
     protected boolean triggered = false; // checks if the character has a trigger for the "planted" bombs
-    private World map;
+    private int roomIndex;
     
     {
         // walk in normal state
@@ -72,10 +73,10 @@ public class BCharacter extends AbstractBlock{
         textures.put("walkLeftWin", 10);
     }
     
-    public BCharacter(String id, World map){
+    public BCharacter(String id, int roomIndex){
         this.id = id;
         this.name = id;
-        this.map = map;
+        this.roomIndex = roomIndex;
     }
 
     public String getId() {
@@ -208,7 +209,7 @@ public class BCharacter extends AbstractBlock{
         new Thread(new Runnable(){
             @Override
             public void run() {
-                map.chars[myChar.posX / World.wallDim][myChar.posY / World.wallDim].remove(myChar.name);
+                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[myChar.posX / World.wallDim][myChar.posY / World.wallDim].remove(myChar.name);
                 for (int i = 0; i < World.wallDim; i++){
                     switch(direction){
                         case "up":
@@ -231,7 +232,7 @@ public class BCharacter extends AbstractBlock{
                         BLogger.getInstance().logException2(ex);
                     }
                 }
-                map.chars[myChar.posX / World.wallDim][myChar.posY / World.wallDim].put(myChar.name, myChar);
+                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[myChar.posX / World.wallDim][myChar.posY / World.wallDim].put(myChar.name, myChar);
                 myChar.walking = false;
             }
         }).start();
@@ -261,7 +262,8 @@ public class BCharacter extends AbstractBlock{
        
        if (ret == true && AbstractItem.class.isAssignableFrom(block.getClass())){
            this.attachEvent((AbstractItem)block);
-           map.blockMatrix[(block.getPosX() / World.wallDim)][block.getPosY() / World.wallDim] = null;
+           BombermanWSEndpoint.items.get(this.roomIndex).remove((AbstractItem)block);
+           BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[(block.getPosX() / World.wallDim)][block.getPosY() / World.wallDim] = null;
            try{
                BombermanWSEndpoint.items.remove((AbstractItem)block);
            } catch (ConcurrentModificationException ex) {
@@ -367,7 +369,7 @@ public class BCharacter extends AbstractBlock{
     
     @Override
     public BCharacter clone(){
-        BCharacter ret = new BCharacter(this.id, this.map);
+        BCharacter ret = new BCharacter(this.id, this.roomIndex);
         ret.posX = this.posX;
         ret.posY = this.posY;
         ret.width = this.width;
