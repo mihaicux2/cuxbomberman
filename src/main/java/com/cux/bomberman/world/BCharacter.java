@@ -39,7 +39,7 @@ public class BCharacter extends AbstractBlock{
     protected int maxBombs = 1; 
     protected boolean walking = false;
     protected boolean triggered = false; // checks if the character has a trigger for the "planted" bombs
-    private int roomIndex;
+    public int roomIndex;
     
     {
         // walk in normal state
@@ -230,6 +230,8 @@ public class BCharacter extends AbstractBlock{
                 BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.name);
                 BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.name, myChar);
                 
+                BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
+                
                 for (int i = 0; i < World.wallDim; i++){
                     switch(direction){
                         case "up":
@@ -251,10 +253,12 @@ public class BCharacter extends AbstractBlock{
                     } catch (InterruptedException ex) {
                         BLogger.getInstance().logException2(ex);
                     }
+                    BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
                 }
                 //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.name);
                 //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.name, myChar);
                 myChar.walking = false;
+                BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
             }
         }).start();
     }
@@ -290,6 +294,7 @@ public class BCharacter extends AbstractBlock{
            } catch (ConcurrentModificationException ex) {
                BLogger.getInstance().logException2(ex);
            }
+           BombermanWSEndpoint.itemsChanged.put(this.roomIndex, true);
            ret = false; // return false ;)
        }
        
@@ -405,6 +410,7 @@ public class BCharacter extends AbstractBlock{
         ret.speed = this.speed;
         ret.maxBombs = this.maxBombs;
         ret.walking = this.walking;
+        ret.roomIndex = this.roomIndex;
         
         return ret;
     }

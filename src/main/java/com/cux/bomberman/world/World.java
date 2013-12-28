@@ -41,9 +41,9 @@ public class World {
     public ArrayList<AbstractWall> walls = new ArrayList<>();
     
     // used for mapping and collisions
-    public AbstractBlock[][] blockMatrix = new AbstractBlock[300][300];
+    public AbstractBlock[][] blockMatrix = new AbstractBlock[100][100];
     
-    public HashMap<String, BCharacter>[][] chars = new HashMap[300][300];
+    public HashMap<String, BCharacter>[][] chars = new HashMap[100][100];
     
     public static int getWidth(){
         return WIDTH;
@@ -62,8 +62,8 @@ public class World {
     }
     
     public World(){
-        for (int i = 0; i < 300; i++){
-            for (int j = 0; j < 300; j++){
+        for (int i = 0; i < 100; i++){
+            for (int j = 0; j < 100; j++){
                 chars[i][j] = new HashMap<String, BCharacter>();
             }
         }        

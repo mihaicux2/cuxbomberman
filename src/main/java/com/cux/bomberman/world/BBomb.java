@@ -6,6 +6,7 @@
 
 package com.cux.bomberman.world;
 
+import com.cux.bomberman.BombermanWSEndpoint;
 import com.cux.bomberman.util.BLogger;
 import java.io.IOException;
 import java.util.Date;
@@ -22,7 +23,7 @@ public class BBomb extends AbstractBlock {
     //protected String charId = "";
     protected BCharacter owner;
     protected Date creationTime = null;
-    protected double lifeTime = 1.5;
+    protected Double lifeTime = 1.5;
     protected boolean volatileB = true;
     
     public BBomb(BCharacter owner){
@@ -34,7 +35,7 @@ public class BBomb extends AbstractBlock {
             this.volatileB = false;
         }
     }
-
+    
     public BCharacter getOwner(){
         return this.owner;
     }
