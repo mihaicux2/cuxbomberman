@@ -6,6 +6,7 @@
 
 package com.cux.bomberman.world.items;
 
+import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.AbstractBlock;
 import java.io.IOException;
 import java.util.Date;
@@ -81,7 +82,7 @@ public abstract class AbstractItem extends AbstractBlock{
         try {
             return ow.writeValueAsString(this);
         } catch (IOException ex) {
-           // Logger.getLogger(AbstractWall.class.getName()).log(Level.SEVERE, null, ex);
+            BLogger.getInstance().logException2(ex);
             return ex.getMessage();
            // return "";
         }

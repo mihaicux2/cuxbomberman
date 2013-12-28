@@ -7,16 +7,17 @@
 package com.cux.bomberman.world;
 
 import com.cux.bomberman.BombermanWSEndpoint;
+import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
-import com.cux.bomberman.world.walls.AbstractWall;
-import com.sun.org.apache.bcel.internal.util.BCELifier;
+//import com.cux.bomberman.world.walls.AbstractWall;
+//import com.sun.org.apache.bcel.internal.util.BCELifier;
 import java.io.IOException;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+//import java.util.logging.Level;
+//import java.util.logging.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 
@@ -37,6 +38,7 @@ public class BCharacter extends AbstractBlock{
     protected int maxBombs = 1; 
     protected boolean walking = false;
     protected boolean triggered = false; // checks if the character has a trigger for the "planted" bombs
+    private World map;
     
     {
         // walk in normal state
@@ -70,9 +72,10 @@ public class BCharacter extends AbstractBlock{
         textures.put("walkLeftWin", 10);
     }
     
-    public BCharacter(String id){
+    public BCharacter(String id, World map){
         this.id = id;
         this.name = id;
+        this.map = map;
     }
 
     public String getId() {
@@ -205,7 +208,7 @@ public class BCharacter extends AbstractBlock{
         new Thread(new Runnable(){
             @Override
             public void run() {
-                World.chars[myChar.posX / World.wallDim][myChar.posY / World.wallDim].remove(myChar.name);
+                map.chars[myChar.posX / World.wallDim][myChar.posY / World.wallDim].remove(myChar.name);
                 for (int i = 0; i < World.wallDim; i++){
                     switch(direction){
                         case "up":
@@ -225,10 +228,10 @@ public class BCharacter extends AbstractBlock{
                         //Thread.sleep(10);
                         Thread.sleep(10-speed);
                     } catch (InterruptedException ex) {
-                        Logger.getLogger(BCharacter.class.getName()).log(Level.SEVERE, null, ex);
+                        BLogger.getInstance().logException2(ex);
                     }
                 }
-                World.chars[myChar.posX / World.wallDim][myChar.posY / World.wallDim].put(myChar.name, myChar);
+                map.chars[myChar.posX / World.wallDim][myChar.posY / World.wallDim].put(myChar.name, myChar);
                 myChar.walking = false;
             }
         }).start();
@@ -258,11 +261,11 @@ public class BCharacter extends AbstractBlock{
        
        if (ret == true && AbstractItem.class.isAssignableFrom(block.getClass())){
            this.attachEvent((AbstractItem)block);
-           World.blockMatrix[(block.getPosX() / World.wallDim)][block.getPosY() / World.wallDim] = null;
+           map.blockMatrix[(block.getPosX() / World.wallDim)][block.getPosY() / World.wallDim] = null;
            try{
                BombermanWSEndpoint.items.remove((AbstractItem)block);
            } catch (ConcurrentModificationException ex) {
-               Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+               BLogger.getInstance().logException2(ex);
            }
            ret = false;
        }
@@ -321,7 +324,7 @@ public class BCharacter extends AbstractBlock{
                             break;
                     }
                 } catch (InterruptedException ex) {
-                    Logger.getLogger(BCharacter.class.getName()).log(Level.SEVERE, null, ex);
+                    BLogger.getInstance().logException2(ex);
                 }
             }
         }).start();
@@ -364,7 +367,7 @@ public class BCharacter extends AbstractBlock{
     
     @Override
     public BCharacter clone(){
-        BCharacter ret = new BCharacter(this.id);
+        BCharacter ret = new BCharacter(this.id, this.map);
         ret.posX = this.posX;
         ret.posY = this.posY;
         ret.width = this.width;

@@ -12,8 +12,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+//import java.util.logging.Level;
+//import java.util.logging.Logger;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
@@ -27,82 +27,103 @@ import com.cux.bomberman.world.World;
 import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
-import java.util.Collection;
+//import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+//import java.util.concurrent.ConcurrentHashMap;
+//import java.util.concurrent.ConcurrentMap;
+//import java.util.logging.FileHandler;
+//import java.util.logging.SimpleFormatter;
+import com.cux.bomberman.util.BLogger;
+//import java.util.Map.Entry;
+import javax.websocket.server.PathParam;
+//import com.cux.bomberman.util.BMessenger;
 
 /**
  *
  * @author mihaicux
+ * Toate fisierele de citit/scris se pun relativ la originea domeniului
+ * Windows : C:\Users\mihaicux\AppData\Roaming\NetBeans\7.4\config\GF_4.0\domain1\config
+ * Linux   : TBD
  */
-@ServerEndpoint("/bombermanendpoint")
+@ServerEndpoint("/bombermanendpoint/")
 public class BombermanWSEndpoint {
 
     private static final Set<Session> peers = Collections.synchronizedSet(new HashSet<Session>());
     
-    private static final Set<BBomb> bombs = Collections.synchronizedSet(new HashSet<BBomb>());
+    private static final Map<Integer, Set<BBomb>> bombs = Collections.synchronizedMap(new HashMap<Integer, Set<BBomb>>());
     
-    private static final Set<BBomb> markedBombs = Collections.synchronizedSet(new HashSet<BBomb>());
+    private static final Map<Integer, Set<BBomb>> markedBombs = Collections.synchronizedMap(new HashMap<Integer, Set<BBomb>>());
     
     private static final Map<String, BCharacter> chars = Collections.synchronizedMap(new HashMap<String, BCharacter>());
     
     private static final Set<String> workingThreads =Collections.synchronizedSet(new HashSet<String>());
     
-    private static final Set<Explosion> explosions = Collections.synchronizedSet(new HashSet<Explosion>());
+    private static final Map<Integer, Set<Explosion>> explosions = Collections.synchronizedMap(new HashMap<Integer, Set<Explosion>>());
     
-    public static Set<AbstractItem> items = Collections.synchronizedSet(new HashSet<AbstractItem>());
+    public static Map<Integer, Set<AbstractItem>> items = Collections.synchronizedMap(new HashMap<Integer, Set<AbstractItem>>());
     
     private static boolean isFirst = true;
     
-    private static World map = null;
+    private static Map<Integer, World> map = Collections.synchronizedMap(new HashMap<Integer, World>());
+    
+    private final static int MAX_PLAYERS = 2;
+    
+    private static final Map<Integer, Integer> mapPlayers = Collections.synchronizedMap(new HashMap<Integer, Integer>());
+    
+    private static int mapNumber = 0;
     
     @OnMessage
     public synchronized String onMessage(String message, Session peer) {
         
         BCharacter crtChar = chars.get(peer.getId());
         
+        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "client message : "+message);
+        
         switch (message){
             case "up":
                 crtChar.setDirection("Up");
-                if (!crtChar.isWalking() && !map.HasMapCollision(crtChar)){
+                if (!crtChar.isWalking() && !map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).HasMapCollision(crtChar)){
                     crtChar.moveUp();
                 }
                 //else crtChar.moveDown();
                 break;
             case "down":
                 crtChar.setDirection("Down");
-                if (!crtChar.isWalking() && !map.HasMapCollision(crtChar)){
+                if (!crtChar.isWalking() && !map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).HasMapCollision(crtChar)){
                     crtChar.moveDown();
                 }
                 //else crtChar.moveUp();
                 break;
             case "left":
                 crtChar.setDirection("Left");
-                if (!crtChar.isWalking() && !map.HasMapCollision(crtChar)){
+                if (!crtChar.isWalking() && !map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).HasMapCollision(crtChar)){
                     crtChar.moveLeft();
                 }
                 //else crtChar.moveRight();
                 break;
             case "right":
                 crtChar.setDirection("Right");
-                if (!crtChar.isWalking() && !map.HasMapCollision(crtChar)){
+                if (!crtChar.isWalking() && !map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).HasMapCollision(crtChar)){
                      crtChar.moveRight();
                 }
                 //else crtChar.moveLeft();
                 break;
             case "bomb":
                 crtChar.addOrDropBomb(); // change character state
-                boolean isAllowed = canPlantNewBomb(crtChar);
+                boolean isAllowed = canPlantNewBomb(peer, crtChar);
                 if (crtChar.getState() == "Normal" && isAllowed){ // if he dropped the bomb, add the bomb to the screen
                     BBomb b = new BBomb(crtChar);
-                    this.bombs.add(b);
-                    map.blockMatrix[b.getPosX()/World.wallDim][b.getPosY()/World.wallDim] = b;
+                    //this.bombs.add(b);
+                    if (this.bombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) == null){
+                        this.bombs.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), new HashSet<BBomb>());
+                    }
+                    this.bombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).add(b);
+                    map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[b.getPosX()/World.wallDim][b.getPosY()/World.wallDim] = b;
                 }
                 else if (!isAllowed){
                     crtChar.addOrDropBomb();
@@ -110,7 +131,7 @@ public class BombermanWSEndpoint {
                 break;
             case "detonate":
                 if(crtChar.isTriggered()){
-                    detonateBomb(crtChar);
+                    detonateBomb(crtChar, peer);
                 }
                 break;
             case "trap":
@@ -126,7 +147,7 @@ public class BombermanWSEndpoint {
                 crtChar.setState("Win");
                 break;
             case "reset":
-                resetMap();
+                //resetMap();
                 break;
             case "getEnvironment":
                 exportEnvironment(peer);
@@ -137,7 +158,7 @@ public class BombermanWSEndpoint {
                     try {
                         peer.close();
                     } catch (IOException ex) {
-                        Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                        BLogger.getInstance().logException2(ex);
                     }
                 }
             default:
@@ -155,7 +176,7 @@ public class BombermanWSEndpoint {
             try {
                 peer.close();
             } catch (IOException ex) {
-                Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                BLogger.getInstance().logException2(ex);
             }
         }
         peers.remove(peer);
@@ -163,13 +184,50 @@ public class BombermanWSEndpoint {
     }
 
     @OnOpen
-    public synchronized void onOpen(Session peer) {
+    public synchronized void onOpen(Session peer, @PathParam("room") final String room) {
+        
         peers.add(peer);
         
         workingThreads.add(peer.getId());
         
-        BCharacter newChar = new BCharacter(peer.getId());
-        newChar = new BCharacter(peer.getId());
+        if (peers.size() == 1){ // this is the first player?
+            mapNumber = 1;
+            if (mapPlayers.get(mapNumber) == null){
+                mapPlayers.put(mapNumber, 1); // one player in current map
+            }
+            else{
+                if (mapPlayers.get(mapNumber) == MAX_PLAYERS){ // create a new room /map
+                    mapNumber++;
+                    mapPlayers.put(mapNumber, 1); // one player in the current map
+                }
+                else{
+                    mapPlayers.put(mapNumber, 1+mapPlayers.get(mapNumber)); // another player in the current map
+                }
+            }
+        }
+        else{
+            if (mapPlayers.get(mapNumber) == MAX_PLAYERS){ // create a new room /map
+                mapNumber++;
+                mapPlayers.put(mapNumber, 1); // one player in the current map
+            }
+            else{
+                mapPlayers.put(mapNumber, 1+mapPlayers.get(mapNumber)); // another player in the current map
+            }
+        }
+        peer.getUserProperties().put("room", mapNumber);
+        
+        //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
+        
+        if (map.size() == 0 || map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) == null){
+            //map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
+            //BLogger.getInstance().log(BLogger.LEVEL_INFO, "first map...");
+            map.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), new World("D:\\Programe\\hobby\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt"));
+            //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
+        }
+        
+        //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected2 ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
+        
+        BCharacter newChar = new BCharacter(peer.getId(), map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())));
         newChar.setPosX(0);
         newChar.setPosY(0);
         newChar.setWidth(World.wallDim);
@@ -177,14 +235,12 @@ public class BombermanWSEndpoint {
         
         chars.put(peer.getId(), newChar);
         
-        if (map == null){
-            map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
-            //map = new World("D:\\Programe\\hobby\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt");
-        }
-        
-        map.chars[0][0].put(newChar.getName(), newChar);
-        
+        map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).chars[0][0].put(newChar.getName(), newChar);
+
         watchPeer(peer);
+        
+        BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
+        //System.exit(0);
     }
 
     @OnError
@@ -194,37 +250,24 @@ public class BombermanWSEndpoint {
     public synchronized void exportEnvironment(Session peer){
         try {
             peer.getBasicRemote().sendText("chars:[" + exportChars(peer));
-            peer.getBasicRemote().sendText("map:[" + exportMap());
-            peer.getBasicRemote().sendText("bombs:[" + exportBombs());
-            peer.getBasicRemote().sendText("explosions:[" + exportExplosions());
-            peer.getBasicRemote().sendText("items:[" + exportItems());
+            peer.getBasicRemote().sendText("map:[" + exportMap(peer));
+            peer.getBasicRemote().sendText("bombs:[" + exportBombs(peer));
+            peer.getBasicRemote().sendText("explosions:[" + exportExplosions(peer));
+            peer.getBasicRemote().sendText("items:[" + exportItems(peer));
         } catch (IOException ex) {
-            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+            BLogger.getInstance().logException2(ex);
         } catch (IllegalStateException ex){
-            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+            BLogger.getInstance().logException2(ex);
         } catch (ConcurrentModificationException ex) {
-            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+            BLogger.getInstance().logException2(ex);
         }
-    }
-    
-    public synchronized void resetMap(){
-        map.walls = new ArrayList<>();
-        map.blockMatrix = new AbstractBlock[100][100];
-        map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
-        //map = new World("D:\\Programe\\hobby\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt");
-       // items = new ArrayList<>();
-        //precCharStr = "";.
-        //precBombStr = "";
-        //precExplStr = "";
-        //precWallStr = "";
-        //precItemStr = "";
     }
     
     public synchronized void stopThread(String threadId){
         workingThreads.remove(threadId);
     }
     
-    public synchronized boolean isTrapped(BCharacter crtChar){
+    public synchronized boolean isTrapped(BCharacter crtChar, Session peer){
         int x     = crtChar.getPosX();
         int y     = crtChar.getPosY();
         int w     = crtChar.getWidth();
@@ -233,10 +276,10 @@ public class BombermanWSEndpoint {
         int right = (x/World.wallDim +1);
         int up    = (y/World.wallDim -1);
         int down  = (y/World.wallDim +1);
-        return ((x<=0 || wallExists(map.blockMatrix, left, y/World.wallDim) || bombExists(map.blockMatrix, left, y/World.wallDim)) &&
-                (x+w >= World.getWidth() || wallExists(map.blockMatrix, right, y/World.wallDim) || bombExists(map.blockMatrix, right, y/World.wallDim)) &&
-                (y <= 0 || wallExists(map.blockMatrix, x/World.wallDim, up) || bombExists(map.blockMatrix, x/World.wallDim, up)) &&
-                (y+h >= World.getHeight() || wallExists(map.blockMatrix, x/World.wallDim, down) || bombExists(map.blockMatrix, x/World.wallDim, down)));
+        return ((x<=0 || wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, left, y/World.wallDim) || bombExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, left, y/World.wallDim)) &&
+                (x+w >= World.getWidth() || wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, right, y/World.wallDim) || bombExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, right, y/World.wallDim)) &&
+                (y <= 0 || wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, x/World.wallDim, up) || bombExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, x/World.wallDim, up)) &&
+                (y+h >= World.getHeight() || wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, x/World.wallDim, down) || bombExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, x/World.wallDim, down)));
     }
     
     public void watchPeer(final Session peer){
@@ -260,7 +303,7 @@ public class BombermanWSEndpoint {
                 while (peer.isOpen() && workingThreads.contains(peer.getId())){
                     isFirst = false;
                     BCharacter crtChar = chars.get(peer.getId());
-                    if (isTrapped(crtChar)){
+                    if (isTrapped(crtChar, peer)){
                         crtChar.setState("Trapped"); // will be automated reverted when a bomb kills him >:)
                     }   
                     try {
@@ -270,54 +313,54 @@ public class BombermanWSEndpoint {
                             precCharStr = exportCharStr;
                         }
                         
-                        exportWallStr = environment.exportMap();
+                        exportWallStr = environment.exportMap(peer);
                         if (!exportWallStr.equals(precWallStr)){
                             peer.getBasicRemote().sendText("map:[" + exportWallStr);
                             precWallStr = exportWallStr;
                         }
                         
-                        exportBombStr = environment.exportBombs();
+                        exportBombStr = environment.exportBombs(peer);
                         if (!exportBombStr.equals(precBombStr)){
                             peer.getBasicRemote().sendText("bombs:[" + exportBombStr);
                             precBombStr = exportBombStr;
                             //System.out.println(exportBombStr);
                         }
-                        exportExplStr = environment.exportExplosions();
+                        exportExplStr = environment.exportExplosions(peer);
                         if (!exportExplStr.equals(precExplStr)){
                             peer.getBasicRemote().sendText("explosions:[" + exportExplStr);
                             precExplStr = exportExplStr;
                         }
-                        exportItemStr = environment.exportItems();
+                        exportItemStr = environment.exportItems(peer);
                         if (!exportExplStr.equals(precItemStr)){
                             peer.getBasicRemote().sendText("items:[" + exportItemStr);
                             precItemStr = exportItemStr;
                         }
                         Thread.sleep(10); // limiteaza la 100FPS comunicarea cu clientul
                     } catch (InterruptedException ex) {
-                        Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                        BLogger.getInstance().logException2(ex);
                     } catch (IOException ex) {
-                        Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                        BLogger.getInstance().logException2(ex);
                     } catch (IllegalStateException ex){
-                        Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                        BLogger.getInstance().logException2(ex);
                     } catch (ConcurrentModificationException ex) {
-                        Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                        BLogger.getInstance().logException2(ex);
                     }
                 }
             }
         }).start();
     }
     
-    protected void detonateBomb(BCharacter myChar){
+    protected void detonateBomb(BCharacter myChar, Session peer){
         try{
-            for (BBomb bomb : bombs){
+            for (BBomb bomb : bombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString()))){
                 if (bomb.getCharId().equals(myChar.getName())){
                     bomb.setVolatileB(true);
-                    markForRemove(bomb);
+                    markForRemove(peer, bomb);
                     break;
                 }
             }
         } catch (ConcurrentModificationException ex){
-            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+            BLogger.getInstance().logException2(ex);
         }
     }
     
@@ -330,7 +373,7 @@ public class BombermanWSEndpoint {
                     chars.remove(peerId);
                     System.out.println("final");
                 } catch (InterruptedException ex) {
-                    Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                    BLogger.getInstance().logException2(ex);
                 } 
             }
         }).start();
@@ -370,24 +413,24 @@ public class BombermanWSEndpoint {
         }
     }
     
-    public static boolean characterExists(int i, int j){
-        return !map.chars[i][j].isEmpty();
+    public static boolean characterExists(Session peer, int i, int j){
+        return !map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).chars[i][j].isEmpty();
     }
     
-    protected synchronized void triggerBlewCharacter(final int x, final int y){
+    protected synchronized void triggerBlewCharacter(final Session peer, final int x, final int y){
         new Thread(new Runnable(){
             @Override
             public synchronized void run() {
-                Iterator it = map.chars[x][y].entrySet().iterator();
+                Iterator it = map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).chars[x][y].entrySet().iterator();
                 while (it.hasNext()) {
                     Map.Entry pairs = (Map.Entry)it.next();
                     revertState((BCharacter)pairs.getValue());
-                    it.remove(); // avoids a ConcurrentModificationException
+                    //it.remove(); // avoids a ConcurrentModificationException
                 }
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
-                    Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                    BLogger.getInstance().logException2(ex);
                 }
             }
         }).start();
@@ -402,14 +445,14 @@ public class BombermanWSEndpoint {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
-                    Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                    BLogger.getInstance().logException2(ex);
                 }
                 myChar.setState("Normal");
             }
         }).start();
     }
     
-    protected synchronized void markForRemove(final BBomb bomb){
+    protected synchronized void markForRemove(final Session peer, final BBomb bomb){
         new Thread(new Runnable(){
             @Override
             public synchronized void run() {
@@ -417,255 +460,281 @@ public class BombermanWSEndpoint {
                     playSoundAll("sounds/explosion.wav");
                     Explosion exp = new Explosion(bomb.getOwner());
                     Set<String> objectHits = Collections.synchronizedSet(new HashSet<String>());
-                    map.blockMatrix[bomb.getPosX()/World.wallDim][bomb.getPosY()/World.wallDim] = null;
+                    map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[bomb.getPosX()/World.wallDim][bomb.getPosY()/World.wallDim] = null;
                     int charRange = bomb.getOwner().getBombRange();
                     
                     for (int i = 1; i <= charRange; i++){
                         
                         // right
-                        if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.bombExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim) && !objectHits.contains("right")){
-                             markForRemove((BBomb)map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]);
+                        if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.bombExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim) && !objectHits.contains("right")){
+                             markForRemove(peer, (BBomb)map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]);
                              objectHits.add("right");
                              //System.out.println("hit bomb right");
                         }
-                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.characterExists((bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim) && !objectHits.contains("right")){
-                            triggerBlewCharacter((bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim);
+                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.characterExists(peer,(bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim) && !objectHits.contains("right")){
+                            triggerBlewCharacter(peer, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim);
                             //objectHits.add("right");
                             exp.ranges.put("right", exp.ranges.get("right")+1);
                             //System.out.println("hit character right");
                         }
-                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim) && !objectHits.contains("right")){
+                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim) && !objectHits.contains("right")){
                             exp.directions.add("right");
                             //System.out.println("hit wall right");
-                            if (((AbstractWall)map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]).isBlowable()){
-                                map.walls.remove(map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]);
+                            if (((AbstractWall)map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]).isBlowable()){
+                                map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).walls.remove(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]);
                                 exp.ranges.put("right", exp.ranges.get("right")+1);
                                 //map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim] = null;
-                                flipForItems((bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim);
+                                flipForItems(peer, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim);
                             }
                             objectHits.add("right");
                         }
-                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.itemExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim) && !objectHits.contains("right")){
+                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && BombermanWSEndpoint.itemExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim) && !objectHits.contains("right")){
                             exp.directions.add("right");
-                            items.remove((AbstractItem)map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]);
-                            map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim] = null;
+                            items.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).remove((AbstractItem)map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim]);
+                            map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim] = null;
                             exp.ranges.put("right", exp.ranges.get("right")+1);
                             objectHits.add("right");
                         }
-                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim) && !objectHits.contains("right")){
+                        else if (bomb.getPosX() + bomb.getWidth()*(i+1) <= World.getWidth() && !BombermanWSEndpoint.wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim)+i, bomb.getPosY()/World.wallDim) && !objectHits.contains("right")){
                             exp.directions.add("right");
                             exp.ranges.put("right", exp.ranges.get("right")+1);
                             //System.out.println("empty right");
                         }
                         
                         // left
-                        if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.bombExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim) && !objectHits.contains("left")){
-                            markForRemove((BBomb)map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]);
+                        if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.bombExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim) && !objectHits.contains("left")){
+                            markForRemove(peer, (BBomb)map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]);
                             objectHits.add("left");
                             //System.out.println("hit bomb left");
                         }
-                        else if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.characterExists((bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim) && !objectHits.contains("left")){
-                            triggerBlewCharacter((bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim);
+                        else if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.characterExists(peer, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim) && !objectHits.contains("left")){
+                            triggerBlewCharacter(peer, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim);
                             //objectHits.add("left");
                             exp.ranges.put("left", exp.ranges.get("left")+1);
                             //System.out.println("hit character left");
                         }
-                        else if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim) && !objectHits.contains("left")){
+                        else if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim) && !objectHits.contains("left")){
                             exp.directions.add("left");
                             //System.out.println("hit wall left");
-                            if (((AbstractWall)map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]).isBlowable()){
-                                map.walls.remove(map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]);
+                            if (((AbstractWall)map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]).isBlowable()){
+                                map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).walls.remove(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]);
                                 exp.ranges.put("left", exp.ranges.get("left")+1);
                                 //map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim] = null;
-                                flipForItems((bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim);
+                                flipForItems(peer, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim);
                             }
                             objectHits.add("left");
                         }
-                        else if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.itemExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim) && !objectHits.contains("left")){
+                        else if (bomb.getPosX() - bomb.getWidth()*i >= 0 && BombermanWSEndpoint.itemExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim) && !objectHits.contains("left")){
                             exp.directions.add("left");
-                            items.remove((AbstractItem)map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]);
-                            map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim] = null;
+                            items.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).remove((AbstractItem)map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim]);
+                            map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim] = null;
                             exp.ranges.put("left", exp.ranges.get("left")+1);
                             objectHits.add("left");
                         }
-                        else  if (bomb.getPosX() - bomb.getWidth()*i >= 0 && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim) && !objectHits.contains("left")){
+                        else  if (bomb.getPosX() - bomb.getWidth()*i >= 0 && !BombermanWSEndpoint.wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim)-i, bomb.getPosY()/World.wallDim) && !objectHits.contains("left")){
                             exp.directions.add("left");
                             exp.ranges.put("left", exp.ranges.get("left")+1);
                             //System.out.println("empty left");
                         }
                         
                         // down
-                        if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.bombExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i) && !objectHits.contains("down")){
-                            markForRemove((BBomb)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]);
+                        if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.bombExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i) && !objectHits.contains("down")){
+                            markForRemove(peer, (BBomb)map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]);
                             objectHits.add("down");
                             //System.out.println("hit bomb down");
                         }
-                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.characterExists((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i) && !objectHits.contains("down")){
-                            triggerBlewCharacter((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i);
+                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.characterExists(peer, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i) && !objectHits.contains("down")){
+                            triggerBlewCharacter(peer, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i);
                             //objectHits.add("down");
                             exp.ranges.put("down", exp.ranges.get("down")+1);
                             //System.out.println("hit character down");
                         }
-                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i) && !objectHits.contains("down")){
+                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i) && !objectHits.contains("down")){
                             exp.directions.add("down");
                             //System.out.println("hit wall down");
-                            if (((AbstractWall)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]).isBlowable()){
-                                map.walls.remove(map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]);
+                            if (((AbstractWall)map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]).isBlowable()){
+                                map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).walls.remove(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]);
                                 exp.ranges.put("down", exp.ranges.get("down")+1);
                                 //map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i] = null;
-                                flipForItems((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i);
+                                flipForItems(peer, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i);
                             }
                             objectHits.add("down");
                         }
-                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.itemExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i) && !objectHits.contains("down")){
+                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && BombermanWSEndpoint.itemExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i) && !objectHits.contains("down")){
                             exp.directions.add("down");
-                            items.remove((AbstractItem)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]);
-                            map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i] = null;
+                            items.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).remove((AbstractItem)map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i]);
+                            map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i] = null;
                             exp.ranges.put("down", exp.ranges.get("down")+1);
                             objectHits.add("down");
                         }
-                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i) && !objectHits.contains("down")){
+                        else if (bomb.getPosY() + bomb.getHeight()*(i+1) <= World.getHeight() && !BombermanWSEndpoint.wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim+i) && !objectHits.contains("down")){
                             exp.directions.add("down");
                             exp.ranges.put("down", exp.ranges.get("down")+1);
                             //System.out.println("empty down");
                         }                       
                         
                         // up
-                        if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.bombExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i) && !objectHits.contains("up")){
-                            markForRemove((BBomb)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i]);
+                        if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.bombExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i) && !objectHits.contains("up")){
+                            markForRemove(peer, (BBomb)map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i]);
                             objectHits.add("up");
                             //System.out.println("hit bomb up");
                         }
-                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.characterExists((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i) && !objectHits.contains("up")){
-                            triggerBlewCharacter((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i);
+                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.characterExists(peer, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i) && !objectHits.contains("up")){
+                            triggerBlewCharacter(peer, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i);
                             //objectHits.add("up");
                             exp.ranges.put("up", exp.ranges.get("up")+1);
                             //System.out.println("hit character up");
                         }
-                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i) && !objectHits.contains("up")){
+                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i) && !objectHits.contains("up")){
                             exp.directions.add("up");
                             //System.out.println("hit wall up");
-                            if(((AbstractWall)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i]).isBlowable()){
-                                map.walls.remove(map.blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim - i]);
+                            if(((AbstractWall)map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i]).isBlowable()){
+                                map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).walls.remove(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim - i]);
                                 exp.ranges.put("up", exp.ranges.get("up")+1);
                                 //map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i] = null;
-                                flipForItems((bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i);
+                                flipForItems(peer, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i);
                             }
                             objectHits.add("up");
                         }
-                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.itemExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i) && !objectHits.contains("up")){
+                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && BombermanWSEndpoint.itemExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i) && !objectHits.contains("up")){
                             exp.directions.add("up");
-                            items.remove((AbstractItem)map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i]);
-                            map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i] = null;
+                            items.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).remove((AbstractItem)map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i]);
+                            map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i] = null;
                             exp.ranges.put("up", exp.ranges.get("up")+1);
                             objectHits.add("up");
                         }
-                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && !BombermanWSEndpoint.wallExists(map.blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i) && !objectHits.contains("up")){
+                        else if (bomb.getPosY() - bomb.getHeight()*i >= 0 && !BombermanWSEndpoint.wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim-i) && !objectHits.contains("up")){
                             exp.directions.add("up");
                             exp.ranges.put("up", exp.ranges.get("up")+1);
                             //System.out.println("empty up");
                         }
                     }
                     
-                    markedBombs.add(bomb);
-                    explosions.add(exp);
+                    if (markedBombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) == null){
+                        markedBombs.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), new HashSet<BBomb>());
+                    }
+                    markedBombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).add(bomb);
+                    if (explosions.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) == null){
+                        explosions.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), new HashSet<Explosion>());
+                    }
+                    explosions.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).add(exp);
                     Thread.sleep(100); // wait one second before actual removing
-                    explosions.remove(exp);
-                    markedBombs.remove(bomb);
-                    bombs.remove(bomb);
+                    explosions.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).remove(exp);
+                    markedBombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).remove(bomb);
+                    bombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).remove(bomb);
                 } catch (InterruptedException ex) {
-                    Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                    BLogger.getInstance().logException2(ex);
                 } 
             }
         }).start();
     }
     
-    protected synchronized void flipForItems(int x, int y){
+    protected synchronized void flipForItems(Session peer, int x, int y){
         
         int rand = (int) (Math.random()*1000000);
         if (rand % 5 == 0){
             AbstractItem item = ItemGenerator.getInstance().generateRandomItem();
-            item.setPosX(map.blockMatrix[x][y].getPosX());
-            item.setPosY(map.blockMatrix[x][y].getPosY());
-            map.blockMatrix[x][y] = null;
-            map.blockMatrix[x][y] = item;
-            items.add(item);
+            //if (map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y] != null){
+                item.setPosX(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y].getPosX());
+                item.setPosY(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y].getPosY());
+               // map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y] = null;
+            //}
+            map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y] = item;
+            if (this.items.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) == null){
+                this.items.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), new HashSet<AbstractItem>());
+            }
+            items.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).add(item);
         }
         else{
-            map.blockMatrix[x][y] = null; // remove the block
+            map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y] = null; // remove the block
         }
     }
     
-    protected boolean alreadyMarked(BBomb bomb){
-        return markedBombs.contains(bomb);
+    protected boolean alreadyMarked(Session peer, BBomb bomb){
+        boolean ret = false;
+        if (markedBombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) == null){
+            markedBombs.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), new HashSet<BBomb>());
+        }
+        ret = markedBombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).contains(bomb);
+        return ret;
     }
     
     protected synchronized String exportChars(Session peer){
-        
+        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting chars...");
         String ret = "";
         ret += peer.getId()+"[#chars#]";
         HashSet<Session> peers2 = new HashSet<Session>(peers);
-        
         for (Session peer2 : peers2) {
-            ret += chars.get(peer2.getId()).toString()+"[#charSep#]";
+            if (peer2.getUserProperties().get("room").toString().equals(peer.getUserProperties().get("room").toString()))
+                ret += chars.get(peer2.getId()).toString()+"[#charSep#]";
         }
-        
+        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exported chars...");
         return ret;
     }
     
-    protected synchronized String exportMap(){
-        return map.toString();
+    protected synchronized String exportMap(Session peer){
+        String ret = "";
+        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting map...");
+        ret = map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).toString();
+        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exported map...");
+        return ret;
     }
     
-    protected synchronized String exportBombs(){
+    protected synchronized String exportBombs(Session peer){
         String ret = "";
-        HashSet<BBomb> bombs2 = new HashSet<BBomb>(bombs);
-        
-        for (BBomb bomb : bombs2){
-            if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime())/1000 >= bomb.getLifeTime() && !alreadyMarked(bomb)){
-               markForRemove(bomb);
-               continue;
+        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting bombs...");
+        if (bombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) != null){
+            HashSet<BBomb> bombs2 = new HashSet<BBomb>((HashSet<BBomb>)bombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())));
+            for (BBomb bomb : bombs2){
+                if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime())/1000 >= bomb.getLifeTime() && !alreadyMarked(peer, bomb)){
+                   markForRemove(peer, bomb);
+                   continue;
+                }
+                else{
+                    ret += bomb.toString()+"[#bombSep#]";
+                }
             }
-            else{
-                ret += bomb.toString()+"[#bombSep#]";
+        }
+        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exported bombs...");
+        return ret;
+    }
+    
+    protected synchronized String exportExplosions(Session peer){
+        String ret = "";
+        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting explosions...");
+        if (explosions.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) != null){
+            HashSet<Explosion> explosions2 = new HashSet<Explosion>(explosions.get(Integer.parseInt(peer.getUserProperties().get("room").toString())));
+            for (Explosion exp : explosions2){
+                ret += exp.toString()+"[#explosionSep#]";
             }
         }
-        
+        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exported explosions...");
         return ret;
     }
     
-    protected synchronized String exportExplosions(){
+    protected synchronized String exportItems(Session peer){
         String ret = "";
-        HashSet<Explosion> explosions2 = new HashSet<Explosion>(explosions);
-        
-        for (Explosion exp : explosions2){
-            ret += exp.toString()+"[#explosionSep#]";
+        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting items...");
+        if (items.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) != null){
+            HashSet<AbstractItem> items2 = new HashSet<AbstractItem>(items.get(Integer.parseInt(peer.getUserProperties().get("room").toString())));
+            for (AbstractItem item : items2){
+                ret += item.toString()+"[#itemSep#]";
+            }
+            //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exported items...");
         }
-        
         return ret;
     }
     
-    protected synchronized String exportItems(){
-        String ret = "";
-        HashSet<AbstractItem> items2 = new HashSet<AbstractItem>(items);
-     
-        for (AbstractItem item : items2){
-            ret += item.toString()+"[#itemSep#]";
-        }
-        
-        return ret;
-    }
-    
-    public synchronized boolean canPlantNewBomb(BCharacter crtChar){
+    public synchronized boolean canPlantNewBomb(Session peer, BCharacter crtChar){
         int maxBombs = crtChar.getMaxBombs();
         int plantedBombs = 0;
-        HashSet<BBomb> bombs2 = new HashSet<BBomb>(bombs);
-        
-        for (BBomb bomb : bombs2){
-            if (bomb.getOwner().getId() == crtChar.getId())
-                plantedBombs++;
+        if (bombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) != null){
+            HashSet<BBomb> bombs2 = new HashSet<BBomb>(bombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())));
+            for (BBomb bomb : bombs2){
+                if (bomb.getOwner().getId() == crtChar.getId())
+                    plantedBombs++;
+            }
         }
-        
         return (plantedBombs < maxBombs);
     }
     
@@ -687,11 +756,11 @@ public class BombermanWSEndpoint {
         try {
             peer.getBasicRemote().sendText("sound:[" + sound);
         } catch (IOException ex) {
-            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+            BLogger.getInstance().logException2(ex);
         } catch (IllegalStateException ex){
-            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+            BLogger.getInstance().logException2(ex);
         } catch (ConcurrentModificationException ex) {
-            Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+            BLogger.getInstance().logException2(ex);
         }
     }
     

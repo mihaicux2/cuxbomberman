@@ -6,10 +6,11 @@
 
 package com.cux.bomberman.world.walls;
 
+import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.AbstractBlock;
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+//import java.util.logging.Level;
+//import java.util.logging.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 
@@ -60,7 +61,7 @@ public abstract class AbstractWall extends AbstractBlock{
         try {
             return ow.writeValueAsString(this);
         } catch (IOException ex) {
-           // Logger.getLogger(AbstractWall.class.getName()).log(Level.SEVERE, null, ex);
+            BLogger.getInstance().logException2(ex);
             return ex.getMessage();
            // return "";
         }

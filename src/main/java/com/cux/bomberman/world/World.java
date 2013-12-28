@@ -6,22 +6,23 @@
 
 package com.cux.bomberman.world;
 
+import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.walls.*;
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
+//import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+//import java.util.Arrays;
+//import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Vector;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectWriter;
+//import java.util.HashSet;
+//import java.util.Set;
+//import java.util.Vector;
+//import java.util.logging.Level;
+//import java.util.logging.Logger;
+//import org.codehaus.jackson.map.ObjectMapper;
+//import org.codehaus.jackson.map.ObjectWriter;
 
 /**
  *
@@ -37,12 +38,12 @@ public class World {
     private String mapFile;
     
     // used for iterating
-    public static ArrayList<AbstractWall> walls = new ArrayList<>();
+    public ArrayList<AbstractWall> walls = new ArrayList<>();
     
     // used for mapping and collisions
-    public static AbstractBlock[][] blockMatrix = new AbstractBlock[100][100];
+    public AbstractBlock[][] blockMatrix = new AbstractBlock[100][100];
     
-    public static HashMap<String, BCharacter>[][] chars = new HashMap[100][100];
+    public HashMap<String, BCharacter>[][] chars = new HashMap[100][100];
     
     public static int getWidth(){
         return WIDTH;
@@ -106,7 +107,7 @@ public class World {
             }
             input.close();
         } catch (IOException ex) {
-            Logger.getLogger(World.class.getName()).log(Level.SEVERE, null, ex);
+            BLogger.getInstance().logException2(ex);
         }
         
     }

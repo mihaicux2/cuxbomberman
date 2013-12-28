@@ -88,7 +88,7 @@ var FIRE = false;
 var DETONATE = false;
 
 function init(){
-  var host = "ws://" + document.location.host + document.location.pathname + "bombermanendpoint";
+  var host = "ws://" + document.location.host + document.location.pathname + "bombermanendpoint/";
   try{
     socket = new WebSocket(host);
     log('WebSocket - status '+socket.readyState);

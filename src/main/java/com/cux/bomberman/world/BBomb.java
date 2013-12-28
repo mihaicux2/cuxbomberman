@@ -6,6 +6,7 @@
 
 package com.cux.bomberman.world;
 
+import com.cux.bomberman.util.BLogger;
 import java.io.IOException;
 import java.util.Date;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -72,7 +73,7 @@ public class BBomb extends AbstractBlock {
         try {
             return ow.writeValueAsString(this);
         } catch (IOException ex) {
-           // Logger.getLogger(AbstractWall.class.getName()).log(Level.SEVERE, null, ex);
+            BLogger.getInstance().logException2(ex);
             return ex.getMessage();
            // return "";
         }
