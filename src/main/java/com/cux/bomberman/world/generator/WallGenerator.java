@@ -35,13 +35,13 @@ public class WallGenerator {
         return instance;
     }
     
-    public String generateRandomWall(){
+    public AbstractWall generateRandomWall(){
         int rand = (int) (Math.random()*1000000);
         int wW = World.getWidth();
         int wH = World.getHeight();
         Random r = new Random();
-        int initialX = r.nextInt(wW);
-        int initialY = r.nextInt(wH);
+        int initialX = (r.nextInt(wW) / World.wallDim ) * World.wallDim;
+        int initialY = (r.nextInt(wH) / World.wallDim ) * World.wallDim;
         
         AbstractWall ret = null;
         
@@ -57,7 +57,8 @@ public class WallGenerator {
         if (lastX > wW) ret.setPosX(wW - ret.getWidth());
         if (lastY > wH) ret.setPosY(wH - ret.getHeight());
         
-        return ret.toString();
+        //return ret.toString();
+        return ret;
         
     }
     

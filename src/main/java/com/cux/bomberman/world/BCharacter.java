@@ -226,6 +226,8 @@ public class BCharacter extends AbstractBlock{
                 else{
                     x2++;
                 }
+                
+                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.name);
                 BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.name, myChar);
                 
                 for (int i = 0; i < World.wallDim; i++){
@@ -250,8 +252,8 @@ public class BCharacter extends AbstractBlock{
                         BLogger.getInstance().logException2(ex);
                     }
                 }
-                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.name);
-                //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[myChar.posX / World.wallDim][myChar.posY / World.wallDim].put(myChar.name, myChar);
+                //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.name);
+                //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.name, myChar);
                 myChar.walking = false;
             }
         }).start();
@@ -284,11 +286,11 @@ public class BCharacter extends AbstractBlock{
            BombermanWSEndpoint.items.get(this.roomIndex).remove((AbstractItem)block);
            BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[(block.getPosX() / World.wallDim)][block.getPosY() / World.wallDim] = null;
            try{
-               BombermanWSEndpoint.items.remove((AbstractItem)block);
+               BombermanWSEndpoint.items.remove((AbstractItem)block); // eliminate the item
            } catch (ConcurrentModificationException ex) {
                BLogger.getInstance().logException2(ex);
            }
-           ret = false;
+           ret = false; // return false ;)
        }
        
        return ret;
