@@ -317,6 +317,9 @@ public class BombermanWSEndpoint {
                 
                 while (peer.isOpen() && workingThreads.contains(peer.getId())){
                     isFirst = false;
+                    if (peer.getUserProperties().get("room") == null || peer.getUserProperties().get("room").equals(-1)){
+                        peer.getUserProperties().put("room", 1);
+                    }
                     BCharacter crtChar = chars.get(peer.getId());
                     if (isTrapped(crtChar, peer)){
                         crtChar.setState("Trapped"); // will be automated reverted when a bomb kills him >:)
@@ -454,24 +457,24 @@ public class BombermanWSEndpoint {
                 }
             }
         }).start();
-        charsChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
     }
     
-    protected synchronized void revertState(Session peer, final BCharacter myChar){
+    protected synchronized void revertState(final Session peer, final BCharacter myChar){
         new Thread(new Runnable(){
             @Override
             public synchronized void run() {
                 playSoundAll("sounds/burn.wav");
                 myChar.setState("Blow");
+                charsChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
                     BLogger.getInstance().logException2(ex);
                 }
                 myChar.setState("Normal");
+                charsChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
             }
         }).start();
-        charsChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
     }
     
     protected synchronized void markForRemove(final Session peer, final BBomb bomb){
@@ -657,11 +660,17 @@ public class BombermanWSEndpoint {
                     
                     explosionsChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
                     bombsChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
+                    mapChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
                     
-                    Thread.sleep(100); // wait one second before actual removing
+                    Thread.sleep(33); // wait one second before actual removing
                     explosions.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).remove(exp);
                     markedBombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).remove(bomb);
                     bombs.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).remove(bomb);
+                    
+                    explosionsChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
+                    bombsChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
+                    mapChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
+                    
                 } catch (InterruptedException ex) {
                     BLogger.getInstance().logException2(ex);
                 }
@@ -672,23 +681,23 @@ public class BombermanWSEndpoint {
     protected synchronized void flipForItems(Session peer, int x, int y){
         int rand = (int) (Math.random()*1000000);
         if (rand % 5 == 0){
-            AbstractItem item = ItemGenerator.getInstance().generateRandomItem();
-            //if (map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y] != null){
+            if (wallExists(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix, y, y)){
+                AbstractItem item = ItemGenerator.getInstance().generateRandomItem();
                 item.setPosX(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y].getPosX());
                 item.setPosY(map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y].getPosY());
-               // map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y] = null;
-            //}
-            map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y] = item;
-            if (this.items.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) == null){
-                this.items.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), new HashSet<AbstractItem>());
+                map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y] = null;
+                map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y] = item;
+                if (this.items.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) == null){
+                    this.items.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), new HashSet<AbstractItem>());
+                }
+                items.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).add(item);
+                itemsChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
             }
-            items.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).add(item);
         }
         else{
             map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[x][y] = null; // remove the block
         }
         mapChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
-        itemsChanged.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), true);
     }
     
     protected boolean alreadyMarked(Session peer, BBomb bomb){
