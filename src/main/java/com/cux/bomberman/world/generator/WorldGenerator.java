@@ -41,11 +41,11 @@ public class WorldGenerator {
         world.setWidth(w);
         world.setHeight(h);
         int x, y;
-        for (int i = 0; i < 200; i++){
+        for (int i = 0; i < 450; i++){
             AbstractWall wall = WallGenerator.getInstance().generateRandomWall();
             x = wall.getPosX() / World.wallDim;
             y = wall.getPosY() / World.wallDim; 
-            if (BombermanWSEndpoint.wallExists(world.blockMatrix, x, y)){
+            if ((x ==0 && y ==0) || BombermanWSEndpoint.wallExists(world.blockMatrix, x, y)){
                 i--;
             }
             else{
