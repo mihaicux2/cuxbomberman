@@ -39,6 +39,7 @@ import java.util.Map;
 //import java.util.logging.FileHandler;
 //import java.util.logging.SimpleFormatter;
 import com.cux.bomberman.util.BLogger;
+import com.cux.bomberman.world.generator.WorldGenerator;
 //import java.util.Map.Entry;
 import javax.websocket.server.PathParam;
 //import com.cux.bomberman.util.BMessenger;
@@ -221,7 +222,8 @@ public class BombermanWSEndpoint {
         if (map.size() == 0 || map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())) == null){
             //map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "first map...");
-            map.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), new World("D:\\Programe\\hobby\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt"));
+            //map.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), new World("D:\\Programe\\hobby\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt"));
+            map.put(Integer.parseInt(peer.getUserProperties().get("room").toString()), WorldGenerator.getInstance().generateWorld(1800, 900));
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
         }
         

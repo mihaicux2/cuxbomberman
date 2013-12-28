@@ -41,9 +41,9 @@ public class World {
     public ArrayList<AbstractWall> walls = new ArrayList<>();
     
     // used for mapping and collisions
-    public AbstractBlock[][] blockMatrix = new AbstractBlock[100][100];
+    public AbstractBlock[][] blockMatrix = new AbstractBlock[300][300];
     
-    public HashMap<String, BCharacter>[][] chars = new HashMap[100][100];
+    public HashMap<String, BCharacter>[][] chars = new HashMap[300][300];
     
     public static int getWidth(){
         return WIDTH;
@@ -52,6 +52,27 @@ public class World {
     public static int getHeight(){
         return HEIGHT;
     }
+    
+    public static void setWidth(int width){
+        WIDTH = width;
+    }
+    
+    public static void setHeight(int height){
+        HEIGHT = height;
+    }
+    
+    public World(){
+        for (int i = 0; i < 300; i++){
+            for (int j = 0; j < 300; j++){
+                chars[i][j] = new HashMap<String, BCharacter>();
+            }
+        }        
+    }
+    
+//    public void addWall(AbstractWall wall){
+//        this.walls.add(wall);
+//        this.blockMatrix[wall.getPosX()/World.wallDim][wall.getPosX()/World.wallDim] = wall;
+//    }
     
     public World(String map){
         this.mapFile = map;
@@ -93,7 +114,7 @@ public class World {
                         wall = new StoneWall(x, y);
                         break;
                     case "water":
-                        wall = new WaterWall(Integer.parseInt(props[1]), Integer.parseInt(props[2]));
+                        wall = new WaterWall(x, y);
                     default:
                         //wall = new WaterWall(0, 0);
                         break;
