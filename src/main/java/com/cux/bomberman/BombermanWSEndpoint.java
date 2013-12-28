@@ -418,6 +418,7 @@ public class BombermanWSEndpoint {
     }
     
     protected synchronized void triggerBlewCharacter(final Session peer, final int x, final int y){
+        System.out.println("hit...");
         new Thread(new Runnable(){
             @Override
             public synchronized void run() {
@@ -463,6 +464,12 @@ public class BombermanWSEndpoint {
                     map.get(Integer.parseInt(peer.getUserProperties().get("room").toString())).blockMatrix[bomb.getPosX()/World.wallDim][bomb.getPosY()/World.wallDim] = null;
                     int charRange = bomb.getOwner().getBombRange();
                     
+                    // check if char is in the same position as the character
+                    if (bomb.getPosX() + bomb.getWidth() <= World.getWidth() && BombermanWSEndpoint.characterExists(peer,(bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim)){
+                        triggerBlewCharacter(peer, (bomb.getPosX()/World.wallDim), bomb.getPosY()/World.wallDim);
+                    }
+                    
+                    // check if the explosion hits anything within it's range
                     for (int i = 1; i <= charRange; i++){
                         
                         // right
