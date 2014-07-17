@@ -86,7 +86,7 @@ public class BCharacter extends AbstractBlock{
     public void setId(String id) {
         this.id = id;
     }
-
+    
     public int getMaxBombs() {
         return maxBombs;
     }
@@ -136,9 +136,10 @@ public class BCharacter extends AbstractBlock{
         this.name = name;
     }
     
+    // uncomment to make the original drop bomb movement (2 buttons ;)))
     public int addOrDropBomb(){
-        if (state == "Normal") state = "Bomb";
-        else if (state == "Bomb") state = "Normal";
+        //if (state == "Normal") state = "Bomb";
+        //else if (state == "Bomb") state = "Normal";
         return 0;
     }
     
@@ -208,7 +209,7 @@ public class BCharacter extends AbstractBlock{
     private synchronized void IAmWalking(final BCharacter myChar, final String direction){
         new Thread(new Runnable(){
             @Override
-            public void run() {
+            public synchronized void run() {
                 int x = myChar.posX / World.wallDim;
                 int y = myChar.posY / World.wallDim;
                 int x2 = x;

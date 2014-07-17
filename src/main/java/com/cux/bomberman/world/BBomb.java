@@ -34,6 +34,7 @@ public class BBomb extends AbstractBlock {
         if (this.owner.isTriggered()){
             this.volatileB = false;
         }
+        
     }
     
     public BCharacter getOwner(){
