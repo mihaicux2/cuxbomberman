@@ -544,7 +544,7 @@ public class BombermanWSEndpoint {
         }).start();
     }
 
-    protected void markForRemove(final Session peer, final BBomb bomb) {
+    protected synchronized void markForRemove(final Session peer, final BBomb bomb) {
         new Thread(new Runnable() {
             @Override
             public void run() {
