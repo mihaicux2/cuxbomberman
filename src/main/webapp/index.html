@@ -17,6 +17,18 @@
             <input type="button" value="reconnect" onclick="quit();init();" />
         </div>
         <div id="output" style="float:left; width:300px;"></div>-->
+        <table id="stats" style="width:600px; border:1px solid #ccc;">
+            <thead>
+                <tr style="background:#ccc; font-weight:bold;">
+                    <td>Player</td>
+                    <td>Kills</td>
+                    <td>Deaths</td>
+                    <td>Connected (seconds)</td>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
         <div id="world" style="width:660px; height:510px; /*float:right;*/ border:1px solid #ccc; position:relative; background:#9ACD32"></div>
         <script type="text/javascript" src="js/jquery.min.js"></script>
         <script type="text/javascript" src="js/websocket.js"></script>

@@ -114,13 +114,16 @@ function init(){
                     MOVE_LEFT = false;
                     break;
                 case 16: // SHIFT
-                    INC_SPEED = true;
+                    //INC_SPEED = true;
+                    DETONATE = true;
                     break;
                 case 13: // ENTER
-                    FIRE = true;
+                    //FIRE = true;
+                    //DETONATE = true;
                     break;
                 case 32: // SPACE
-                    DETONATE = true;
+                    //DETONATE = true;
+                    FIRE = true;
                     break;
             }
         });
@@ -139,13 +142,16 @@ function init(){
                     MOVE_RIGHT = false;
                     break;
                 case 16: // SHIFT
-                    INC_SPEED = false;
+                    //INC_SPEED = false;
+                    DETONATE = false;
                     break;
                 case 13: // ENTER
-                    FIRE = false;
+                    //FIRE = false;
+                    //DETONATE = false;
                     break;
                 case 32: // SPACE
-                    DETONATE = false;
+                    //DETONATE = false;
+                    FIRE = false;
                     break;
             }
         });
@@ -375,7 +381,12 @@ function renderMap(toProc){
 var charNames;
 var timers = {};
 var charID = "";
+var stats = {};
+
 function renderChars(toProc){
+    
+    stats = {};
+    
     charID = toProc.substr(0, toProc.indexOf("[#chars#]"));
     //console.log(charID);
     toProc = toProc.substr(toProc.indexOf("[#chars#]") + 9 /*"[#chars#]".length*/);
@@ -388,6 +399,11 @@ function renderChars(toProc){
         if (idx == last) break;
         try{
            var x = JSON.parse(chars[i]);
+           console.log(x);
+           stats[x.name] = {};
+           stats[x.name]["kills"] = x.kills;
+           stats[x.name]["deaths"] = x.deaths;
+           stats[x.name]["connectionTime"] = x.connectionTime;
            if ($("#char_"+x.name).length > 0){
                 var ob = $("#char_"+x.name);
 
@@ -440,6 +456,26 @@ function renderChars(toProc){
             //console.log($(this).attr("id"));
         }
     });
+    renderStats(charID);
+}
+
+function renderStats(charID){
+    $(".stat").remove();
+    var str = "";
+    for (i in stats){
+        var style = "";
+        if (i == charID){
+            style = "background:#ffcccc";
+        }
+        var x = stats[i];
+        str += "<tr class='stat' style='"+style+"'>";
+        str += "<td>"+i+"</td>";
+        str += "<td>"+x.kills+"</td>";
+        str += "<td>"+x.deaths+"</td>";
+        str += "<td>"+x.connectionTime+"</td>";
+        str += "</tr>";
+    }
+    $("#stats").append(str);
 }
 
 function boundNumber(nr, lo, hi){

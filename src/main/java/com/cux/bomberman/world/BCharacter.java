@@ -10,9 +10,8 @@ import com.cux.bomberman.BombermanWSEndpoint;
 import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
-//import com.cux.bomberman.world.walls.AbstractWall;
-//import com.sun.org.apache.bcel.internal.util.BCELifier;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
@@ -40,6 +39,10 @@ public class BCharacter extends AbstractBlock{
     protected boolean walking = false;
     protected boolean triggered = false; // checks if the character has a trigger for the "planted" bombs
     public int roomIndex;
+    protected int kills = 0;
+    protected int deaths = 0;
+    public long connectionTime = 0; // in seconds
+    public Date creationTime;
     
     {
         // walk in normal state
@@ -77,6 +80,7 @@ public class BCharacter extends AbstractBlock{
         this.id = id;
         this.name = id;
         this.roomIndex = roomIndex;
+        this.creationTime = new Date();
     }
 
     public String getId() {
@@ -175,6 +179,39 @@ public class BCharacter extends AbstractBlock{
 
     public void setDirection(String direction) {
         this.direction = direction;
+    }
+    
+    public int getKills(){
+        return this.kills;
+    }
+    
+    public void setKills(int kills){
+        this.kills = kills;
+    }
+    
+    public int getDeaths(){
+        return this.deaths;
+    }
+    
+    public void setDeaths(int deaths){
+        this.deaths = deaths;
+    }
+    
+    public void resetScore(){
+        this.kills = 0;
+        this.deaths = 0;
+    }
+    
+    public void incDeaths(){
+        this.deaths++;
+    }
+    
+    public void incKills(){
+        this.kills++;
+    }
+    
+    public void decKills(){
+        this.kills--;
     }
     
     public void moveUp(){
@@ -384,6 +421,8 @@ public class BCharacter extends AbstractBlock{
     @Override
     public String toString(){
         this.crtTexture = textures.get("walk"+this.direction+this.state);
+        Date now = new Date();
+        this.connectionTime = (now.getTime() - this.creationTime.getTime()) / 1000;
         ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
         try {
             return ow.writeValueAsString(this);
