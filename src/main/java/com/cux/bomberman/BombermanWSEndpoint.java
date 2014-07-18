@@ -5,42 +5,35 @@
  */
 package com.cux.bomberman;
 
+import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.AbstractBlock;
 import com.cux.bomberman.world.BBomb;
+import com.cux.bomberman.world.BCharacter;
+import com.cux.bomberman.world.Explosion;
+import com.cux.bomberman.world.World;
+import com.cux.bomberman.world.generator.ItemGenerator;
+import com.cux.bomberman.world.generator.WorldGenerator;
+import com.cux.bomberman.world.items.AbstractItem;
+import com.cux.bomberman.world.walls.AbstractWall;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
-//import java.util.logging.Level;
-//import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
-import javax.websocket.server.ServerEndpoint;
-
-import com.cux.bomberman.world.BCharacter;
-import com.cux.bomberman.world.Explosion;
-import com.cux.bomberman.world.World;
-import com.cux.bomberman.world.generator.ItemGenerator;
-import com.cux.bomberman.world.items.AbstractItem;
-import com.cux.bomberman.world.walls.AbstractWall;
-//import java.util.Collection;
-import java.util.ConcurrentModificationException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map;
-//import java.util.concurrent.ConcurrentHashMap;
-//import java.util.concurrent.ConcurrentMap;
-//import java.util.logging.FileHandler;
-//import java.util.logging.SimpleFormatter;
-import com.cux.bomberman.util.BLogger;
-import com.cux.bomberman.world.generator.WorldGenerator;
-//import java.util.Map.Entry;
 import javax.websocket.server.PathParam;
+import javax.websocket.server.ServerEndpoint;
 //import com.cux.bomberman.util.BMessenger;
 
 /**
@@ -53,7 +46,7 @@ import javax.websocket.server.PathParam;
 @ServerEndpoint("/bombermanendpoint/")
 public class BombermanWSEndpoint {
 
-    private static final Set<Session> peers = Collections.synchronizedSet(new HashSet<Session>());
+    public static final Set<Session> peers = Collections.synchronizedSet(new HashSet<Session>());
 
     private static final Map<Integer, ArrayList<BBomb>> bombs = Collections.synchronizedMap(new HashMap<Integer, ArrayList<BBomb>>());
 
@@ -88,6 +81,12 @@ public class BombermanWSEndpoint {
     public static final Map<String, Integer> peerRooms = Collections.synchronizedMap(new HashMap<String, Integer>());
     
     private static boolean initialized = false;
+    
+    private static BombermanWSEndpoint instance = null;
+    
+    public static BombermanWSEndpoint getInstance(){
+        return BombermanWSEndpoint.instance;
+    }
     
     @OnMessage
     public synchronized String onMessage(String message, Session peer) {
@@ -174,20 +173,22 @@ public class BombermanWSEndpoint {
                 break;
             case "getEnvironment":
                 exportEnvironment(peer);
-                break;
+                break;                
             case "QUIT":
-                chars.remove(peer.getId());
-                if (peer.isOpen()) {
-                    try {
-                        peer.close();
-                    } catch (IOException ex) {
-                        BLogger.getInstance().logException2(ex);
-                    }
-                }
-                charsChanged.put(roomNr, true);
+                this.onClose(peer);
             default:
                 break;
         }
+        
+        String pattern = "name ([a-zA-Z0-9. ]+)";
+        Pattern p = Pattern.compile(pattern);
+        Matcher m = p.matcher(message);
+        if (m.matches()){
+            String name = message.substring(message.indexOf(" ")).trim();
+            if (name.length() > 0)
+                chars.get(peer.getId()).setName(name);
+        }        
+        
         //System.out.println(message);
         return null; // any string will be send to the requesting peer
     }
@@ -196,6 +197,10 @@ public class BombermanWSEndpoint {
     public synchronized void onClose(Session peer) {
         this.delayedRemove(peer.getId());
         this.stopThread(peer.getId());
+        int roomNr = getRoom(peer);
+        chars2.get(roomNr).remove(chars.get(peer.getId()));
+        chars.remove(peer.getId());
+        peers.remove(peer);
         if (peer.isOpen()) {
             try {
                 peer.close();
@@ -203,9 +208,9 @@ public class BombermanWSEndpoint {
                 BLogger.getInstance().logException2(ex);
             }
         }
-        int roomNr = getRoom(peer);
-        peers.remove(peer);
         charsChanged.put(roomNr, true);
+        mapChanged.put(roomNr, true);
+        mapPlayers.put(roomNr, mapPlayers.get(roomNr) - 1);
         System.out.println("out...");
 //        if (peers.size() == 0){
 //            BombermanWSEndpoint.initialized = false;
@@ -281,6 +286,7 @@ public class BombermanWSEndpoint {
             watchBombs();
             watchPeers();
             BombermanWSEndpoint.initialized = true;
+            BombermanWSEndpoint.instance = this;
         }
         
     }
@@ -321,6 +327,7 @@ public class BombermanWSEndpoint {
     }
 
     public synchronized boolean isTrapped(BCharacter crtChar, Session peer) {
+        if (crtChar == null) return false;
         int x = crtChar.getPosX();
         int y = crtChar.getPosY();
         int w = crtChar.getWidth();
@@ -394,6 +401,7 @@ public class BombermanWSEndpoint {
                                     peer.getUserProperties().put("room", 1);
                                 }
                                 BCharacter crtChar = chars.get(peer.getId());
+                                
                                 int roomNr = getRoom(peer);
                                 if (isTrapped(crtChar, peer)) {
                                     crtChar.setState("Trapped"); // will be automated reverted when a bomb kills him >:)
@@ -402,6 +410,7 @@ public class BombermanWSEndpoint {
                                 try {
                                     // export chars?
                                     //if (charsChanged.get(roomNr)) {
+                                    
                                         peer.getBasicRemote().sendText("chars:[" + environment.exportChars(peer));
                                     //    charChanged[roomNr] = true;
                                     //}
@@ -435,29 +444,39 @@ public class BombermanWSEndpoint {
                                     BLogger.getInstance().logException2(ex);
                                 } catch (ConcurrentModificationException ex) {
                                     BLogger.getInstance().logException2(ex);
-                                }
+                                } catch (RuntimeException ex){
+                                    BLogger.getInstance().logException2(ex);
+                                } 
                             }
                         }
                         for (int i = 1; i <= mapNumber; i++){
                             //if (charChanged[i]){
                                 //charsChanged.put(i, false);
                             //}
-                            if (map2Changed[i]){
-                                mapChanged.put(i, false);
+                            try{
+                                if (map2Changed[i]){
+                                    mapChanged.put(i, false);
+                                }
+                                if (bombChanged[i]){
+                                    bombsChanged.put(i, false);
+                                }
+                                if (explosionChanged[i]){
+                                    explosionsChanged.put(i, false);
+                                }
+                                if (itemChanged[i]){
+                                    itemsChanged.put(i, false);
+                                }
                             }
-                            if (bombChanged[i]){
-                                bombsChanged.put(i, false);
-                            }
-                            if (explosionChanged[i]){
-                                explosionsChanged.put(i, false);
-                            }
-                            if (itemChanged[i]){
-                                itemsChanged.put(i, false);
+                            catch (ArrayIndexOutOfBoundsException e){
+                                
                             }
                         }
                         Thread.sleep(10); // limiteaza la 100FPS comunicarea cu clientul
                     }
                     catch(InterruptedException ex){
+                        BLogger.getInstance().logException2(ex);
+                    }
+                    catch ( java.util.ConcurrentModificationException ex){
                         BLogger.getInstance().logException2(ex);
                     }
                 }
@@ -600,7 +619,7 @@ public class BombermanWSEndpoint {
         }).start();
     }
 
-    protected synchronized void markForRemove(final Session peer, final BBomb bomb) {
+    protected void markForRemove(final Session peer, final BBomb bomb) {
         new Thread(new Runnable() {
             @Override
             public void run() {

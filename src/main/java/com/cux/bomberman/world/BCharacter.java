@@ -43,6 +43,7 @@ public class BCharacter extends AbstractBlock{
     protected int deaths = 0;
     public long connectionTime = 0; // in seconds
     public Date creationTime;
+    private boolean dropBombs = false;
     
     {
         // walk in normal state
@@ -247,6 +248,7 @@ public class BCharacter extends AbstractBlock{
         new Thread(new Runnable(){
             @Override
             public synchronized void run() {
+                
                 int x = myChar.posX / World.wallDim;
                 int y = myChar.posY / World.wallDim;
                 int x2 = x;
@@ -357,6 +359,12 @@ public class BCharacter extends AbstractBlock{
             case "spoog":
                 this.setMaxBombs(this.getMaxBombs() + item.getScale());
                 break;
+            case "ebola":
+                this.dropBombs = true;
+                this.setSpeed(this.getSpeed() - item.getScale());
+                this.setMaxBombs(this.getMaxBombs() + item.getScale());
+                this.cycleEbola(this);
+                break;
             case "random":
                 this.attachEvent(ItemGenerator.getInstance().generateRandomItem());
                 break;
@@ -366,10 +374,14 @@ public class BCharacter extends AbstractBlock{
         }
     }
     
+    public boolean dropsBombs(){
+        return this.dropBombs;
+    }
+    
     private synchronized void cycleEvent(final BCharacter myChar, final AbstractItem item){
         new Thread(new Runnable(){
             @Override
-            public void run() {
+            public synchronized void run() {
                 try {
                     Thread.sleep(1000*item.getLifeTime());
                     switch(item.getName()){
@@ -388,9 +400,35 @@ public class BCharacter extends AbstractBlock{
                         case "spoog":
                             myChar.setMaxBombs(myChar.getMaxBombs() - item.getScale());
                             break;
+                        case "ebola":
+                            myChar.dropBombs = false;
+                            myChar.setSpeed(myChar.getSpeed() + item.getScale());
+                            myChar.setMaxBombs(myChar.getMaxBombs() - item.getScale());
+                            break;
                     }
                 } catch (InterruptedException ex) {
                     BLogger.getInstance().logException2(ex);
+                }
+            }
+        }).start();
+    }
+    
+    public void cycleEbola(final BCharacter myChar){
+        new Thread(new Runnable(){
+            @Override
+            public synchronized void run() {
+                while (myChar.dropsBombs()){
+                    try {
+                        for (Session peer : BombermanWSEndpoint.peers){
+                            if (peer.getId() == myChar.getId()){
+                                BombermanWSEndpoint.getInstance().onMessage("bomb", peer);
+                                break;
+                            }
+                        }
+                        Thread.sleep(1000); // 1 bomb per second
+                    } catch (InterruptedException ex) {
+                        BLogger.getInstance().logException2(ex);
+                    }
                 }
             }
         }).start();

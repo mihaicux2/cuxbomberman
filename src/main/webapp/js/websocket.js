@@ -190,6 +190,7 @@ function init(){
     };
     socket.onclose   = function(msg){
         log("Disconnected - status "+this.readyState);
+        alert("Connection closed");
         $("#chatUsers").html("");
         clearInterval(timer);
     };
@@ -399,13 +400,14 @@ function renderChars(toProc){
         if (idx == last) break;
         try{
            var x = JSON.parse(chars[i]);
-           console.log(x);
-           stats[x.name] = {};
-           stats[x.name]["kills"] = x.kills;
-           stats[x.name]["deaths"] = x.deaths;
-           stats[x.name]["connectionTime"] = x.connectionTime;
-           if ($("#char_"+x.name).length > 0){
-                var ob = $("#char_"+x.name);
+           //console.log(x);
+           stats[x.id] = {};
+           stats[x.id]["kills"] = x.kills;
+           stats[x.id]["deaths"] = x.deaths;
+           stats[x.id]["connectionTime"] = x.connectionTime;
+           stats[x.id]["name"] = x.name;
+           if ($("#char_"+x.id).length > 0){
+                var ob = $("#char_"+x.id);
 
                 if (ob.css("top") != (x.posY+"px")){
                     ob.css("top", x.posY+"px");
@@ -442,10 +444,10 @@ function renderChars(toProc){
                 }
             }
             else{
-                str = "<div id='char_"+x.name+"' class='character' style='position:absolute; top:" + x.posY + "px; left:" + x.posX + "px;' alt='" + x.name + "' title='" + x.name + "'><img src='images/characters/" + x.crtTexture + ".gif' width='" + x.width + "' height='" + x.height + "' /><canvas style='display:none;' width='"+x.width+"' height='"+x.height+"'></canvas></div>";
+                str = "<div id='char_"+x.id+"' class='character' style='position:absolute; top:" + x.posY + "px; left:" + x.posX + "px;' alt='" + x.name + "' title='" + x.name + "'><img src='images/characters/" + x.crtTexture + ".gif' width='" + x.width + "' height='" + x.height + "' /><canvas style='display:none;' width='"+x.width+"' height='"+x.height+"'></canvas></div>";
                 $("#world").append(str);
             }
-            charNames.push("char_"+x.name);
+            charNames.push("char_"+x.id);
         }
         catch(ex){ console.log(ex); }
     }
@@ -469,7 +471,7 @@ function renderStats(charID){
         }
         var x = stats[i];
         str += "<tr class='stat' style='"+style+"'>";
-        str += "<td>"+i+"</td>";
+        str += "<td>"+x.name+"</td>";
         str += "<td>"+x.kills+"</td>";
         str += "<td>"+x.deaths+"</td>";
         str += "<td>"+x.connectionTime+"</td>";
@@ -494,6 +496,12 @@ function centerMap(id){
     jQuery(window)
         .scrollTop(elOffset.top + (elHeight/2) - (viewportHeight/2))
         .scrollLeft(elOffset.left + (elWidth/2) - (viewportWidth/2));
+}
+
+function changeName(){
+    var name = $.trim($("#name").val());
+    if (!name) alert("Enter a valid name!");
+     try{ socket.send("name "+name); } catch(ex){ log(ex); } // request info about the other users
 }
 
 var walking = false;
