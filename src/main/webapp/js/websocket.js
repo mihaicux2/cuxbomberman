@@ -184,6 +184,7 @@ function init(){
                 renderItems(toProc);
                 break;
             case "blownWalls":
+                console.log("blown...");
                 removeWalls(toProc);
                 break;
             case "sound":

@@ -125,6 +125,7 @@ public class World {
                 if (wall != null){
                     wall.setHeight(World.wallDim);
                     wall.setWidth(World.wallDim);
+                    wall.wallId = java.util.UUID.randomUUID().toString();
                     this.walls.add(wall);
                     blockMatrix[x/World.wallDim][y/World.wallDim] = wall;
                 }

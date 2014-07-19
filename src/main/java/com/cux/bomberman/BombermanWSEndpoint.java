@@ -256,8 +256,9 @@ public class BombermanWSEndpoint {
         if (map.size() == 0 || map.get(mapNumber) == null) {
             //map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "first map...");
-            //map.put(roomNr, new World("D:\\Programe\\hobby\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt"));
-            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(1500, 750));
+//            map.put(mapNumber, new World("D:\\Programe\\hobby\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt"));
+            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
+//            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(3000, 1500, 1200));
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
         }
         
@@ -297,6 +298,10 @@ public class BombermanWSEndpoint {
             bombs.put(mapNumber, new ArrayList<BBomb>());
         }
 
+        if (wallsChanged.size() == 0 || wallsChanged.get(mapNumber) == null){
+            wallsChanged.put(mapNumber, true);
+        }
+        
         chars2.get(mapNumber).add(newChar);
         
         BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected [" + peer.getId() + "], room " + peer.getUserProperties().get("room"));
@@ -892,7 +897,7 @@ public class BombermanWSEndpoint {
         if (rand % 2 == 0) { // about 50% chance to find a hidden item behind the wall ;))
             if (wallExists(map.get(roomNr).blockMatrix, x, y)) {
                 AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[x][y]);
-                blownWalls.get(roomNr).add(wall.wallId);
+                //blownWalls.get(roomNr).add(wall.wallId);
                 
                 AbstractItem item = ItemGenerator.getInstance().generateRandomItem();
                 item.setPosX(map.get(roomNr).blockMatrix[x][y].getPosX());
@@ -909,7 +914,7 @@ public class BombermanWSEndpoint {
         }
         //mapChanged.put(roomNr, true);
         itemsChanged.put(roomNr, true);
-        wallsChanged.put(roomNr, true);
+//        wallsChanged.put(roomNr, true);
     }
 
     public synchronized boolean alreadyMarked(Session peer, BBomb bomb) {

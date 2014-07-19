@@ -36,12 +36,12 @@ public class WorldGenerator {
         throw new CloneNotSupportedException();
     }
     
-    public World generateWorld(int w, int h){
+    public World generateWorld(int w, int h, int bricks){
         World world = new World();
         world.setWidth(w);
         world.setHeight(h);
         int x, y;
-        for (int i = 0; i < 450; i++){
+        for (int i = 0; i < bricks; i++){
             AbstractWall wall = WallGenerator.getInstance().generateRandomWall();
             x = wall.getPosX() / World.wallDim;
             y = wall.getPosY() / World.wallDim; 
