@@ -577,6 +577,7 @@ public class BombermanWSEndpoint {
 
     public static synchronized boolean bombExists(AbstractBlock[][] data, int i, int j) {
         if (i < 0 || j < 0) return false;
+        if (data == null) return false; 
         try {
             AbstractBlock x = data[i][j];
             if (data[i][j] == null) {
@@ -613,7 +614,9 @@ public class BombermanWSEndpoint {
     public static synchronized boolean characterExists(Session peer, int i, int j) {
         if (i < 0 || j < 0) return false;
         int roomNr = getRoom(peer);
-        return !map.get(roomNr).chars[i][j].isEmpty();
+        World world = map.get(roomNr);
+        if (world == null) return false;
+        return !world.chars[i][j].isEmpty();
     }
 
     protected synchronized void triggerBlewCharacter(final Session peer, final int x, final int y) {
