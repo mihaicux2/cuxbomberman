@@ -94,6 +94,7 @@ function init(){
     log('WebSocket - status '+socket.readyState);
     socket.onopen    = function(msg){
         log("Welcome - status "+this.readyState);
+        $.blockUI({message:"<p>Please wait for the map to load</p>"})
         setTimeout("getMap()", 100);
         $(window).keydown(function(e){
             switch (e.keyCode){
@@ -393,6 +394,8 @@ function renderMap(toProc){
         }
         catch(ex){ console.log(ex); }
     }
+    log("gata");
+    $.unblockUI();
 }
 
 var charNames;

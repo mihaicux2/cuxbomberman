@@ -254,11 +254,9 @@ public class BombermanWSEndpoint {
 
         //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
         if (map.size() == 0 || map.get(mapNumber) == null) {
-            //map = new World("/home/mihaicux/bomberman_java/src/main/java/com/maps/firstmap.txt");
-            //BLogger.getInstance().log(BLogger.LEVEL_INFO, "first map...");
-//            map.put(mapNumber, new World("D:\\Programe\\hobby\\bomberman_java\\src\\main\\java\\com\\maps\\firstmap.txt"));
             map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
-//            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(3000, 1500, 1200));
+//            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/map2.txt"));
+//            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
         }
         
@@ -385,6 +383,7 @@ public class BombermanWSEndpoint {
                             if (bombs.get(roomNr) != null) {
                                 ArrayList<BBomb> bombs2 = new ArrayList<BBomb>((ArrayList<BBomb>) bombs.get(roomNr));
                                 for (BBomb bomb : bombs2) {
+                                    if (bomb == null) continue;
                                     Session peer = peers.get(bomb.getOwner().getId());
                                     if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime()) / 1000 >= bomb.getLifeTime() && !alreadyMarked(peer, bomb)) {
                                         markForRemove(peer, bomb);
@@ -527,7 +526,7 @@ public class BombermanWSEndpoint {
         }).start();
     }
 
-    protected void detonateBomb(BCharacter myChar, Session peer) {
+    protected synchronized void detonateBomb(BCharacter myChar, Session peer) {
         int roomNr = getRoom(peer);
         try {
             for (BBomb bomb : bombs.get(roomNr)) {
@@ -621,7 +620,7 @@ public class BombermanWSEndpoint {
         System.out.println("hit...");
         new Thread(new Runnable() {
             @Override
-            public void run() {
+            public synchronized void run() {
                 BCharacter winner = chars.get(peer.getId());
                 if (winner == null) return;
                 winner.setState("Win");
@@ -673,6 +672,9 @@ public class BombermanWSEndpoint {
 //            System.out.println("nu stiu de unde...");
 //            return;
 //        }
+        
+        if (bomb == null) return;
+        
         new Thread(new Runnable() {
             @Override
             public synchronized void run() {
@@ -695,13 +697,12 @@ public class BombermanWSEndpoint {
                     
                     new Thread(new Runnable() {
                         @Override
-                        public void run() {
+                        public synchronized void run() {
                             try {
-                                Thread.sleep(100); // wait one second before actual removing
+                                Thread.sleep(100); // wait .1 second before actual removing
                                 explosions.get(roomNr).remove(exp);
                                 markedBombs.get(roomNr).remove(bomb);
                                 bombs.get(roomNr).remove(bomb);
-
                                 explosionsChanged.put(roomNr, true);
                                 bombsChanged.put(roomNr, true);
                                 //mapChanged.put(roomNr, true);
@@ -716,168 +717,221 @@ public class BombermanWSEndpoint {
                         triggerBlewCharacter(peer, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim);
                     }
 
+                    int posX = bomb.getPosX();
+                    int posY = bomb.getPosY();
+                    int width = bomb.getWidth();
+                    int height = bomb.getHeight();
+                    int wWidth = World.getWidth();
+                    int wHeight = World.getHeight();
+                    int blockX = posX / World.wallDim;
+                    int blockY = posY / World.wallDim;
+                    
                     // check if the explosion hits anything within it's range
                     for (int i = 1; i <= charRange; i++) {
                         
                         // right
-                        boolean bombExistsRight = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, (bomb.getPosX() / World.wallDim) + i, bomb.getPosY() / World.wallDim);
-                        boolean charExistsRight = BombermanWSEndpoint.characterExists(peer, (bomb.getPosX() / World.wallDim) + i, bomb.getPosY() / World.wallDim);
-                        boolean wallExistsRight = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, (bomb.getPosX() / World.wallDim) + i, bomb.getPosY() / World.wallDim);
-                        boolean itemExistsRight = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, (bomb.getPosX() / World.wallDim) + i, bomb.getPosY() / World.wallDim);
-                        if (bomb.getPosX() + bomb.getWidth() * (i + 1) <= World.getWidth() && bombExistsRight && !objectHits.contains("right")) {
-                            markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim) + i][bomb.getPosY() / World.wallDim]);
+                        final int xR = blockX + i;
+                        final int yR = blockY;
+                        boolean bombExistsRight = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, xR, yR);
+                        boolean charExistsRight = BombermanWSEndpoint.characterExists(peer, xR, yR);
+                        boolean wallExistsRight = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, xR, yR);
+                        boolean itemExistsRight = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, xR, yR);
+                        if (posX + width * (i + 1) <= wWidth && bombExistsRight && !objectHits.contains("right")) {
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xR][yR]);
+                                }
+                            }).start();
                             objectHits.add("right");
                             //System.out.println("hit bomb right");
-                        } else if (bomb.getPosX() + bomb.getWidth() * (i + 1) <= World.getWidth() &&  charExistsRight&& !objectHits.contains("right")) {
-                            triggerBlewCharacter(peer, (bomb.getPosX() / World.wallDim) + i, bomb.getPosY() / World.wallDim);
+                        } else if (posX + width * (i + 1) <= wWidth &&  charExistsRight&& !objectHits.contains("right")) {
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    triggerBlewCharacter(peer, xR, yR);
+                                }
+                            }).start();
                             //objectHits.add("right");
                             exp.ranges.put("right", exp.ranges.get("right") + 1);
                             //System.out.println("hit character right");
-                        } else if (bomb.getPosX() + bomb.getWidth() * (i + 1) <= World.getWidth() && wallExistsRight && !objectHits.contains("right")) {
+                        } else if (posX + width * (i + 1) <= wWidth && wallExistsRight && !objectHits.contains("right")) {
                             exp.directions.add("right");
                             //System.out.println("hit wall right");
-                            AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim) + i][bomb.getPosY() / World.wallDim]);
+                            AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xR][yR]);
                             if (wall.isBlowable()) {
-                                map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim) + i][bomb.getPosY() / World.wallDim]);
+                                map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xR][yR]);
                                 exp.ranges.put("right", exp.ranges.get("right") + 1);
-                                //map.blockMatrix[(bomb.getPosX()/World.wallDim)+i][bomb.getPosY()/World.wallDim] = null;
-                                flipForItems(peer, (bomb.getPosX() / World.wallDim) + i, bomb.getPosY() / World.wallDim);
+                                flipForItems(peer, xR, yR);
                                 //mapChanged.put(roomNr, true);
                                 blownWalls.get(roomNr).add(wall.wallId);
                                 wallsChanged.put(roomNr, true);
                             }
                             objectHits.add("right");
-                        } else if (bomb.getPosX() + bomb.getWidth() * (i + 1) <= World.getWidth() && itemExistsRight && !objectHits.contains("right")) {
+                        } else if (posX + width * (i + 1) <= wWidth && itemExistsRight && !objectHits.contains("right")) {
                             exp.directions.add("right");
-                            items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim) + i][bomb.getPosY() / World.wallDim]);
-                            map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim) + i][bomb.getPosY() / World.wallDim] = null;
+                            items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xR][yR]);
+                            map.get(roomNr).blockMatrix[xR][yR] = null;
                             exp.ranges.put("right", exp.ranges.get("right") + 1);
                             objectHits.add("right");
                             itemsChanged.put(roomNr, true);
-                        } else if (bomb.getPosX() + bomb.getWidth() * (i + 1) <= World.getWidth() && !wallExistsRight && !objectHits.contains("right")) {
+                        } else if (posX + width * (i + 1) <= wWidth && !wallExistsRight && !objectHits.contains("right")) {
                             exp.directions.add("right");
                             exp.ranges.put("right", exp.ranges.get("right") + 1);
                             //System.out.println("empty right");
                         }
 
                         // left
-                        boolean bombExistsLeft = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, (bomb.getPosX() / World.wallDim) - i, bomb.getPosY() / World.wallDim);
-                        boolean charExistsLeft = BombermanWSEndpoint.characterExists(peer, (bomb.getPosX() / World.wallDim) - i, bomb.getPosY() / World.wallDim);
-                        boolean wallExistsLeft = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, (bomb.getPosX() / World.wallDim) - i, bomb.getPosY() / World.wallDim);
-                        boolean itemExistsLeft = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, (bomb.getPosX() / World.wallDim) - i, bomb.getPosY() / World.wallDim);
+                        final int xL = blockX - i;
+                        final int yL = blockY;
+                        boolean bombExistsLeft = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, xL, yL);
+                        boolean charExistsLeft = BombermanWSEndpoint.characterExists(peer, xL, yL);
+                        boolean wallExistsLeft = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, xL, yL);
+                        boolean itemExistsLeft = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, xL, yL);
                         if (bomb.getPosX() - bomb.getWidth() * i >= 0 && bombExistsLeft && !objectHits.contains("left")) {
-                            markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim) - i][bomb.getPosY() / World.wallDim]);
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xL][yL]);
+                                }
+                            }).start();
                             objectHits.add("left");
                             //System.out.println("hit bomb left");
-                        } else if (bomb.getPosX() - bomb.getWidth() * i >= 0 && charExistsLeft && !objectHits.contains("left")) {
-                            triggerBlewCharacter(peer, (bomb.getPosX() / World.wallDim) - i, bomb.getPosY() / World.wallDim);
+                        } else if (posX - width * i >= 0 && charExistsLeft && !objectHits.contains("left")) {
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    triggerBlewCharacter(peer, xL, yL);
+                                }
+                            }).start();
                             //objectHits.add("left");
                             exp.ranges.put("left", exp.ranges.get("left") + 1);
                             //System.out.println("hit character left");
-                        } else if (bomb.getPosX() - bomb.getWidth() * i >= 0 && wallExistsLeft && !objectHits.contains("left")) {
+                        } else if (posX - width * i >= 0 && wallExistsLeft && !objectHits.contains("left")) {
                             exp.directions.add("left");
                             //System.out.println("hit wall left");
-                            AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim) - i][bomb.getPosY() / World.wallDim]);
+                            AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xL][yL]);
                             if (wall.isBlowable()) {
-                                map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim) - i][bomb.getPosY() / World.wallDim]);
+                                map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xL][yL]);
                                 exp.ranges.put("left", exp.ranges.get("left") + 1);
-                                //map.blockMatrix[(bomb.getPosX()/World.wallDim)-i][bomb.getPosY()/World.wallDim] = null;
-                                flipForItems(peer, (bomb.getPosX() / World.wallDim) - i, bomb.getPosY() / World.wallDim);
+                                flipForItems(peer, xL, yL);
 //                                mapChanged.put(roomNr, true);
                                 blownWalls.get(roomNr).add(wall.wallId);
                                 wallsChanged.put(roomNr, true);
                             }
                             objectHits.add("left");
-                        } else if (bomb.getPosX() - bomb.getWidth() * i >= 0 && itemExistsLeft && !objectHits.contains("left")) {
+                        } else if (posX - width * i >= 0 && itemExistsLeft && !objectHits.contains("left")) {
                             exp.directions.add("left");
-                            items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim) - i][bomb.getPosY() / World.wallDim]);
-                            map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim) - i][bomb.getPosY() / World.wallDim] = null;
+                            items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xL][yL]);
+                            map.get(roomNr).blockMatrix[xL][yL] = null;
                             exp.ranges.put("left", exp.ranges.get("left") + 1);
                             objectHits.add("left");
                             itemsChanged.put(roomNr, true);
-                        } else if (bomb.getPosX() - bomb.getWidth() * i >= 0 && !wallExistsLeft && !objectHits.contains("left")) {
+                        } else if (posX - width * i >= 0 && !wallExistsLeft && !objectHits.contains("left")) {
                             exp.directions.add("left");
                             exp.ranges.put("left", exp.ranges.get("left") + 1);
                             //System.out.println("empty left");
                         }
 
                         // down
-                        boolean bombExistsDown = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim + i);
-                        boolean charExistsDown = BombermanWSEndpoint.characterExists(peer, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim + i);
-                        boolean wallExistsDown = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim + i);
-                        boolean itemExistsDown = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim + i);
-                        if (bomb.getPosY() + bomb.getHeight() * (i + 1) <= World.getHeight() && bombExistsDown && !objectHits.contains("down")) {
-                            markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim + i]);
+                        final int xD = blockX;
+                        final int yD = blockY + i;
+                        boolean bombExistsDown = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, xD, yD);
+                        boolean charExistsDown = BombermanWSEndpoint.characterExists(peer, xD, yD);
+                        boolean wallExistsDown = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, xD, yD);
+                        boolean itemExistsDown = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, xD, yD);
+                        if (posY + height * (i + 1) <= wHeight && bombExistsDown && !objectHits.contains("down")) {
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xD][yD]);
+                                }
+                            }).start();
                             objectHits.add("down");
                             //System.out.println("hit bomb down");
-                        } else if (bomb.getPosY() + bomb.getHeight() * (i + 1) <= World.getHeight() && charExistsDown && !objectHits.contains("down")) {
-                            triggerBlewCharacter(peer, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim + i);
+                        } else if (posY + height * (i + 1) <= wHeight && charExistsDown && !objectHits.contains("down")) {
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    triggerBlewCharacter(peer, xD, yD);                                    
+                                }
+                            }).start();
                             //objectHits.add("down");
                             exp.ranges.put("down", exp.ranges.get("down") + 1);
                             //System.out.println("hit character down");
-                        } else if (bomb.getPosY() + bomb.getHeight() * (i + 1) <= World.getHeight() && wallExistsDown && !objectHits.contains("down")) {
+                        } else if (posY + height * (i + 1) <= wHeight && wallExistsDown && !objectHits.contains("down")) {
                             exp.directions.add("down");
                             //System.out.println("hit wall down");
-                            AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim + i]);
+                            AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xD][yD]);
                             if (wall.isBlowable()) {
-                                map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim + i]);
+                                map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xD][yD]);
                                 exp.ranges.put("down", exp.ranges.get("down") + 1);
-                                //map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim+i] = null;
-                                flipForItems(peer, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim + i);
+                                flipForItems(peer, xD, yD);
 //                                mapChanged.put(roomNr, true);
                                 blownWalls.get(roomNr).add(wall.wallId);
                                 wallsChanged.put(roomNr, true);
                             }
                             objectHits.add("down");
-                        } else if (bomb.getPosY() + bomb.getHeight() * (i + 1) <= World.getHeight() && itemExistsDown && !objectHits.contains("down")) {
+                        } else if (posY + height * (i + 1) <= wHeight && itemExistsDown && !objectHits.contains("down")) {
                             exp.directions.add("down");
-                            items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim + i]);
-                            map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim + i] = null;
+                            items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xD][yD]);
+                            map.get(roomNr).blockMatrix[xD][yD] = null;
                             exp.ranges.put("down", exp.ranges.get("down") + 1);
                             objectHits.add("down");
                             itemsChanged.put(roomNr, true);
-                        } else if (bomb.getPosY() + bomb.getHeight() * (i + 1) <= World.getHeight() && !wallExistsDown && !objectHits.contains("down")) {
+                        } else if (posY + height * (i + 1) <= wHeight && !wallExistsDown && !objectHits.contains("down")) {
                             exp.directions.add("down");
                             exp.ranges.put("down", exp.ranges.get("down") + 1);
                             //System.out.println("empty down");
                         }
 
                         // up
-                        boolean bombExistsUp = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim - i);
-                        boolean charExistsUp = BombermanWSEndpoint.characterExists(peer, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim - i);
-                        boolean wallExistsUp = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim - i);
-                        boolean itemExistsUp = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim - i);
-                        if (bomb.getPosY() - bomb.getHeight() * i >= 0 && bombExistsUp && !objectHits.contains("up")) {
-                            markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim - i]);
+                        final int xU = blockX;
+                        final int yU = blockY - i;
+                        boolean bombExistsUp = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, xU, yU);
+                        boolean charExistsUp = BombermanWSEndpoint.characterExists(peer, xU, yU);
+                        boolean wallExistsUp = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, xU, yU);
+                        boolean itemExistsUp = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, xU, yU);
+                        if (posY - height * i >= 0 && bombExistsUp && !objectHits.contains("up")) {
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xU][yU]);
+                                }
+                            }).start();
                             objectHits.add("up");
                             //System.out.println("hit bomb up");
-                        } else if (bomb.getPosY() - bomb.getHeight() * i >= 0 && charExistsUp && !objectHits.contains("up")) {
-                            triggerBlewCharacter(peer, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim - i);
+                        } else if (posY - height * i >= 0 && charExistsUp && !objectHits.contains("up")) {
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    triggerBlewCharacter(peer, xU, yU);
+                                }
+                            }).start();
                             //objectHits.add("up");
                             exp.ranges.put("up", exp.ranges.get("up") + 1);
                             //System.out.println("hit character up");
-                        } else if (bomb.getPosY() - bomb.getHeight() * i >= 0 && wallExistsUp && !objectHits.contains("up")) {
+                        } else if (posY - height * i >= 0 && wallExistsUp && !objectHits.contains("up")) {
                             exp.directions.add("up");
                             //System.out.println("hit wall up");
-                            AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim - i]);
+                            AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xU][yU]);
                             if (wall.isBlowable()) {
-                                map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim - i]);
+                                map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xU][yU]);
                                 exp.ranges.put("up", exp.ranges.get("up") + 1);
-                                //map.blockMatrix[(bomb.getPosX()/World.wallDim)][bomb.getPosY()/World.wallDim-i] = null;
-                                flipForItems(peer, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim - i);
+                                flipForItems(peer, xU, yU);
 //                                mapChanged.put(roomNr, true);
                                 blownWalls.get(roomNr).add(wall.wallId);
                                 wallsChanged.put(roomNr, true);
                             }
                             objectHits.add("up");
-                        } else if (bomb.getPosY() - bomb.getHeight() * i >= 0 && itemExistsUp && !objectHits.contains("up")) {
+                        } else if (posY - height * i >= 0 && itemExistsUp && !objectHits.contains("up")) {
                             exp.directions.add("up");
-                            items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim - i]);
-                            map.get(roomNr).blockMatrix[(bomb.getPosX() / World.wallDim)][bomb.getPosY() / World.wallDim - i] = null;
+                            items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xU][yU]);
+                            map.get(roomNr).blockMatrix[xU][yU] = null;
                             exp.ranges.put("up", exp.ranges.get("up") + 1);
                             objectHits.add("up");
                             itemsChanged.put(roomNr, true);
-                        } else if (bomb.getPosY() - bomb.getHeight() * i >= 0 && !wallExistsUp && !objectHits.contains("up")) {
+                        } else if (posY - height * i >= 0 && !wallExistsUp && !objectHits.contains("up")) {
                             exp.directions.add("up");
                             exp.ranges.put("up", exp.ranges.get("up") + 1);
                             //System.out.println("empty up");
