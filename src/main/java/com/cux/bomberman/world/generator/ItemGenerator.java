@@ -60,7 +60,7 @@ public class ItemGenerator {
         else if (rand % 2 == 0) ret = new SlowItem(initialX, initialY);
         else                    ret = new FlameItem(initialX, initialY);
         
-        ret = new EbolaItem(initialX, initialY);
+//        ret = new EbolaItem(initialX, initialY);
         
         int lastX = initialX + ret.getWidth();
         int lastY = initialY + ret.getHeight();

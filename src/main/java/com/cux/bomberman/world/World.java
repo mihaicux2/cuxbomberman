@@ -13,9 +13,12 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 //import java.util.Arrays;
 //import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 //import java.util.HashSet;
 //import java.util.Set;
 //import java.util.Vector;
@@ -162,7 +165,8 @@ public class World {
     @Override
     public String toString(){
         
-        ArrayList<AbstractWall> walls2 = (ArrayList<AbstractWall>)walls.clone();
+//        ArrayList<AbstractWall> walls2 = (ArrayList<AbstractWall>)walls.clone();
+        Set<AbstractWall> walls2 = Collections.synchronizedSet(new HashSet<AbstractWall>(walls));
         
         String ret = "";
         ret += World.WIDTH+"x"+World.HEIGHT+"[#walls#]";

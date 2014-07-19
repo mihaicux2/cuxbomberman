@@ -7,6 +7,7 @@
 package com.cux.bomberman.world;
 
 import com.cux.bomberman.BombermanWSEndpoint;
+import static com.cux.bomberman.BombermanWSEndpoint.peers;
 import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
@@ -15,6 +16,8 @@ import java.sql.Timestamp;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import javax.websocket.Session;
 //import java.util.logging.Level;
 //import java.util.logging.Logger;
@@ -419,13 +422,16 @@ public class BCharacter extends AbstractBlock{
             public synchronized void run() {
                 while (myChar.dropsBombs()){
                     try {
-                        for (Session peer : BombermanWSEndpoint.peers){
+                        Iterator it = peers.entrySet().iterator();
+                        while (it.hasNext()) {
+                            Map.Entry pairs = (Map.Entry) it.next();
+                            Session peer = (Session) pairs.getValue();
                             if (peer.getId() == myChar.getId()){
                                 BombermanWSEndpoint.getInstance().onMessage("bomb", peer);
                                 break;
                             }
                         }
-                        Thread.sleep(1000); // 1 bomb per second
+                        Thread.sleep(800); // almost 1 bomb per second
                     } catch (InterruptedException ex) {
                         BLogger.getInstance().logException2(ex);
                     }

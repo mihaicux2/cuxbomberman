@@ -22,10 +22,10 @@ import org.codehaus.jackson.map.ObjectWriter;
  */
 public abstract class AbstractWall extends AbstractBlock{
 
-    
     public String texture;
     public String name;
     public boolean blowable = false;
+    public String wallId;
     
     protected AbstractWall(String name){
         this.name = name;

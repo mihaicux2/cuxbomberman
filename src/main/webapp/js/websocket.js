@@ -183,6 +183,9 @@ function init(){
             case "items":
                 renderItems(toProc);
                 break;
+            case "blownWalls":
+                removeWalls(toProc);
+                break;
             case "sound":
                 $.playSound(toProc);
                 break;
@@ -202,6 +205,18 @@ function init(){
   }
   catch(ex){ console.log(ex); }
   //$("#msg").focus();
+}
+
+function removeWalls(toProc){
+    items = toProc.split("[#brickSep#]");
+    var last = items.length;
+    var idx = 0;
+    for (i in items){
+        idx++;
+        if (idx == last) break;
+        var item = items[i];
+        $("#brick_"+item).remove();
+    }
 }
 
 function renderItems(toProc){
@@ -372,7 +387,7 @@ function renderMap(toProc){
         if (idx == last) break;
         try{
            brick = JSON.parse(bricks[i]);
-           str = "<div class='brick' style='position:absolute; top:" + brick.posY + "px; left:" + brick.posX + "px;' alt='"+brick.name+"' title='"+brick.name+"'><img src='images/walls/" + brick.texture + "' width='" + brick.width + "' height='" + brick.height + "' /></div>";
+           str = "<div class='brick' id='brick_"+brick.wallId+"' style='position:absolute; top:" + brick.posY + "px; left:" + brick.posX + "px;' alt='"+brick.name+"' title='"+brick.name+"'><img src='images/walls/" + brick.texture + "' width='" + brick.width + "' height='" + brick.height + "' /></div>";
            $("#world").append(str);
         }
         catch(ex){ console.log(ex); }

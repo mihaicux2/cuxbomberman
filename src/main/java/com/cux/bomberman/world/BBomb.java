@@ -10,6 +10,9 @@ import com.cux.bomberman.BombermanWSEndpoint;
 import com.cux.bomberman.util.BLogger;
 import java.io.IOException;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.websocket.Session;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 
@@ -34,7 +37,6 @@ public class BBomb extends AbstractBlock {
         if (this.owner.isTriggered()){
             this.volatileB = false;
         }
-        
     }
     
     public BCharacter getOwner(){

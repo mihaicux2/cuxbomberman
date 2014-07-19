@@ -1,14 +1,14 @@
 package com.cux.bomberman.util;
 
 //import java.io.File;
-import java.io.FileWriter;
 import java.io.BufferedWriter;
-//import java.io.PrintStream;
+import java.io.FileWriter;
 import java.io.IOException;
-
-import java.util.Date;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 
 //import javax.swing.JDialog;
 //import javax.swing.JOptionPane;
@@ -80,7 +80,10 @@ public final class BLogger {
         }
         log(BMessenger.LEVEL_EXCEPTION, exceptionStr);
         //echo(e.getMessage(), LEVEL_EXCEPTION);
-        echo(e.getMessage(), LEVEL_EXCEPTION);
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+        echo(sw.toString(), LEVEL_EXCEPTION);
     }
 
     // salveaza in log erorile Throwable [cu tot cu tracking - fisierul, linia etc.]

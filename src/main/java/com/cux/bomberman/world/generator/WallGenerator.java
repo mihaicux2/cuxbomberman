@@ -56,6 +56,8 @@ public class WallGenerator {
         
         if (lastX > wW) ret.setPosX(wW - ret.getWidth());
         if (lastY > wH) ret.setPosY(wH - ret.getHeight());
+    
+        ret.wallId = java.util.UUID.randomUUID().toString();
         
         //return ret.toString();
         return ret;
