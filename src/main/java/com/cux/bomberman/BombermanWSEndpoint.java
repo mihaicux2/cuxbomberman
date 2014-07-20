@@ -177,7 +177,10 @@ public class BombermanWSEndpoint {
                 break;
             case "getEnvironment":
                 exportEnvironment(peer);
-                break;                
+                break;     
+            case "ready":
+                makePlayerReady(peer);
+                break;
             case "QUIT":
                 this.onClose(peer);
             default:
@@ -327,22 +330,27 @@ public class BombermanWSEndpoint {
         int roomNr = getRoom(peer);
         try {
             //if (charsChanged.get(roomNr)){
-            peer.getBasicRemote().sendText("chars:[" + exportChars(peer));
+            //peer.getBasicRemote().sendText("chars:[" + exportChars(peer));
+            exportChars(peer);
             //}
             //if (mapChanged.get(roomNr)){
-            peer.getBasicRemote().sendText("map:[" + exportMap(peer));
+            //peer.getBasicRemote().sendText("map:[" + exportMap(peer));
+            exportMap(peer);
             //}
             //if (bombsChanged.get(roomNr)){
-            peer.getBasicRemote().sendText("bombs:[" + exportBombs(peer));
+            //peer.getBasicRemote().sendText("bombs:[" + exportBombs(peer));
+            exportBombs(peer);
             //}
             //if (explosionsChanged.get(roomNr)){
-            peer.getBasicRemote().sendText("explosions:[" + exportExplosions(peer));
+            //peer.getBasicRemote().sendText("explosions:[" + exportExplosions(peer));
+            exportExplosions(peer);
             //}
             //if (itemsChanged.get(roomNr)){
-            peer.getBasicRemote().sendText("items:[" + exportItems(peer));
+            //peer.getBasicRemote().sendText("items:[" + exportItems(peer));
+            exportItems(peer);
             //}
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
+        /*} catch (IOException ex) {
+            BLogger.getInstance().logException2(ex);*/
         } catch (IllegalStateException ex) {
             BLogger.getInstance().logException2(ex);
         } catch (ConcurrentModificationException ex) {
@@ -441,41 +449,47 @@ public class BombermanWSEndpoint {
                                     // export chars?
                                     //if (charsChanged.get(roomNr)) {
                                     
-                                        peer.getBasicRemote().sendText("chars:[" + environment.exportChars(peer));
+                                        //peer.getBasicRemote().sendText("chars:[" + environment.exportChars(peer));
+                                        environment.exportChars(peer);
                                     //    charChanged[roomNr] = true;
                                     //}
 
                                     // export map?
                                     if (mapChanged.get(roomNr)) {
-                                        peer.getBasicRemote().sendText("map:[" + environment.exportMap(peer));
+//                                        peer.getBasicRemote().sendText("map:[" + environment.exportMap(peer));
+                                        environment.exportMap(peer);
                                         map2Changed[roomNr] = true;
                                     }
 
                                     // export walls?
                                     if (wallsChanged.get(roomNr)){
-                                        peer.getBasicRemote().sendText("blownWalls:[" + environment.exportWalls(peer));
+                                        //peer.getBasicRemote().sendText("blownWalls:[" + environment.exportWalls(peer));
+                                        exportWalls(peer);
                                         wallChanged[roomNr] = true;
                                     }
                                     
                                     // export bombs?
                                     if (bombsChanged.get(roomNr)) {
-                                        peer.getBasicRemote().sendText("bombs:[" + environment.exportBombs(peer));
+                                        //peer.getBasicRemote().sendText("bombs:[" + environment.exportBombs(peer));
+                                        environment.exportBombs(peer);
                                         bombChanged[roomNr] = true;
                                     }
                                     
                                     // export explosions?
                                     if (explosionsChanged.get(roomNr)) {
-                                        peer.getBasicRemote().sendText("explosions:[" + environment.exportExplosions(peer));
+                                        //peer.getBasicRemote().sendText("explosions:[" + environment.exportExplosions(peer));
+                                        exportExplosions(peer);
                                         explosionChanged[roomNr] = true;
                                     }
 
                                     // eport items?
                                     if (itemsChanged.get(roomNr)) {
-                                        peer.getBasicRemote().sendText("items:[" + environment.exportItems(peer));
+                                        //peer.getBasicRemote().sendText("items:[" + environment.exportItems(peer));
+                                        environment.exportItems(peer);
                                         itemChanged[roomNr] = true;
                                     }
-                                } catch (IOException ex) {
-                                    BLogger.getInstance().logException2(ex);
+                                /*} catch (IOException ex) {
+                                    BLogger.getInstance().logException2(ex);*/
                                 } catch (IllegalStateException ex) {
                                     BLogger.getInstance().logException2(ex);
                                 } catch (ConcurrentModificationException ex) {
@@ -982,85 +996,141 @@ public class BombermanWSEndpoint {
         return ret;
     }
 
-    protected synchronized String exportChars(Session peer) {
-        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting chars...");
-        String ret = "";
-        ret += peer.getId() + "[#chars#]";
-        int roomNr = getRoom(peer);
-        Set<BCharacter> myChars = Collections.synchronizedSet(new HashSet<BCharacter>(chars2.get(roomNr)));
-        for (BCharacter crtChar : myChars){
-            ret += crtChar.toString() + "[#charSep#]";
-        }
-        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exported chars...");
-        return ret;
-    }
+    protected synchronized void exportChars(final Session peer) {
+        new Thread(new Runnable(){
 
-    protected synchronized String exportMap(Session peer) {
-        String ret = "";
-        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting map...");
-        int roomNr = getRoom(peer);
-        ret = map.get(roomNr).toString();
-        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exported map...");
-        return ret;
-    }
-
-    protected synchronized  String exportWalls(Session peer){
-        String ret = "";
-        int roomNr = getRoom(peer);
-        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting bombs...");
-        if (blownWalls.get(roomNr) != null) {
-            //ArrayList<BBomb> bombs2 = new ArrayList<BBomb>((ArrayList<BBomb>) bombs.get(roomNr));
-            Set<String> walls2 = Collections.synchronizedSet(new HashSet<String>(blownWalls.get(roomNr)));
-            for (String wall : walls2) {
-                ret += wall + "[#brickSep#]";
+            @Override
+            public synchronized void run() {
+                String ret = "";
+                ret += peer.getId() + "[#chars#]";
+                int roomNr = getRoom(peer);
+                Set<BCharacter> myChars = Collections.synchronizedSet(new HashSet<BCharacter>(chars2.get(roomNr)));
+                for (BCharacter crtChar : myChars){
+                    ret += crtChar.toString() + "[#charSep#]";
+                }
+                try {
+                    peer.getBasicRemote().sendText("chars:[" + ret);
+                } catch (IOException ex) {
+                    BLogger.getInstance().logException2(ex);
+                }
             }
-        }
-        return ret;
+            
+        }).start();
+    }
+
+    protected synchronized void exportMap(final Session peer) {
+        new Thread(new Runnable(){
+
+            @Override
+            public synchronized void run() {
+                String ret = "";
+                int roomNr = getRoom(peer);
+                ret = map.get(roomNr).toString();
+                try {
+                    peer.getBasicRemote().sendText("map:[" + ret);
+                } catch (IOException ex) {
+                    BLogger.getInstance().logException2(ex);
+                }
+            }
+            
+        }).start();
+    }
+
+    protected synchronized void exportWalls(final Session peer){
+        new Thread(new Runnable(){
+
+            @Override
+            public synchronized void run() {
+                String ret = "";
+                int roomNr = getRoom(peer);
+                //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting bombs...");
+                if (blownWalls.get(roomNr) != null) {
+                    Set<String> walls2 = Collections.synchronizedSet(new HashSet<String>(blownWalls.get(roomNr)));
+                    for (String wall : walls2) {
+                        ret += wall + "[#brickSep#]";
+                    }
+                }
+                try {
+                    peer.getBasicRemote().sendText("blownWalls:[" + ret);
+                } catch (IOException ex) {
+                    BLogger.getInstance().logException2(ex);
+                }
+            }
+            
+        }).start();
     }
     
-    protected synchronized String exportBombs(Session peer) {
-        String ret = "";
-        int roomNr = getRoom(peer);
-        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting bombs...");
-        if (bombs.get(roomNr) != null) {
-            //ArrayList<BBomb> bombs2 = new ArrayList<BBomb>((ArrayList<BBomb>) bombs.get(roomNr));
-            Set<BBomb> bombs2 = Collections.synchronizedSet(new HashSet<BBomb>(bombs.get(roomNr)));
-            for (BBomb bomb : bombs2) {
-                ret += bomb.toString() + "[#bombSep#]";
+    protected synchronized void exportBombs(final Session peer) {
+        new Thread(new Runnable(){
+
+            @Override
+            public synchronized void run() {
+                String ret = "";
+                int roomNr = getRoom(peer);
+                //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting bombs...");
+                if (bombs.get(roomNr) != null) {
+                    Set<BBomb> bombs2 = Collections.synchronizedSet(new HashSet<BBomb>(bombs.get(roomNr)));
+                    for (BBomb bomb : bombs2) {
+                        ret += bomb.toString() + "[#bombSep#]";
+                    }
+                }
+                try {
+                    peer.getBasicRemote().sendText("bombs:[" + ret);
+                    
+                } catch (IOException ex) {
+                    BLogger.getInstance().logException2(ex);
+                }
             }
-        }
-        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exported bombs...");
-        return ret;
+            
+        }).start();
     }
 
-    protected synchronized String exportExplosions(Session peer) {
-        String ret = "";
-        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting explosions...");
-        int roomNr = getRoom(peer);
-        if (explosions.get(roomNr) != null) {
-            Set<Explosion> explosions2 = Collections.synchronizedSet(new HashSet<Explosion>(explosions.get(roomNr)));
-            //HashSet<Explosion> explosions2 = new HashSet<Explosion>(explosions.get(roomNr));
-            for (Explosion exp : explosions2) {
-                ret += exp.toString() + "[#explosionSep#]";
+    protected synchronized void exportExplosions(final Session peer) {
+        new Thread(new Runnable(){
+
+            @Override
+            public synchronized void run() {
+                String ret = "";
+                int roomNr = getRoom(peer);
+                if (explosions.get(roomNr) != null) {
+                    Set<Explosion> explosions2 = Collections.synchronizedSet(new HashSet<Explosion>(explosions.get(roomNr)));
+                    for (Explosion exp : explosions2) {
+                        ret += exp.toString() + "[#explosionSep#]";
+                    }
+                }
+                try {
+                    peer.getBasicRemote().sendText("explosions:[" + ret);
+                    
+                } catch (IOException ex) {
+                    BLogger.getInstance().logException2(ex);
+                }
             }
-        }
-        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exported explosions...");
-        return ret;
+            
+        }).start();
     }
 
-    protected synchronized String exportItems(Session peer) {
-        String ret = "";
-        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting items...");
-        int roomNr = getRoom(peer);
-        if (items.get(roomNr) != null) {
-            Set<AbstractItem> items2 = Collections.synchronizedSet(new HashSet<AbstractItem>(items.get(roomNr)));
-            //HashSet<AbstractItem> items2 = new HashSet<AbstractItem>(items.get(roomNr));
-            for (AbstractItem item : items2) {
-                ret += item.toString() + "[#itemSep#]";
+    protected synchronized void exportItems(final Session peer) {
+        new Thread(new Runnable(){
+
+            @Override
+            public synchronized void run() {
+                String ret = "";
+                int roomNr = getRoom(peer);
+                if (items.get(roomNr) != null) {
+                    Set<AbstractItem> items2 = Collections.synchronizedSet(new HashSet<AbstractItem>(items.get(roomNr)));
+                    for (AbstractItem item : items2) {
+                        ret += item.toString() + "[#itemSep#]";
+                    }
+                }
+                try {
+                    peer.getBasicRemote().sendText("items:[" + ret);
+                    
+                } catch (IOException ex) {
+                    BLogger.getInstance().logException2(ex);
+                }
             }
-            //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exported items...");
-        }
-        return ret;
+            
+        }).start();
     }
 
     public boolean canPlantNewBomb(Session peer, BCharacter crtChar) {
@@ -1125,4 +1195,10 @@ public class BombermanWSEndpoint {
         }
         return peerRooms.get(peer.getId());
     }
+    
+    public synchronized void makePlayerReady(Session peer){
+        BCharacter crtChar = chars.get(peer.getId());
+        crtChar.setReady(true);
+    }
+    
 }

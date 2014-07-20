@@ -77,66 +77,6 @@ public class World {
 //        this.blockMatrix[wall.getPosX()/World.wallDim][wall.getPosX()/World.wallDim] = wall;
 //    }
     
-    public void World(String map){
-        this.mapFile = map;
-        try {
-            for (int i = 0; i < 100; i++){
-                for (int j = 0; j < 100; j++){
-                    chars[i][j] = new HashMap<String, BCharacter>();
-                }
-            }
-            BufferedReader input =  new BufferedReader(new FileReader(map));
-            String line = null; //not declared within while loop
-            Boolean firstLine = true;
-            while (( line = input.readLine()) != null){
-                if (firstLine == true){
-                    String[] dims = line.split("x");
-                    World.WIDTH = (Integer.parseInt(dims[0])/World.wallDim) * World.wallDim;
-                    if (World.WIDTH == 0) World.WIDTH = 660;
-                    World.HEIGHT = (Integer.parseInt(dims[1])/World.wallDim) * World.wallDim;
-                    if (World.HEIGHT == 0) World.WIDTH = 510;
-                    firstLine = false;
-                    continue;
-                }
-                String[] props = line.split("##");
-                AbstractWall wall = null;
-                int x = Integer.parseInt(props[1]);
-                int y = Integer.parseInt(props[2]);
-                //System.out.println(line);
-                switch(props[0]){
-                    case "brick":
-                        wall = new BrickWall(x, y);
-                        break;
-                    case "steel":
-                        wall = new SteelWall(x, y);
-                        break;
-                    case "grass":
-                        wall = new GrassWall(x, y);
-                        break;
-                    case "stone":
-                        wall = new StoneWall(x, y);
-                        break;
-                    case "water":
-                        wall = new WaterWall(x, y);
-                    default:
-                        //wall = new WaterWall(0, 0);
-                        break;
-                }
-                if (wall != null){
-                    wall.setHeight(World.wallDim);
-                    wall.setWidth(World.wallDim);
-                    wall.wallId = java.util.UUID.randomUUID().toString();
-                    this.walls.add(wall);
-                    this.blockMatrix[x/World.wallDim][y/World.wallDim] = wall;
-                }
-            }
-            input.close();
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-        }
-        
-    }
-    
     public World(String map){
         this.mapFile = map;
         for (int i = 0; i < 100; i++){

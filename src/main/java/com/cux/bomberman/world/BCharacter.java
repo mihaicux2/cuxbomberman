@@ -47,6 +47,7 @@ public class BCharacter extends AbstractBlock{
     public long connectionTime = 0; // in seconds
     public Date creationTime;
     private boolean dropBombs = false;
+    private boolean ready = false;
     
     {
         // walk in normal state
@@ -93,6 +94,14 @@ public class BCharacter extends AbstractBlock{
 
     public void setId(String id) {
         this.id = id;
+    }
+    
+    public boolean getReady(){
+        return this.ready;
+    }
+    
+    public void setReady(boolean ready){
+        this.ready = ready;
     }
     
     public int getMaxBombs() {

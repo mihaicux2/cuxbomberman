@@ -395,7 +395,12 @@ function renderMap(toProc){
         catch(ex){ console.log(ex); }
     }
     log("gata");
+    sendReadyMessage();
     $.unblockUI();
+}
+
+function sendReadyMessage(){
+    try{ socket.send("ready"); } catch(ex){ log(ex); } // request info about the other users
 }
 
 var charNames;
@@ -425,6 +430,7 @@ function renderChars(toProc){
            stats[x.id]["deaths"] = x.deaths;
            stats[x.id]["connectionTime"] = x.connectionTime;
            stats[x.id]["name"] = x.name;
+//           log(x);
            if ($("#char_"+x.id).length > 0){
                 var ob = $("#char_"+x.id);
 
@@ -467,6 +473,20 @@ function renderChars(toProc){
                 $("#world").append(str);
             }
             charNames.push("char_"+x.id);
+            var elem = $("#char_"+x.id);
+            if (x.ready == false){
+                if (!elem.hasClass("blinking")){
+                    blinking[charID] = true;
+                    elem.addClass("blinking");
+                    blinkChar(x.id, true);
+                }
+            }
+            else{
+                if (elem.hasClass("blinking")){
+                    elem.removeClass("blinking");
+                    unblinkChar(x.id);
+                }
+            }
         }
         catch(ex){ console.log(ex); }
     }
@@ -478,6 +498,27 @@ function renderChars(toProc){
         }
     });
     renderStats(charID);
+}
+
+var blinking = {};
+
+function blinkChar(charID, hide){
+    if (blinking[charID]){
+         var elem = $("#char_"+charID);
+         if (hide){
+            elem.fadeOut(500);
+        }
+        else{
+            elem.fadeIn(500);
+        }
+        setTimeout('blinkChar("'+charID+'", '+!hide+')', 500);   
+    }
+}
+
+function unblinkChar(charID){
+    var elem = $("#char_"+charID);
+    blinking[charID] = false;
+    elem.fadeIn('fast');
 }
 
 function renderStats(charID){
@@ -520,7 +561,7 @@ function centerMap(id){
 function changeName(){
     var name = $.trim($("#name").val());
     if (!name) alert("Enter a valid name!");
-     try{ socket.send("name "+name); } catch(ex){ log(ex); } // request info about the other users
+    try{ socket.send("name "+name); } catch(ex){ log(ex); } // request info about the other users
 }
 
 var walking = false;
