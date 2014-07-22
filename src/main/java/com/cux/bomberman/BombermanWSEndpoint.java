@@ -202,14 +202,24 @@ public class BombermanWSEndpoint {
                 break;
         }
         
-        String pattern = "name ([a-zA-Z0-9. ]+)";
-        Pattern p = Pattern.compile(pattern);
+        String namePattern = "name ([a-zA-Z0-9. ]+)";
+        Pattern p = Pattern.compile(namePattern);
         Matcher m = p.matcher(message);
         if (m.matches()){
             String name = message.substring(message.indexOf(" ")).trim();
-            if (name.length() > 0)
+            if (name.length() > 0){
+                String initialName = chars.get(peer.getId()).getName();
                 chars.get(peer.getId()).setName(name);
+                sendMessageAll(roomNr, "<b>"+initialName+" is now known as <u>"+name+"</u> </b>");
+            }
         }        
+        
+        if (message.length() > 4 && message.substring(0, 4).toLowerCase().equals("msg ")){
+            System.out.println("message for chat");
+            String msg = message.substring(message.indexOf(" ")).trim();
+            if (msg.length() > 0)
+                sendMessageAll(roomNr, "<b>"+chars.get(peer.getId()).getName()+" : </b>"+msg);
+        }
         
         //System.out.println(message);
         return null; // any string will be send to the requesting peer
@@ -220,6 +230,7 @@ public class BombermanWSEndpoint {
         this.delayedRemove(peer.getId());
         this.stopThread(peer.getId());
         int roomNr = getRoom(peer);
+        String initialName = chars.get(peer.getId()).getName();
         chars2.get(roomNr).remove(chars.get(peer.getId()));
         chars.remove(peer.getId());
         peers.remove(peer);
@@ -237,6 +248,7 @@ public class BombermanWSEndpoint {
 //        if (peers.size() == 0){
 //            BombermanWSEndpoint.initialized = false;
 //        }
+        sendMessageAll(roomNr, "<b>ELVIS [ "+initialName+" ]  has left the building </b>");
     }
 
     @OnOpen
@@ -345,6 +357,8 @@ public class BombermanWSEndpoint {
                 BLogger.getInstance().logException2(e);
             }
         }
+        
+        sendMessageAll(mapNumber, "<b>"+newChar.getName()+" has joined");
         
     }
 
@@ -1265,6 +1279,25 @@ public class BombermanWSEndpoint {
         newChar.setPosX(X * World.wallDim);
         newChar.setPosY(Y * World.wallDim);
         map.get(mapNumber).chars[X][Y].put(newChar.getId(), newChar);
+    }
+    
+    public void sendMessage(String msg, Session peer) {
+        try {
+            peer.getBasicRemote().sendText("msg:[" + msg);
+        } catch (IOException ex) {
+            BLogger.getInstance().logException2(ex);
+        } catch (IllegalStateException ex) {
+            BLogger.getInstance().logException2(ex);
+        } catch (ConcurrentModificationException ex) {
+            BLogger.getInstance().logException2(ex);
+        }
+    }
+    
+    public void sendMessageAll(int roomNr, String msg){
+        Set<BCharacter> myChars = Collections.synchronizedSet(new HashSet<BCharacter>(chars2.get(roomNr)));
+        for (BCharacter crtChar : myChars){
+            sendMessage(msg, peers.get(crtChar.getId()));
+        }
     }
     
 }

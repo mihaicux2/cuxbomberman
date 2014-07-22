@@ -119,12 +119,18 @@ function init(){
                     DETONATE = true;
                     break;
                 case 13: // ENTER
-                    //FIRE = true;
-                    //DETONATE = true;
+                    showChatBox();
                     break;
                 case 32: // SPACE
                     //DETONATE = true;
                     FIRE = true;
+                    break;
+                case 27: // ESC
+                    closeChatBox();
+                    break;
+                case 9: // TAB
+                    showStats();
+                    e.preventDefault();
                     break;
             }
         });
@@ -147,12 +153,18 @@ function init(){
                     DETONATE = false;
                     break;
                 case 13: // ENTER
-                    //FIRE = false;
-                    //DETONATE = false;
+                    showChatBox();
                     break;
                 case 32: // SPACE
                     //DETONATE = false;
                     FIRE = false;
+                    break;
+                case 27: // ESC
+                    closeChatBox();
+                    break;
+                case 9: // TAB
+                    closeStats();
+                    e.preventDefault();
                     break;
             }
         });
@@ -190,6 +202,9 @@ function init(){
                 break;
             case "sound":
                 $.playSound(toProc);
+                break;
+            case "msg":
+                showMessage(toProc);
                 break;
         }
     };
@@ -613,6 +628,40 @@ function canFire(){
 
 function getMap(){
     try{ socket.send("getEnvironment"); } catch(ex){ log(ex); } // request info about the other users
+}
+
+function showChatBox(){
+    $("#chatBox").css("display", "inline");
+    $("#chatMessage").val("");
+    $("#chatMessage").focus();
+}
+
+function closeChatBox(){
+    $("#chatBox").css("display", "none");
+}
+
+function showStats(){
+    $("#stats").css("display", "table");
+}
+
+function closeStats(){
+    $("#stats").css("display", "none");
+}
+
+function sendMessage(){
+    try{ socket.send("msg "+ $("#chatMessage").val()); } catch(ex){ log(ex); } // request info about the other users
+    $("#chatMessage").val("");
+}
+
+function showMessage(message){
+    //log(message);
+    var msgID = Math.random().toString(36).slice(2);
+    $("body").append("<div class='message' id='msg_"+msgID+"'>"+message+"</div>");
+    setTimeout("hideMessage('"+msgID+"')", 2000);
+}
+
+function hideMessage(msgID){
+    $("#msg_"+msgID).fadeOut();
 }
 
 function quit(){
