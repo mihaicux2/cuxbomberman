@@ -87,6 +87,16 @@ var INC_SPEED  = false;
 var FIRE = false;
 var DETONATE = false;
 
+var brickLength = 0;
+var walking = false;
+var charNames;
+var timers = {};
+var charID = "";
+var stats = {};
+var blinking = {};
+
+var chatBoxOpen = false;
+
 function init(){
   var host = "ws://" + document.location.host + document.location.pathname + "bombermanendpoint/";
   try{
@@ -97,31 +107,39 @@ function init(){
         $.blockUI({message:"<p>Please wait for the map to load</p>"})
         setTimeout("getMap()", 100);
         $(window).keydown(function(e){
+            
             switch (e.keyCode){
                 case 38:  // KEY_UP
+                    if (chatBoxOpen) break;
                     MOVE_UP = true;
                     MOVE_DOWN = false;
                     break;
                 case 40:  // KEY_DOWN
+                    if (chatBoxOpen) break;
                     MOVE_DOWN = true;
                     MOVE_UP = false;
                     break;
                 case 37:  // KEY_LEFT
+                    if (chatBoxOpen) break;
                     MOVE_LEFT = true;
                     MOVE_RIGHT = false;
                     break;
                 case 39:  // KEY_RIGHT
+                    if (chatBoxOpen) break;
                     MOVE_RIGHT = true;
                     MOVE_LEFT = false;
                     break;
                 case 16: // SHIFT
+                    if (chatBoxOpen) break;
                     //INC_SPEED = true;
                     DETONATE = true;
                     break;
                 case 13: // ENTER
+                    if (chatBoxOpen) break;
                     showChatBox();
                     break;
                 case 32: // SPACE
+                    if (chatBoxOpen) break;
                     //DETONATE = true;
                     FIRE = true;
                     break;
@@ -137,25 +155,35 @@ function init(){
         $(window).keyup(function(e){
             switch (e.keyCode){
                 case 38:  // KEY_UP
+                    if (chatBoxOpen) break;
                     MOVE_UP = false;
                     break;
                 case 40:  // KEY_DOWN
+                    if (chatBoxOpen) break;
                     MOVE_DOWN = false;
                     break;
                 case 37:  // KEY_LEFT
+                    if (chatBoxOpen) break;
                     MOVE_LEFT = false;
                     break;
                 case 39:  // KEY_RIGHT
+                    if (chatBoxOpen) break;
                     MOVE_RIGHT = false;
                     break;
                 case 16: // SHIFT
+                    if (chatBoxOpen) break;
                     //INC_SPEED = false;
                     DETONATE = false;
                     break;
                 case 13: // ENTER
+                    if (chatBoxOpen){
+                        sendMessage();
+                        break;
+                    }
                     showChatBox();
                     break;
                 case 32: // SPACE
+                    if (chatBoxOpen) break;
                     //DETONATE = false;
                     FIRE = false;
                     break;
@@ -222,6 +250,20 @@ function init(){
   }
   catch(ex){ console.log(ex); }
   //$("#msg").focus();
+  showNameBox();
+}
+
+function showNameBox(){
+    if ($("#nameBox").css("display") == "none"){
+        $("#nameBox").css("display", "block");
+    }
+    else{
+        hideNameBox();
+    }
+}
+
+function hideNameBox(){
+    $("#nameBox").css("display", "none");
 }
 
 function removeWalls(toProc){
@@ -379,8 +421,6 @@ function renderExplosions(toProc){
     } 
 }
 
-var brickLength = 0;
-
 function renderMap(toProc){
     //console.log(toProc);
     var dims = toProc.substr(0, toProc.indexOf("[#walls#]")).split("x");
@@ -417,11 +457,6 @@ function renderMap(toProc){
 function sendReadyMessage(){
     try{ socket.send("ready"); } catch(ex){ log(ex); } // request info about the other users
 }
-
-var charNames;
-var timers = {};
-var charID = "";
-var stats = {};
 
 function renderChars(toProc){
     
@@ -515,8 +550,6 @@ function renderChars(toProc){
     renderStats(charID);
 }
 
-var blinking = {};
-
 function blinkChar(charID, hide){
     if (blinking[charID]){
          var elem = $("#char_"+charID);
@@ -579,7 +612,6 @@ function changeName(){
     try{ socket.send("name "+name); } catch(ex){ log(ex); } // request info about the other users
 }
 
-var walking = false;
 function updateStatus(){
     walking = false;
     if (MOVE_UP){
@@ -634,10 +666,12 @@ function showChatBox(){
     $("#chatBox").css("display", "inline");
     $("#chatMessage").val("");
     $("#chatMessage").focus();
+    chatBoxOpen = true;
 }
 
 function closeChatBox(){
     $("#chatBox").css("display", "none");
+    chatBoxOpen = false;
 }
 
 function showStats(){
@@ -651,17 +685,18 @@ function closeStats(){
 function sendMessage(){
     try{ socket.send("msg "+ $("#chatMessage").val()); } catch(ex){ log(ex); } // request info about the other users
     $("#chatMessage").val("");
+    $("#chatMessage").focus();
 }
 
 function showMessage(message){
     //log(message);
     var msgID = Math.random().toString(36).slice(2);
-    $("body").append("<div class='message' id='msg_"+msgID+"'>"+message+"</div>");
-    setTimeout("hideMessage('"+msgID+"')", 2000);
+    $(".messages").append("<div class='message' id='msg_"+msgID+"'>"+message+"</div>");
+    setTimeout("hideMessage('"+msgID+"')", 3000);
 }
 
 function hideMessage(msgID){
-    $("#msg_"+msgID).fadeOut();
+    $("#msg_"+msgID).fadeOut('slow');
 }
 
 function quit(){

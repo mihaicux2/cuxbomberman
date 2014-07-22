@@ -6,6 +6,37 @@
         <style>
             body {
                 overflow:hidden;
+                margin:0px;
+            }
+            #options{
+                position: fixed;
+                top:0px;
+                right:0px;
+                background-color: rgba(44, 100, 150, 0.9);
+                border: 2px solid #aacccc;
+                border-radius: 5px;
+                z-index: 9999;
+                cursor:pointer;
+            }
+            #nameBox{
+                position: fixed;
+                display: none;
+                bottom: 25%;
+                top:25%;
+                left: 25%;
+                right: 25%;
+                width: 40%;
+                /*height: 40px;*/
+                background-color: rgba(44, 100, 150, 0.5);
+                border: 2px solid #aacccc;
+                border-radius: 5px;
+                z-index: 9999;
+                color: #ffffff;
+                font-weight: bold;
+                font-family: arial;
+            }
+            #nameBox div{
+                padding: 10px;
             }
             #chatBox{
                 position: fixed;
@@ -16,7 +47,7 @@
                 width: 40%;
                 height: 80px;
                 padding: 10px;
-                background: #99cccc;
+                background-color: rgba(44, 100, 150, 0.5);
                 border: 2px solid #aacccc;
                 border-radius: 5px;
                 z-index: 9999;
@@ -30,29 +61,33 @@
                 width: 80%;
                 border: 1px solid #ccc;
                 z-index: 9999;
+                border-radius: 5px;
+                background: #ffffff;
+                padding: 5px;
             }
-            .message{
+            
+            .messages{
                 position: fixed;
                 top: 20px;
                 left: 10%;
                 right: 10%;
                 width: 80%;
-                padding: 10px;
-                background: #99cccc;
+                z-index: 9999;
+            }
+            
+            .message{
+                background-color: rgba(44, 100, 150, 0.5);
                 border: 2px solid #aacccc;
                 border-radius: 5px;
-                z-index: 9999;
+                font-family: verdana;
+                font-size: 12px;
+                margin-bottom: 5px;
+                padding: 5px;
+                color:#fff;
             }
         </style>
     </head>
     <body>
-        <h1>WebApp::Bomberman (websockets with java server)</h1>
-<!--        <div style="clear:both;">
-            <input type="button" value="resetMap" onclick="resetMap();" />
-            <input type="button" value="quit" onclick="quit();" />
-            <input type="button" value="reconnect" onclick="quit();init();" />
-        </div>
-        <div id="output" style="float:left; width:300px;"></div>-->
         <table id="stats">
             <thead>
                 <tr style="background:#ccc; font-weight:bold;">
@@ -65,9 +100,27 @@
             <tbody>
             </tbody>
         </table>
-        <input type="button" value="QUIT" onclick="quit()" />
-        <input type="text" id="name" value="" placeholder="mihaicux" />
-        <input type="button" value="Change Name" onclick="changeName()" />
+        <div id="options">
+            <div style="position:relative;">
+                <img src="images/utils/options.png" onclick="showNameBox()" />
+            </div>
+        </div>
+        <div id="nameBox">
+            <div style="position:relative;">
+                <input type="text" id="name" value="" placeholder="mihaicux" />
+                <input type="button" value="Change Name" onclick="changeName()" />
+                <input type="button" value="QUIT" onclick="quit()" />
+                <img src="images/utils/close.png" style="position:absolute; right:0px; top:0px;" onclick="hideNameBox()" />
+                <ol>
+                    <li>Press SPACE to drop bomb</li>
+                    <li>Press SHIFT to detonate bomb - if you have the trigger item</li>
+                    <li>Press ENTER to open the chat box</li>
+                    <li>Press ENTER to send a message - if the chat box is opened</li>
+                    <li>Press ESC to close the chat box</li>
+                    <li>Press and hold TAB to see the game stats</li>
+                </ol>
+            </div>
+        </div>
         <div style="position:relative;">
             <div id="world" style="width:660px; height:510px; /*float:right;*/ border:1px solid #ccc; position:relative; background:#9ACD32"></div>
             <div id="chatBox">
@@ -76,6 +129,7 @@
                 <input type="button" value="CLOSE BOX" onclick="closeChatBox()" />
             </div>
         </div>
+        <div class="messages"></div>
         <script type="text/javascript" src="js/jquery.min.js"></script>
         <script type="text/javascript" src="js/jquery.blockUI.js"></script>
         <script type="text/javascript" src="js/websocket.js"></script>
