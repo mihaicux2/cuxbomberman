@@ -48,6 +48,7 @@ public class BCharacter extends AbstractBlock{
     public Date creationTime;
     private boolean dropBombs = false;
     private boolean ready = false;
+    private int plantedBombs = 0;
     
     {
         // walk in normal state
@@ -88,6 +89,26 @@ public class BCharacter extends AbstractBlock{
         this.creationTime = new Date();
     }
 
+    public void incPlantedBombs(){
+        if (this.plantedBombs < this.maxBombs){
+            this.plantedBombs++;
+        }
+    }
+    
+    public void decPlantedBombs(){
+        if (this.plantedBombs > 0){
+            this.plantedBombs--;
+        }
+    }
+    
+    public int getPlantedBombs(){
+        return this.plantedBombs;
+    }
+    
+    public void setPlantedBombs(int plantedBombs){
+        this.plantedBombs = plantedBombs;
+    }
+    
     public String getId() {
         return id;
     }
@@ -265,7 +286,7 @@ public class BCharacter extends AbstractBlock{
                 int y = myChar.posY / World.wallDim;
                 int x2 = x;
                 int y2 = y;
-                //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.name);
+                //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.id);
                 if (direction.equals("up")){
                     y2--;
                 }
@@ -279,8 +300,8 @@ public class BCharacter extends AbstractBlock{
                     x2++;
                 }
                 
-                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.name);
-                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.name, myChar);
+                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.id);
+                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.id, myChar);
                 
                 BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
                 
@@ -307,8 +328,8 @@ public class BCharacter extends AbstractBlock{
                     }
                     BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
                 }
-                //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.name);
-                //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.name, myChar);
+                //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.id);
+                //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.id, myChar);
                 myChar.walking = false;
                 BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
             }

@@ -144,6 +144,7 @@ public class BombermanWSEndpoint {
                     }
                     this.bombs.get(roomNr).add(b);
                     map.get(roomNr).blockMatrix[b.getPosX() / World.wallDim][b.getPosY() / World.wallDim] = b;
+                    //crtChar.incPlantedBombs();
                 } else if (!isAllowed) {
                     crtChar.addOrDropBomb();
                 }
@@ -257,7 +258,8 @@ public class BombermanWSEndpoint {
 
         //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
         if (map.size() == 0 || map.get(mapNumber) == null) {
-            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
+//            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
+            map.put(mapNumber, new World("/var/www/bomberman/maps/firstmap.txt"));
 //            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/map2.txt"));
 //            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
@@ -273,7 +275,7 @@ public class BombermanWSEndpoint {
 
         chars.put(peer.getId(), newChar);
 
-        map.get(mapNumber).chars[0][0].put(newChar.getName(), newChar);
+        map.get(mapNumber).chars[0][0].put(newChar.getId(), newChar);
 
         if (blownWalls.size() == 0 || blownWalls.get(mapNumber) == null) {
             blownWalls.put(mapNumber, new HashSet<String>());
@@ -706,6 +708,8 @@ public class BombermanWSEndpoint {
 
                     markedBombs.get(roomNr).add(bomb);
                     
+                    //bomb.getOwner().decPlantedBombs();
+                    
                     explosions.get(roomNr).add(exp);
 
                     explosionsChanged.put(roomNr, true);
@@ -729,7 +733,7 @@ public class BombermanWSEndpoint {
                         }
                     }).start();
                     
-                    // check if char is in the same position as the character
+                    // check if char is in the same position as the bomb
                     if (bomb.getPosX() + bomb.getWidth() <= World.getWidth() && BombermanWSEndpoint.characterExists(peer, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim)) {
                         triggerBlewCharacter(peer, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim);
                     }
@@ -749,11 +753,16 @@ public class BombermanWSEndpoint {
                         // right
                         final int xR = blockX + i;
                         final int yR = blockY;
+                        String checkedRight = BombermanWSEndpoint.checkWorldMatrix(roomNr, xR, yR);
+                        
+                        /*
                         boolean bombExistsRight = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, xR, yR);
                         boolean charExistsRight = BombermanWSEndpoint.characterExists(peer, xR, yR);
                         boolean wallExistsRight = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, xR, yR);
                         boolean itemExistsRight = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, xR, yR);
-                        if (posX + width * (i + 1) <= wWidth && bombExistsRight && !objectHits.contains("right")) {
+                        */
+                        
+                        if (posX + width * (i + 1) <= wWidth && checkedRight.equals("bomb") && !objectHits.contains("right")) {
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -762,7 +771,7 @@ public class BombermanWSEndpoint {
                             }).start();
                             objectHits.add("right");
                             //System.out.println("hit bomb right");
-                        } else if (posX + width * (i + 1) <= wWidth &&  charExistsRight&& !objectHits.contains("right")) {
+                        } else if (posX + width * (i + 1) <= wWidth &&  checkedRight.equals("char") && !objectHits.contains("right")) {
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -772,7 +781,7 @@ public class BombermanWSEndpoint {
                             //objectHits.add("right");
                             exp.ranges.put("right", exp.ranges.get("right") + 1);
                             //System.out.println("hit character right");
-                        } else if (posX + width * (i + 1) <= wWidth && wallExistsRight && !objectHits.contains("right")) {
+                        } else if (posX + width * (i + 1) <= wWidth && checkedRight.equals("wall") && !objectHits.contains("right")) {
                             exp.directions.add("right");
                             //System.out.println("hit wall right");
                             AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xR][yR]);
@@ -785,14 +794,14 @@ public class BombermanWSEndpoint {
                                 wallsChanged.put(roomNr, true);
                             }
                             objectHits.add("right");
-                        } else if (posX + width * (i + 1) <= wWidth && itemExistsRight && !objectHits.contains("right")) {
+                        } else if (posX + width * (i + 1) <= wWidth && checkedRight.equals("item") && !objectHits.contains("right")) {
                             exp.directions.add("right");
                             items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xR][yR]);
                             map.get(roomNr).blockMatrix[xR][yR] = null;
                             exp.ranges.put("right", exp.ranges.get("right") + 1);
                             objectHits.add("right");
                             itemsChanged.put(roomNr, true);
-                        } else if (posX + width * (i + 1) <= wWidth && !wallExistsRight && !objectHits.contains("right")) {
+                        } else if (posX + width * (i + 1) <= wWidth && !checkedRight.equals("wall") && !objectHits.contains("right")) {
                             exp.directions.add("right");
                             exp.ranges.put("right", exp.ranges.get("right") + 1);
                             //System.out.println("empty right");
@@ -801,11 +810,16 @@ public class BombermanWSEndpoint {
                         // left
                         final int xL = blockX - i;
                         final int yL = blockY;
+                        String checkedLeft = BombermanWSEndpoint.checkWorldMatrix(roomNr, xL, yL);
+                        
+                        /*
                         boolean bombExistsLeft = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, xL, yL);
                         boolean charExistsLeft = BombermanWSEndpoint.characterExists(peer, xL, yL);
                         boolean wallExistsLeft = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, xL, yL);
                         boolean itemExistsLeft = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, xL, yL);
-                        if (bomb.getPosX() - bomb.getWidth() * i >= 0 && bombExistsLeft && !objectHits.contains("left")) {
+                        */
+                        
+                        if (bomb.getPosX() - bomb.getWidth() * i >= 0 && checkedLeft.equals("bomb") && !objectHits.contains("left")) {
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -814,7 +828,7 @@ public class BombermanWSEndpoint {
                             }).start();
                             objectHits.add("left");
                             //System.out.println("hit bomb left");
-                        } else if (posX - width * i >= 0 && charExistsLeft && !objectHits.contains("left")) {
+                        } else if (posX - width * i >= 0 && checkedLeft.equals("char") && !objectHits.contains("left")) {
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -824,7 +838,7 @@ public class BombermanWSEndpoint {
                             //objectHits.add("left");
                             exp.ranges.put("left", exp.ranges.get("left") + 1);
                             //System.out.println("hit character left");
-                        } else if (posX - width * i >= 0 && wallExistsLeft && !objectHits.contains("left")) {
+                        } else if (posX - width * i >= 0 && checkedLeft.equals("wall") && !objectHits.contains("left")) {
                             exp.directions.add("left");
                             //System.out.println("hit wall left");
                             AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xL][yL]);
@@ -837,14 +851,14 @@ public class BombermanWSEndpoint {
                                 wallsChanged.put(roomNr, true);
                             }
                             objectHits.add("left");
-                        } else if (posX - width * i >= 0 && itemExistsLeft && !objectHits.contains("left")) {
+                        } else if (posX - width * i >= 0 && checkedLeft.equals("item") && !objectHits.contains("left")) {
                             exp.directions.add("left");
                             items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xL][yL]);
                             map.get(roomNr).blockMatrix[xL][yL] = null;
                             exp.ranges.put("left", exp.ranges.get("left") + 1);
                             objectHits.add("left");
                             itemsChanged.put(roomNr, true);
-                        } else if (posX - width * i >= 0 && !wallExistsLeft && !objectHits.contains("left")) {
+                        } else if (posX - width * i >= 0 && !checkedLeft.equals("wall") && !objectHits.contains("left")) {
                             exp.directions.add("left");
                             exp.ranges.put("left", exp.ranges.get("left") + 1);
                             //System.out.println("empty left");
@@ -853,11 +867,16 @@ public class BombermanWSEndpoint {
                         // down
                         final int xD = blockX;
                         final int yD = blockY + i;
+                        String checkedDown = BombermanWSEndpoint.checkWorldMatrix(roomNr, xD, yD);
+                        
+                        /*
                         boolean bombExistsDown = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, xD, yD);
                         boolean charExistsDown = BombermanWSEndpoint.characterExists(peer, xD, yD);
                         boolean wallExistsDown = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, xD, yD);
                         boolean itemExistsDown = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, xD, yD);
-                        if (posY + height * (i + 1) <= wHeight && bombExistsDown && !objectHits.contains("down")) {
+                        */
+                        
+                        if (posY + height * (i + 1) <= wHeight && checkedDown.equals("bomb") && !objectHits.contains("down")) {
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -866,7 +885,7 @@ public class BombermanWSEndpoint {
                             }).start();
                             objectHits.add("down");
                             //System.out.println("hit bomb down");
-                        } else if (posY + height * (i + 1) <= wHeight && charExistsDown && !objectHits.contains("down")) {
+                        } else if (posY + height * (i + 1) <= wHeight && checkedDown.equals("char") && !objectHits.contains("down")) {
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -876,7 +895,7 @@ public class BombermanWSEndpoint {
                             //objectHits.add("down");
                             exp.ranges.put("down", exp.ranges.get("down") + 1);
                             //System.out.println("hit character down");
-                        } else if (posY + height * (i + 1) <= wHeight && wallExistsDown && !objectHits.contains("down")) {
+                        } else if (posY + height * (i + 1) <= wHeight && checkedDown.equals("wall") && !objectHits.contains("down")) {
                             exp.directions.add("down");
                             //System.out.println("hit wall down");
                             AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xD][yD]);
@@ -889,14 +908,14 @@ public class BombermanWSEndpoint {
                                 wallsChanged.put(roomNr, true);
                             }
                             objectHits.add("down");
-                        } else if (posY + height * (i + 1) <= wHeight && itemExistsDown && !objectHits.contains("down")) {
+                        } else if (posY + height * (i + 1) <= wHeight && checkedDown.equals("item") && !objectHits.contains("down")) {
                             exp.directions.add("down");
                             items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xD][yD]);
                             map.get(roomNr).blockMatrix[xD][yD] = null;
                             exp.ranges.put("down", exp.ranges.get("down") + 1);
                             objectHits.add("down");
                             itemsChanged.put(roomNr, true);
-                        } else if (posY + height * (i + 1) <= wHeight && !wallExistsDown && !objectHits.contains("down")) {
+                        } else if (posY + height * (i + 1) <= wHeight && !checkedDown.equals("wall") && !objectHits.contains("down")) {
                             exp.directions.add("down");
                             exp.ranges.put("down", exp.ranges.get("down") + 1);
                             //System.out.println("empty down");
@@ -905,11 +924,16 @@ public class BombermanWSEndpoint {
                         // up
                         final int xU = blockX;
                         final int yU = blockY - i;
+                        String checkedUp = BombermanWSEndpoint.checkWorldMatrix(roomNr, xU, yU);
+                        
+                        /*
                         boolean bombExistsUp = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, xU, yU);
                         boolean charExistsUp = BombermanWSEndpoint.characterExists(peer, xU, yU);
                         boolean wallExistsUp = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, xU, yU);
                         boolean itemExistsUp = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, xU, yU);
-                        if (posY - height * i >= 0 && bombExistsUp && !objectHits.contains("up")) {
+                        */
+                        
+                        if (posY - height * i >= 0 && checkedUp.equals("bomb") && !objectHits.contains("up")) {
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -918,7 +942,7 @@ public class BombermanWSEndpoint {
                             }).start();
                             objectHits.add("up");
                             //System.out.println("hit bomb up");
-                        } else if (posY - height * i >= 0 && charExistsUp && !objectHits.contains("up")) {
+                        } else if (posY - height * i >= 0 && checkedUp.equals("char") && !objectHits.contains("up")) {
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -928,7 +952,7 @@ public class BombermanWSEndpoint {
                             //objectHits.add("up");
                             exp.ranges.put("up", exp.ranges.get("up") + 1);
                             //System.out.println("hit character up");
-                        } else if (posY - height * i >= 0 && wallExistsUp && !objectHits.contains("up")) {
+                        } else if (posY - height * i >= 0 && checkedUp.equals("wall") && !objectHits.contains("up")) {
                             exp.directions.add("up");
                             //System.out.println("hit wall up");
                             AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xU][yU]);
@@ -941,14 +965,14 @@ public class BombermanWSEndpoint {
                                 wallsChanged.put(roomNr, true);
                             }
                             objectHits.add("up");
-                        } else if (posY - height * i >= 0 && itemExistsUp && !objectHits.contains("up")) {
+                        } else if (posY - height * i >= 0 && checkedUp.equals("item") && !objectHits.contains("up")) {
                             exp.directions.add("up");
                             items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xU][yU]);
                             map.get(roomNr).blockMatrix[xU][yU] = null;
                             exp.ranges.put("up", exp.ranges.get("up") + 1);
                             objectHits.add("up");
                             itemsChanged.put(roomNr, true);
-                        } else if (posY - height * i >= 0 && !wallExistsUp && !objectHits.contains("up")) {
+                        } else if (posY - height * i >= 0 && !checkedUp.equals("wall") && !objectHits.contains("up")) {
                             exp.directions.add("up");
                             exp.ranges.put("up", exp.ranges.get("up") + 1);
                             //System.out.println("empty up");
@@ -965,7 +989,7 @@ public class BombermanWSEndpoint {
     protected synchronized void flipForItems(Session peer, int x, int y) {
         int rand = (int) (Math.random() * 1000000);
         int roomNr = getRoom(peer);
-        if (rand % 2 == 0) { // about 50% chance to find a hidden item behind the wall ;))
+        if (rand % 2 == 0) { // 50% chance to find a hidden item behind the wall ;))
             if (wallExists(map.get(roomNr).blockMatrix, x, y)) {
                 AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[x][y]);
                 //blownWalls.get(roomNr).add(wall.wallId);
@@ -989,18 +1013,14 @@ public class BombermanWSEndpoint {
     }
 
     public synchronized boolean alreadyMarked(Session peer, BBomb bomb) {
-        boolean ret = false;
-        int roomNr = getRoom(peer);
-        
-        ret = markedBombs.get(roomNr).contains(bomb);
-        return ret;
+        return markedBombs.get(getRoom(peer)).contains(bomb);
     }
 
     protected synchronized void exportChars(final Session peer) {
-        new Thread(new Runnable(){
-
-            @Override
-            public synchronized void run() {
+//        new Thread(new Runnable(){
+//
+//            @Override
+//            public synchronized void run() {
                 String ret = "";
                 ret += peer.getId() + "[#chars#]";
                 int roomNr = getRoom(peer);
@@ -1013,9 +1033,9 @@ public class BombermanWSEndpoint {
                 } catch (IOException ex) {
                     BLogger.getInstance().logException2(ex);
                 }
-            }
-            
-        }).start();
+//            }
+//            
+//        }).start();
     }
 
     protected synchronized void exportMap(final Session peer) {
@@ -1037,10 +1057,10 @@ public class BombermanWSEndpoint {
     }
 
     protected synchronized void exportWalls(final Session peer){
-        new Thread(new Runnable(){
-
-            @Override
-            public synchronized void run() {
+//        new Thread(new Runnable(){
+//
+//            @Override
+//            public synchronized void run() {
                 String ret = "";
                 int roomNr = getRoom(peer);
                 //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting bombs...");
@@ -1055,16 +1075,16 @@ public class BombermanWSEndpoint {
                 } catch (IOException ex) {
                     BLogger.getInstance().logException2(ex);
                 }
-            }
-            
-        }).start();
+//            }
+//            
+//        }).start();
     }
     
     protected synchronized void exportBombs(final Session peer) {
-        new Thread(new Runnable(){
-
-            @Override
-            public synchronized void run() {
+//        new Thread(new Runnable(){
+//
+//            @Override
+//            public synchronized void run() {
                 String ret = "";
                 int roomNr = getRoom(peer);
                 //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting bombs...");
@@ -1080,16 +1100,16 @@ public class BombermanWSEndpoint {
                 } catch (IOException ex) {
                     BLogger.getInstance().logException2(ex);
                 }
-            }
-            
-        }).start();
+//            }
+//            
+//        }).start();
     }
 
     protected synchronized void exportExplosions(final Session peer) {
-        new Thread(new Runnable(){
-
-            @Override
-            public synchronized void run() {
+//        new Thread(new Runnable(){
+//
+//            @Override
+//            public synchronized void run() {
                 String ret = "";
                 int roomNr = getRoom(peer);
                 if (explosions.get(roomNr) != null) {
@@ -1104,16 +1124,16 @@ public class BombermanWSEndpoint {
                 } catch (IOException ex) {
                     BLogger.getInstance().logException2(ex);
                 }
-            }
-            
-        }).start();
+//            }
+//            
+//        }).start();
     }
 
     protected synchronized void exportItems(final Session peer) {
-        new Thread(new Runnable(){
-
-            @Override
-            public synchronized void run() {
+//        new Thread(new Runnable(){
+//
+//            @Override
+//            public synchronized void run() {
                 String ret = "";
                 int roomNr = getRoom(peer);
                 if (items.get(roomNr) != null) {
@@ -1128,12 +1148,13 @@ public class BombermanWSEndpoint {
                 } catch (IOException ex) {
                     BLogger.getInstance().logException2(ex);
                 }
-            }
-            
-        }).start();
+//            }
+//            
+//        }).start();
     }
 
     public boolean canPlantNewBomb(Session peer, BCharacter crtChar) {
+        //return crtChar.getPlantedBombs() < crtChar.getMaxBombs();
         int maxBombs = crtChar.getMaxBombs();
         int plantedBombs = 0;
         int roomNr = getRoom(peer);
@@ -1146,21 +1167,24 @@ public class BombermanWSEndpoint {
             }
         }
         return (plantedBombs < maxBombs);
+        
     }
 
-    public static synchronized String checkWorldMatrix(AbstractBlock[][] data, int i, int j) {
+    public static synchronized String checkWorldMatrix(int roomNr, int i, int j) {
+        HashMap<String, BCharacter>[][] chars = map.get(roomNr).chars;
+        AbstractBlock[][] data = map.get(roomNr).blockMatrix;
         if (i < 0 || j < 0) return "out of bounds";
         String ret = "";
         try {
-            AbstractBlock x = data[i][j];
-            if (data[i][j] == null) {
-                return "blank";
-            } else if (AbstractWall.class.isAssignableFrom(data[i][j].getClass())) {
-                return "wall";
-            } else if (BBomb.class.isAssignableFrom(data[i][j].getClass())) {
-                return "bomb";
-            } else if (BCharacter.class.isAssignableFrom(data[i][j].getClass())) {
+            Class<?> cls = (data[i][j] != null) ? data[i][j].getClass() : "".getClass();
+            if (chars[i][j] != null && !chars[i][j].isEmpty()) {
                 return "char";
+            } else if (AbstractWall.class.isAssignableFrom(cls)) {
+                return "wall";
+            } else if (BBomb.class.isAssignableFrom(cls)) {
+                return "bomb";
+            } else if (AbstractItem.class.isAssignableFrom(cls)) {
+                return "item";
             }
             return "else";
         } catch (ArrayIndexOutOfBoundsException e) {
