@@ -16,6 +16,8 @@ import com.cux.bomberman.world.generator.WorldGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
@@ -89,6 +91,17 @@ public class BombermanWSEndpoint {
     private static boolean initialized = false;
     
     private static BombermanWSEndpoint instance = null;
+    
+    private static Connection con = null;
+    
+    private static final String DBConnectionString = "jdbc:mysql://localhost:3306/";
+    private static final String DBName = "bomberman";
+    private static final String DBUser = "root";
+    private static final String DBPass = "P@sswordcux";
+            
+    public Connection getConnection(){
+        return BombermanWSEndpoint.con;
+    }
     
     public static BombermanWSEndpoint getInstance(){
         return BombermanWSEndpoint.instance;
@@ -321,6 +334,16 @@ public class BombermanWSEndpoint {
             watchPeers();
             BombermanWSEndpoint.initialized = true;
             BombermanWSEndpoint.instance = this;
+            try{
+                Class.forName("com.mysql.jdbc.Driver").newInstance();
+                BombermanWSEndpoint.con = DriverManager.getConnection(BombermanWSEndpoint.DBConnectionString+BombermanWSEndpoint.DBName,
+                    BombermanWSEndpoint.DBUser, BombermanWSEndpoint.DBPass);
+                if (!con.isClosed()) {
+                    BLogger.getInstance().log(BLogger.LEVEL_FINE, "Connected to MySQL Database...");
+                }
+            } catch (Exception e) {
+                BLogger.getInstance().logException2(e);
+            }
         }
         
     }
