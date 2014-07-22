@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -275,8 +276,8 @@ public class BombermanWSEndpoint {
 
         chars.put(peer.getId(), newChar);
 
-        map.get(mapNumber).chars[0][0].put(newChar.getId(), newChar);
-
+        setCharPosition(mapNumber, newChar);
+        
         if (blownWalls.size() == 0 || blownWalls.get(mapNumber) == null) {
             blownWalls.put(mapNumber, new HashSet<String>());
         }
@@ -681,6 +682,7 @@ public class BombermanWSEndpoint {
                     BLogger.getInstance().logException2(ex);
                 }
                 myChar.setState("Normal");
+                setCharPosition(roomNr, myChar);
                 charsChanged.put(roomNr, true);
             }
         }).start();
@@ -1173,7 +1175,7 @@ public class BombermanWSEndpoint {
     public static synchronized String checkWorldMatrix(int roomNr, int i, int j) {
         HashMap<String, BCharacter>[][] chars = map.get(roomNr).chars;
         AbstractBlock[][] data = map.get(roomNr).blockMatrix;
-        if (i < 0 || j < 0) return "out of bounds";
+        if (i < 0 || j < 0) return "empty";
         String ret = "";
         try {
             Class<?> cls = (data[i][j] != null) ? data[i][j].getClass() : "".getClass();
@@ -1186,10 +1188,10 @@ public class BombermanWSEndpoint {
             } else if (AbstractItem.class.isAssignableFrom(cls)) {
                 return "item";
             }
-            return "else";
+            return "empty";
         } catch (ArrayIndexOutOfBoundsException e) {
             BLogger.getInstance().logException2(e);
-            return "out of bounds";
+            return "empty";
         }
     }
 
@@ -1223,6 +1225,23 @@ public class BombermanWSEndpoint {
     public synchronized void makePlayerReady(Session peer){
         BCharacter crtChar = chars.get(peer.getId());
         crtChar.setReady(true);
+    }
+    
+    public synchronized void setCharPosition(int mapNumber, BCharacter newChar){
+        Random r = new Random();
+        int Low = 0;
+        int HighW = World.getWidth() / World.wallDim - 1;
+        int HighH = World.getHeight() / World.wallDim - 1;
+        int X = r.nextInt(HighW - Low) + Low;
+        int Y = r.nextInt(HighH) + Low;
+        while (!BombermanWSEndpoint.checkWorldMatrix(mapNumber, X, Y).equals("empty")) {
+            X = r.nextInt(HighW - Low) + Low;
+            Y = r.nextInt(HighH) + Low;
+        }
+
+        newChar.setPosX(X * World.wallDim);
+        newChar.setPosY(Y * World.wallDim);
+        map.get(mapNumber).chars[X][Y].put(newChar.getId(), newChar);
     }
     
 }
