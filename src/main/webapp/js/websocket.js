@@ -77,6 +77,40 @@ function log(msg){
 
 //$("body").scrollLeft("40px");
 
+function BombermanClient(options){
+    this.options = options;
+    this.posX = 0;
+    this.posY = 0;
+    this.MOVE_UP = false;
+    this.MOVE_DOWN = false;
+    this.MOVE_LEFT = false;
+    this.MOVE_RIGHT = false;
+    this.INC_SPEED = false;
+    this.FIRE = false;
+    this.DETONATE = false;
+    this.brickLength = 0;
+    this.walking = false;
+    this.charNames;
+    this.timers = {};
+    this.charID = "";
+    this.stats = {};
+    this.blinking = {};
+    this.chatBoxOpen = false;
+    this.host = "ws://" + document.location.host + document.location.pathname + "bombermanendpoint/";
+    this.socket = {};
+}
+
+BombermanClient.prototype.init = function(){
+    try{
+        this.socket = new WebSocket(host);
+    }
+    catch(ex){ this.log(ex); }
+}
+
+BombermanClient.prototype.log = function(msg){
+    console.log(msg);
+}
+
 var posX = 0;
 var posY = 0;
 var MOVE_UP = false;
