@@ -1,7 +1,14 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * Query-uri pentru baza de date.
+ * CREATE DATABASE `bomberman`;
+ * CREATE TABLE `chat_message` (
+ `id` int(11) NOT NULL AUTO_INCREMENT,
+ `peer_id` varchar(128) NOT NULL,
+ `peer_name` varchar(128) NOT NULL,
+ `message_time` DATETIME NOT NULL,
+ `message` TEXT NOT NULL,
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
  */
 package com.cux.bomberman;
 
@@ -18,6 +25,9 @@ import com.cux.bomberman.world.walls.AbstractWall;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
@@ -217,8 +227,10 @@ public class BombermanWSEndpoint {
         if (message.length() > 4 && message.substring(0, 4).toLowerCase().equals("msg ")){
             System.out.println("message for chat");
             String msg = message.substring(message.indexOf(" ")).trim();
-            if (msg.length() > 0)
+            if (msg.length() > 0){
+                logChatMessage(chars.get(peer.getId()), msg);
                 sendMessageAll(roomNr, "<b>"+chars.get(peer.getId()).getName()+" : </b>"+msg);
+            }
         }
         
         //System.out.println(message);
@@ -284,8 +296,8 @@ public class BombermanWSEndpoint {
 
         //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
         if (map.size() == 0 || map.get(mapNumber) == null) {
-            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
-//            map.put(mapNumber, new World("/var/www/bomberman/maps/firstmap.txt"));
+//            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
+            map.put(mapNumber, new World("/home/mihaicux/NetBeansProjects/bomberman/maps/firstmap.txt"));
 //            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/map2.txt"));
 //            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
@@ -1297,6 +1309,23 @@ public class BombermanWSEndpoint {
         Set<BCharacter> myChars = Collections.synchronizedSet(new HashSet<BCharacter>(chars2.get(roomNr)));
         for (BCharacter crtChar : myChars){
             sendMessage(msg, peers.get(crtChar.getId()));
+        }
+    }
+
+    private void logChatMessage(BCharacter myChar, String msg) {
+        try {
+            String query = "INSERT INTO `chat_message` (id, peer_id, peer_name, message_time, message)"
+                    + "VALUES (NULL, ?, ?, NOW(), ?)";
+            PreparedStatement st = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(query);
+            st.setString(1, myChar.getId());
+            st.setString(2, myChar.getName());
+            st.setString(3, msg);
+            int affectedRows = st.executeUpdate();
+            if (affectedRows == 0){
+                throw new SQLException("Cannot log chat message : `"+msg+"` from user `"+myChar.getName()+" ( "+myChar.getId()+" )"+"`");
+            }
+        } catch (SQLException ex) {
+            BLogger.getInstance().logException2(ex);
         }
     }
     
