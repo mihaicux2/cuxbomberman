@@ -7,6 +7,14 @@
             body {
                 overflow:hidden;
                 margin:0px;
+                cursor:none;
+            }
+            #world{
+                width:660px;
+                height:510px;
+                border:1px solid #ccc;
+                position:relative;
+                background:#9ACD32;
             }
             #options{
                 position: fixed;
@@ -34,6 +42,7 @@
                 color: #ffffff;
                 font-weight: bold;
                 font-family: arial;
+                font-size: 12px;
             }
             #nameBox div{
                 padding: 10px;
@@ -102,31 +111,33 @@
         </table>
         <div id="options">
             <div style="position:relative;">
-                <img src="images/utils/options.png" onclick="showNameBox()" />
+                <img src="images/utils/options.png" onclick="BombermanClient.showNameBox()" />
             </div>
         </div>
         <div id="nameBox">
             <div style="position:relative;">
                 <input type="text" id="name" value="" placeholder="mihaicux" />
-                <input type="button" value="Change Name" onclick="changeName()" />
-                <input type="button" value="QUIT" onclick="quit()" />
-                <img src="images/utils/close.png" style="position:absolute; right:0px; top:0px;" onclick="hideNameBox()" />
+                <input type="button" value="Change Name" onclick="BombermanClient.changeName()" />
+                <input type="button" value="QUIT" onclick="BombermanClient.quit()" />
+                <img src="images/utils/close.png" style="position:absolute; right:0px; top:0px;" onclick="BombermanClient.hideNameBox()" />
                 <ol>
                     <li>Press SPACE to drop bomb</li>
                     <li>Press SHIFT to detonate bomb - if you have the trigger item</li>
                     <li>Press ENTER to open the chat box</li>
                     <li>Press ENTER to send a message - if the chat box is opened</li>
-                    <li>Press ESC to close the chat box</li>
+                    <li>Press ESC to close the chat box - if the chat box is opened</li>
+                    <li>Press ESC to close the help box - if the help box is opened</li>
                     <li>Press and hold TAB to see the game stats</li>
+                    <li>Press CONSOLE KEY (` | ~) to see the help box ( this menu )</li>
                 </ol>
             </div>
         </div>
         <div style="position:relative;">
-            <div id="world" style="width:660px; height:510px; /*float:right;*/ border:1px solid #ccc; position:relative; background:#9ACD32"></div>
+            <div id="world"></div>
             <div id="chatBox">
                 <textarea id="chatMessage" style="width:100%; height:55px;"></textarea>
-                <input type="button" value="SEND" onclick="sendMessage()" />
-                <input type="button" value="CLOSE BOX" onclick="closeChatBox()" />
+                <input type="button" value="SEND" onclick="BombermanClient.sendMessage()" />
+                <input type="button" value="CLOSE BOX" onclick="BombermanClient.closeChatBox()" />
             </div>
         </div>
         <div class="messages"></div>

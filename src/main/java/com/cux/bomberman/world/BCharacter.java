@@ -47,7 +47,7 @@ public class BCharacter extends AbstractBlock{
     public long connectionTime = 0; // in seconds
     public Date creationTime;
     private boolean dropBombs = false;
-    private boolean ready = false;
+    public boolean ready = false;
     private int plantedBombs = 0;
     
     {

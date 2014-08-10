@@ -83,7 +83,7 @@ public class BombermanWSEndpoint {
 
     public static Map<Integer, World> map = Collections.synchronizedMap(new HashMap<Integer, World>());
 
-    private final static int MAX_PLAYERS = 2;
+    private final static int MAX_PLAYERS = 6;
 
     private static final Map<Integer, Integer> mapPlayers = Collections.synchronizedMap(new HashMap<Integer, Integer>());
 
@@ -297,8 +297,8 @@ public class BombermanWSEndpoint {
         //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
         if (map.size() == 0 || map.get(mapNumber) == null) {
 //            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
-            map.put(mapNumber, new World("/home/mihaicux/NetBeansProjects/bomberman/maps/firstmap.txt"));
-//            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/map2.txt"));
+//            map.put(mapNumber, new World("/home/mihaicux/NetBeansProjects/bomberman/maps/firstmap.txt"));
+            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/map2.txt"));
 //            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
         }
@@ -692,19 +692,21 @@ public class BombermanWSEndpoint {
             public synchronized void run() {
                 BCharacter winner = chars.get(peer.getId());
                 if (winner == null) return;
-                winner.setState("Win");
-                winner.incKills();
                 int roomNr = getRoom(peer);
                 Iterator it = map.get(roomNr).chars[x][y].entrySet().iterator();
                 while (it.hasNext()) {
                     Map.Entry pairs = (Map.Entry) it.next();
                     BCharacter looser = (BCharacter) pairs.getValue();
-                    looser.incDeaths();
-                    if (looser.equals(winner)){
-                        looser.decKills(); // first, revert the initial kill
-                        looser.decKills(); // second, "steal" one of the user kills (suicide is a crime)
+                    if (looser.getReady()){ // change game stats only if the character within a bomb range is ready to play
+                        looser.incDeaths();
+                        winner.incKills();
+                        winner.setState("Win");
+                        if (looser.equals(winner)){
+                            looser.decKills(); // first, revert the initial kill
+                            looser.decKills(); // second, "steal" one of the user kills (suicide is a crime)
+                        }
+                        revertState(peer, looser);
                     }
-                    revertState(peer, looser);
                     //it.remove(); // avoids a ConcurrentModificationException
                 }
                 try {
@@ -730,6 +732,19 @@ public class BombermanWSEndpoint {
                 } catch (InterruptedException ex) {
                     BLogger.getInstance().logException2(ex);
                 }
+                myChar.setReady(false);
+                new Thread(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(3000);
+                        } catch (InterruptedException ex) {
+                            BLogger.getInstance().logException2(ex);
+                        }
+                        myChar.setReady(true);
+                    }
+                }).start();
                 myChar.setState("Normal");
                 setCharPosition(roomNr, myChar);
                 charsChanged.put(roomNr, true);
@@ -738,10 +753,6 @@ public class BombermanWSEndpoint {
     }
 
     public synchronized void markForRemove(final Session peer, final BBomb bomb) {
-//        if (true){
-//            System.out.println("nu stiu de unde...");
-//            return;
-//        }
         
         if (bomb == null) return;
         
@@ -799,19 +810,14 @@ public class BombermanWSEndpoint {
                     int blockY = posY / World.wallDim;
                     
                     // check if the explosion hits anything within it's range
-                    for (int i = 1; i <= charRange; i++) {
+                    // in it's position                    
+                    
+                    for (int i = 1; i <= charRange; i++) { // in it's range
                         
                         // right
                         final int xR = blockX + i;
                         final int yR = blockY;
                         String checkedRight = BombermanWSEndpoint.checkWorldMatrix(roomNr, xR, yR);
-                        
-                        /*
-                        boolean bombExistsRight = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, xR, yR);
-                        boolean charExistsRight = BombermanWSEndpoint.characterExists(peer, xR, yR);
-                        boolean wallExistsRight = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, xR, yR);
-                        boolean itemExistsRight = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, xR, yR);
-                        */
                         
                         if (posX + width * (i + 1) <= wWidth && checkedRight.equals("bomb") && !objectHits.contains("right")) {
                             new Thread(new Runnable() {
