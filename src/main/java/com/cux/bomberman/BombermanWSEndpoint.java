@@ -212,7 +212,7 @@ public class BombermanWSEndpoint {
                 break;
         }
         
-        String namePattern = "name ([a-zA-Z0-9. ]+)";
+        String namePattern = "name ([a-zA-Z0-9. _-]+)";
         Pattern p = Pattern.compile(namePattern);
         Matcher m = p.matcher(message);
         if (m.matches()){
@@ -296,9 +296,9 @@ public class BombermanWSEndpoint {
 
         //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
         if (map.size() == 0 || map.get(mapNumber) == null) {
-//            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
+            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
 //            map.put(mapNumber, new World("/home/mihaicux/NetBeansProjects/bomberman/maps/firstmap.txt"));
-            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/map2.txt"));
+//            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/map2.txt"));
 //            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
         }

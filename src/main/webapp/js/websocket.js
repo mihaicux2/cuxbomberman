@@ -446,7 +446,7 @@ BombermanClient.renderMap = function(toProc){
         if (idx == last) break;
         try{
            brick = JSON.parse(bricks[i]);
-           str = "<div class='brick' id='brick_"+brick.wallId+"' style='position:absolute; top:" + brick.posY + "px; left:" + brick.posX + "px;' alt='"+brick.name+"' title='"+brick.name+"'><img src='images/walls/" + brick.texture + "' width='" + brick.width + "' height='" + brick.height + "' /></div>";
+           str = "<div class='brick' id='brick_"+brick.wallId+"' style='position:absolute; top:" + brick.posY + "px; left:" + brick.posX + "px;' alt='"+brick.name+"'><img src='images/walls/" + brick.texture + "' width='" + brick.width + "' height='" + brick.height + "' /></div>";
            jQuery("#world").append(str);
         }
         catch(ex){ BombermanClient.log(ex); }
