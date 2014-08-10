@@ -83,7 +83,7 @@ BombermanClient.bindKeyDown = function(){
                 BombermanClient.showChatBox();
                 break;
             case 32: // SPACE
-                if (BombermanClient.chatBoxOpen)
+                if (BombermanClient.chatBoxOpen || jQuery("#nameBox").css("display") != "none")
                     break;
                 //DETONATE = true;
                 BombermanClient.FIRE = true;
@@ -151,7 +151,7 @@ BombermanClient.bindKeyUp = function(){
                 BombermanClient.showChatBox();
                 break;
             case 32: // SPACE
-                if (BombermanClient.chatBoxOpen)
+                if (BombermanClient.chatBoxOpen|| jQuery("#nameBox").css("display") != "none")
                     break;
                 //DETONATE = false;
                 BombermanClient.FIRE = false;
