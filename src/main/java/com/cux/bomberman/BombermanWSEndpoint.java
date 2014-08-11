@@ -797,11 +797,6 @@ public class BombermanWSEndpoint {
                             }
                         }
                     }).start();
-                    
-                    // check if char is in the same position as the bomb
-                    if (bomb.getPosX() + bomb.getWidth() <= World.getWidth() && BombermanWSEndpoint.characterExists(peer, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim)) {
-                        triggerBlewCharacter(peer, (bomb.getPosX() / World.wallDim), bomb.getPosY() / World.wallDim);
-                    }
 
                     int posX = bomb.getPosX();
                     int posY = bomb.getPosY();
@@ -812,18 +807,22 @@ public class BombermanWSEndpoint {
                     int blockX = posX / World.wallDim;
                     int blockY = posY / World.wallDim;
                     
-                    // check if the explosion hits anything within it's range
-                    // in it's position                    
+                    /**
+                     * check to see if the explosion hits anything within it's range
+                     */
                     
-                    for (int i = 1; i <= charRange; i++) { // in it's range
-                        
+                    // in it's  current position                    
+                    if (posX + width <= wWidth && BombermanWSEndpoint.characterExists(peer, (posX / World.wallDim), posY / World.wallDim)) {
+                        triggerBlewCharacter(peer, (posX / World.wallDim), posY / World.wallDim);
+                    }
+                    // in it's external range
+                    for (int i = 1; i <= charRange; i++) {
                         // right
                         final int xR = blockX + i;
                         final int yR = blockY;
                         String checkedRight = BombermanWSEndpoint.checkWorldMatrix(roomNr, xR, yR);
                         boolean hitRight = objectHits.contains("right");
                         boolean crtPosRight = (posX + width * (i + 1) <= wWidth);
-                        
                         if (!hitRight && crtPosRight){
                             if (checkedRight.equals("bomb")) {
                                 new Thread(new Runnable() {
@@ -877,7 +876,6 @@ public class BombermanWSEndpoint {
                         String checkedLeft = BombermanWSEndpoint.checkWorldMatrix(roomNr, xL, yL);
                         boolean hitLeft = objectHits.contains("left");
                         boolean crtPosLeft = (posX - width * i >= 0);
-                        
                         if (!hitLeft && crtPosLeft){                            
                             if (checkedLeft.equals("bomb")) {
                                 new Thread(new Runnable() {
@@ -931,7 +929,6 @@ public class BombermanWSEndpoint {
                         String checkedDown = BombermanWSEndpoint.checkWorldMatrix(roomNr, xD, yD);
                         boolean hitDown = objectHits.contains("down");
                         boolean crtPosDown = (posY + height * (i + 1) <= wHeight);
-                        
                         if (!hitDown && crtPosDown){
                             if (checkedDown.equals("bomb")) {
                                 new Thread(new Runnable() {
@@ -985,7 +982,6 @@ public class BombermanWSEndpoint {
                         String checkedUp = BombermanWSEndpoint.checkWorldMatrix(roomNr, xU, yU);
                         boolean hitUp = objectHits.contains("up");
                         boolean crtPosUp = (posY - height * i >= 0);
-                        
                         if (!hitUp && crtPosUp){
                             if (checkedUp.equals("bomb")) {
                                 new Thread(new Runnable() {
@@ -1042,9 +1038,10 @@ public class BombermanWSEndpoint {
     }
 
     protected synchronized void flipForItems(Session peer, int x, int y) {
-        int rand = (int) (Math.random() * 1000000);
         int roomNr = getRoom(peer);
-        if (rand % 2 == 0) { // 50% chance to find a hidden item behind the wall ;))
+        Random r = new Random();
+        int rand = r.nextInt(1000000);
+        if (rand % 5 == 0) { // 20% chance to find a hidden item behind the wall ;))
             if (wallExists(map.get(roomNr).blockMatrix, x, y)) {
                 AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[x][y]);
                 //blownWalls.get(roomNr).add(wall.wallId);
