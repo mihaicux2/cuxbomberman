@@ -296,8 +296,8 @@ public class BombermanWSEndpoint {
 
         //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
         if (map.size() == 0 || map.get(mapNumber) == null) {
-            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
-//            map.put(mapNumber, new World("/home/mihaicux/NetBeansProjects/bomberman/maps/firstmap.txt"));
+//            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
+            map.put(mapNumber, new World("/home/mihaicux/NetBeansProjects/bomberman/maps/firstmap.txt"));
 //            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/map2.txt"));
 //            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
@@ -706,6 +706,9 @@ public class BombermanWSEndpoint {
                             looser.decKills(); // second, "steal" one of the user kills (suicide is a crime)
                         }
                         revertState(peer, looser);
+                        // clear the block containing the character
+                        map.get(roomNr).chars[x][y].remove(looser);
+                        map.get(roomNr).blockMatrix[x][y] = null;
                     }
                     //it.remove(); // avoids a ConcurrentModificationException
                 }
@@ -818,221 +821,216 @@ public class BombermanWSEndpoint {
                         final int xR = blockX + i;
                         final int yR = blockY;
                         String checkedRight = BombermanWSEndpoint.checkWorldMatrix(roomNr, xR, yR);
+                        boolean hitRight = objectHits.contains("right");
+                        boolean crtPosRight = (posX + width * (i + 1) <= wWidth);
                         
-                        if (posX + width * (i + 1) <= wWidth && checkedRight.equals("bomb") && !objectHits.contains("right")) {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xR][yR]);
-                                }
-                            }).start();
-                            objectHits.add("right");
-                            //System.out.println("hit bomb right");
-                        } else if (posX + width * (i + 1) <= wWidth &&  checkedRight.equals("char") && !objectHits.contains("right")) {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    triggerBlewCharacter(peer, xR, yR);
-                                }
-                            }).start();
-                            //objectHits.add("right");
-                            exp.ranges.put("right", exp.ranges.get("right") + 1);
-                            //System.out.println("hit character right");
-                        } else if (posX + width * (i + 1) <= wWidth && checkedRight.equals("wall") && !objectHits.contains("right")) {
-                            exp.directions.add("right");
-                            //System.out.println("hit wall right");
-                            AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xR][yR]);
-                            if (wall.isBlowable()) {
-                                map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xR][yR]);
+                        if (!hitRight && crtPosRight){
+                            if (checkedRight.equals("bomb")) {
+                                new Thread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xR][yR]);
+                                    }
+                                }).start();
+                                objectHits.add("right");
+                                //System.out.println("hit bomb right");
+                            } else if (checkedRight.equals("char")) {
+                                new Thread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        triggerBlewCharacter(peer, xR, yR);
+                                    }
+                                }).start();
+                                //objectHits.add("right");
                                 exp.ranges.put("right", exp.ranges.get("right") + 1);
-                                flipForItems(peer, xR, yR);
-                                //mapChanged.put(roomNr, true);
-                                blownWalls.get(roomNr).add(wall.wallId);
-                                wallsChanged.put(roomNr, true);
+                                //System.out.println("hit character right");
+                            } else if (checkedRight.equals("wall")) {
+                                exp.directions.add("right");
+                                //System.out.println("hit wall right");
+                                AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xR][yR]);
+                                if (wall.isBlowable()) {
+                                    map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xR][yR]);
+                                    exp.ranges.put("right", exp.ranges.get("right") + 1);
+                                    flipForItems(peer, xR, yR);
+                                    //mapChanged.put(roomNr, true);
+                                    blownWalls.get(roomNr).add(wall.wallId);
+                                    wallsChanged.put(roomNr, true);
+                                }
+                                objectHits.add("right");
+                            } else if (checkedRight.equals("item")) {
+                                exp.directions.add("right");
+                                items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xR][yR]);
+                                map.get(roomNr).blockMatrix[xR][yR] = null;
+                                exp.ranges.put("right", exp.ranges.get("right") + 1);
+                                objectHits.add("right");
+                                itemsChanged.put(roomNr, true);
+                            } else if (!checkedRight.equals("wall")) {
+                                exp.directions.add("right");
+                                exp.ranges.put("right", exp.ranges.get("right") + 1);
+                                //System.out.println("empty right");
                             }
-                            objectHits.add("right");
-                        } else if (posX + width * (i + 1) <= wWidth && checkedRight.equals("item") && !objectHits.contains("right")) {
-                            exp.directions.add("right");
-                            items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xR][yR]);
-                            map.get(roomNr).blockMatrix[xR][yR] = null;
-                            exp.ranges.put("right", exp.ranges.get("right") + 1);
-                            objectHits.add("right");
-                            itemsChanged.put(roomNr, true);
-                        } else if (posX + width * (i + 1) <= wWidth && !checkedRight.equals("wall") && !objectHits.contains("right")) {
-                            exp.directions.add("right");
-                            exp.ranges.put("right", exp.ranges.get("right") + 1);
-                            //System.out.println("empty right");
                         }
-
+                        
                         // left
                         final int xL = blockX - i;
                         final int yL = blockY;
                         String checkedLeft = BombermanWSEndpoint.checkWorldMatrix(roomNr, xL, yL);
+                        boolean hitLeft = objectHits.contains("left");
+                        boolean crtPosLeft = (posX - width * i >= 0);
                         
-                        /*
-                        boolean bombExistsLeft = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, xL, yL);
-                        boolean charExistsLeft = BombermanWSEndpoint.characterExists(peer, xL, yL);
-                        boolean wallExistsLeft = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, xL, yL);
-                        boolean itemExistsLeft = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, xL, yL);
-                        */
-                        
-                        if (bomb.getPosX() - bomb.getWidth() * i >= 0 && checkedLeft.equals("bomb") && !objectHits.contains("left")) {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xL][yL]);
-                                }
-                            }).start();
-                            objectHits.add("left");
-                            //System.out.println("hit bomb left");
-                        } else if (posX - width * i >= 0 && checkedLeft.equals("char") && !objectHits.contains("left")) {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    triggerBlewCharacter(peer, xL, yL);
-                                }
-                            }).start();
-                            //objectHits.add("left");
-                            exp.ranges.put("left", exp.ranges.get("left") + 1);
-                            //System.out.println("hit character left");
-                        } else if (posX - width * i >= 0 && checkedLeft.equals("wall") && !objectHits.contains("left")) {
-                            exp.directions.add("left");
-                            //System.out.println("hit wall left");
-                            AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xL][yL]);
-                            if (wall.isBlowable()) {
-                                map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xL][yL]);
+                        if (!hitLeft && crtPosLeft){                            
+                            if (checkedLeft.equals("bomb")) {
+                                new Thread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xL][yL]);
+                                    }
+                                }).start();
+                                objectHits.add("left");
+                                //System.out.println("hit bomb left");
+                            } else if (checkedLeft.equals("char")) {
+                                new Thread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        triggerBlewCharacter(peer, xL, yL);
+                                    }
+                                }).start();
+                                //objectHits.add("left");
                                 exp.ranges.put("left", exp.ranges.get("left") + 1);
-                                flipForItems(peer, xL, yL);
-//                                mapChanged.put(roomNr, true);
-                                blownWalls.get(roomNr).add(wall.wallId);
-                                wallsChanged.put(roomNr, true);
+                                //System.out.println("hit character left");
+                            } else if (checkedLeft.equals("wall")) {
+                                exp.directions.add("left");
+                                //System.out.println("hit wall left");
+                                AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xL][yL]);
+                                if (wall.isBlowable()) {
+                                    map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xL][yL]);
+                                    exp.ranges.put("left", exp.ranges.get("left") + 1);
+                                    flipForItems(peer, xL, yL);
+    //                                mapChanged.put(roomNr, true);
+                                    blownWalls.get(roomNr).add(wall.wallId);
+                                    wallsChanged.put(roomNr, true);
+                                }
+                                objectHits.add("left");
+                            } else if (checkedLeft.equals("item")) {
+                                exp.directions.add("left");
+                                items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xL][yL]);
+                                map.get(roomNr).blockMatrix[xL][yL] = null;
+                                exp.ranges.put("left", exp.ranges.get("left") + 1);
+                                objectHits.add("left");
+                                itemsChanged.put(roomNr, true);
+                            } else if (!checkedLeft.equals("wall")) {
+                                exp.directions.add("left");
+                                exp.ranges.put("left", exp.ranges.get("left") + 1);
+                                //System.out.println("empty left");
                             }
-                            objectHits.add("left");
-                        } else if (posX - width * i >= 0 && checkedLeft.equals("item") && !objectHits.contains("left")) {
-                            exp.directions.add("left");
-                            items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xL][yL]);
-                            map.get(roomNr).blockMatrix[xL][yL] = null;
-                            exp.ranges.put("left", exp.ranges.get("left") + 1);
-                            objectHits.add("left");
-                            itemsChanged.put(roomNr, true);
-                        } else if (posX - width * i >= 0 && !checkedLeft.equals("wall") && !objectHits.contains("left")) {
-                            exp.directions.add("left");
-                            exp.ranges.put("left", exp.ranges.get("left") + 1);
-                            //System.out.println("empty left");
                         }
-
+                        
                         // down
                         final int xD = blockX;
                         final int yD = blockY + i;
                         String checkedDown = BombermanWSEndpoint.checkWorldMatrix(roomNr, xD, yD);
+                        boolean hitDown = objectHits.contains("down");
+                        boolean crtPosDown = (posY + height * (i + 1) <= wHeight);
                         
-                        /*
-                        boolean bombExistsDown = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, xD, yD);
-                        boolean charExistsDown = BombermanWSEndpoint.characterExists(peer, xD, yD);
-                        boolean wallExistsDown = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, xD, yD);
-                        boolean itemExistsDown = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, xD, yD);
-                        */
-                        
-                        if (posY + height * (i + 1) <= wHeight && checkedDown.equals("bomb") && !objectHits.contains("down")) {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xD][yD]);
-                                }
-                            }).start();
-                            objectHits.add("down");
-                            //System.out.println("hit bomb down");
-                        } else if (posY + height * (i + 1) <= wHeight && checkedDown.equals("char") && !objectHits.contains("down")) {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    triggerBlewCharacter(peer, xD, yD);                                    
-                                }
-                            }).start();
-                            //objectHits.add("down");
-                            exp.ranges.put("down", exp.ranges.get("down") + 1);
-                            //System.out.println("hit character down");
-                        } else if (posY + height * (i + 1) <= wHeight && checkedDown.equals("wall") && !objectHits.contains("down")) {
-                            exp.directions.add("down");
-                            //System.out.println("hit wall down");
-                            AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xD][yD]);
-                            if (wall.isBlowable()) {
-                                map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xD][yD]);
+                        if (!hitDown && crtPosDown){
+                            if (checkedDown.equals("bomb")) {
+                                new Thread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xD][yD]);
+                                    }
+                                }).start();
+                                objectHits.add("down");
+                                //System.out.println("hit bomb down");
+                            } else if (checkedDown.equals("char")) {
+                                new Thread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        triggerBlewCharacter(peer, xD, yD);                                    
+                                    }
+                                }).start();
+                                //objectHits.add("down");
                                 exp.ranges.put("down", exp.ranges.get("down") + 1);
-                                flipForItems(peer, xD, yD);
-//                                mapChanged.put(roomNr, true);
-                                blownWalls.get(roomNr).add(wall.wallId);
-                                wallsChanged.put(roomNr, true);
+                                //System.out.println("hit character down");
+                            } else if (checkedDown.equals("wall")) {
+                                exp.directions.add("down");
+                                //System.out.println("hit wall down");
+                                AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xD][yD]);
+                                if (wall.isBlowable()) {
+                                    map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xD][yD]);
+                                    exp.ranges.put("down", exp.ranges.get("down") + 1);
+                                    flipForItems(peer, xD, yD);
+    //                                mapChanged.put(roomNr, true);
+                                    blownWalls.get(roomNr).add(wall.wallId);
+                                    wallsChanged.put(roomNr, true);
+                                }
+                                objectHits.add("down");
+                            } else if (checkedDown.equals("item")) {
+                                exp.directions.add("down");
+                                items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xD][yD]);
+                                map.get(roomNr).blockMatrix[xD][yD] = null;
+                                exp.ranges.put("down", exp.ranges.get("down") + 1);
+                                objectHits.add("down");
+                                itemsChanged.put(roomNr, true);
+                            } else if (!checkedDown.equals("wall")) {
+                                exp.directions.add("down");
+                                exp.ranges.put("down", exp.ranges.get("down") + 1);
+                                //System.out.println("empty down");
                             }
-                            objectHits.add("down");
-                        } else if (posY + height * (i + 1) <= wHeight && checkedDown.equals("item") && !objectHits.contains("down")) {
-                            exp.directions.add("down");
-                            items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xD][yD]);
-                            map.get(roomNr).blockMatrix[xD][yD] = null;
-                            exp.ranges.put("down", exp.ranges.get("down") + 1);
-                            objectHits.add("down");
-                            itemsChanged.put(roomNr, true);
-                        } else if (posY + height * (i + 1) <= wHeight && !checkedDown.equals("wall") && !objectHits.contains("down")) {
-                            exp.directions.add("down");
-                            exp.ranges.put("down", exp.ranges.get("down") + 1);
-                            //System.out.println("empty down");
                         }
-
+                        
                         // up
                         final int xU = blockX;
                         final int yU = blockY - i;
                         String checkedUp = BombermanWSEndpoint.checkWorldMatrix(roomNr, xU, yU);
+                        boolean hitUp = objectHits.contains("up");
+                        boolean crtPosUp = (posY - height * i >= 0);
                         
-                        /*
-                        boolean bombExistsUp = BombermanWSEndpoint.bombExists(map.get(roomNr).blockMatrix, xU, yU);
-                        boolean charExistsUp = BombermanWSEndpoint.characterExists(peer, xU, yU);
-                        boolean wallExistsUp = BombermanWSEndpoint.wallExists(map.get(roomNr).blockMatrix, xU, yU);
-                        boolean itemExistsUp = BombermanWSEndpoint.itemExists(map.get(roomNr).blockMatrix, xU, yU);
-                        */
-                        
-                        if (posY - height * i >= 0 && checkedUp.equals("bomb") && !objectHits.contains("up")) {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xU][yU]);
-                                }
-                            }).start();
-                            objectHits.add("up");
-                            //System.out.println("hit bomb up");
-                        } else if (posY - height * i >= 0 && checkedUp.equals("char") && !objectHits.contains("up")) {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    triggerBlewCharacter(peer, xU, yU);
-                                }
-                            }).start();
-                            //objectHits.add("up");
-                            exp.ranges.put("up", exp.ranges.get("up") + 1);
-                            //System.out.println("hit character up");
-                        } else if (posY - height * i >= 0 && checkedUp.equals("wall") && !objectHits.contains("up")) {
-                            exp.directions.add("up");
-                            //System.out.println("hit wall up");
-                            AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xU][yU]);
-                            if (wall.isBlowable()) {
-                                map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xU][yU]);
+                        if (!hitUp && crtPosUp){
+                            if (checkedUp.equals("bomb")) {
+                                new Thread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xU][yU]);
+                                    }
+                                }).start();
+                                objectHits.add("up");
+                                //System.out.println("hit bomb up");
+                            } else if (checkedUp.equals("char")) {
+                                new Thread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        triggerBlewCharacter(peer, xU, yU);
+                                    }
+                                }).start();
+                                //objectHits.add("up");
                                 exp.ranges.put("up", exp.ranges.get("up") + 1);
-                                flipForItems(peer, xU, yU);
-//                                mapChanged.put(roomNr, true);
-                                blownWalls.get(roomNr).add(wall.wallId);
-                                wallsChanged.put(roomNr, true);
+                                //System.out.println("hit character up");
+                            } else if (checkedUp.equals("wall")) {
+                                exp.directions.add("up");
+                                //System.out.println("hit wall up");
+                                AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xU][yU]);
+                                if (wall.isBlowable()) {
+                                    map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xU][yU]);
+                                    exp.ranges.put("up", exp.ranges.get("up") + 1);
+                                    flipForItems(peer, xU, yU);
+    //                                mapChanged.put(roomNr, true);
+                                    blownWalls.get(roomNr).add(wall.wallId);
+                                    wallsChanged.put(roomNr, true);
+                                }
+                                objectHits.add("up");
+                            } else if (checkedUp.equals("item")) {
+                                exp.directions.add("up");
+                                items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xU][yU]);
+                                map.get(roomNr).blockMatrix[xU][yU] = null;
+                                exp.ranges.put("up", exp.ranges.get("up") + 1);
+                                objectHits.add("up");
+                                itemsChanged.put(roomNr, true);
+                            } else if (!checkedUp.equals("wall")) {
+                                exp.directions.add("up");
+                                exp.ranges.put("up", exp.ranges.get("up") + 1);
+                                //System.out.println("empty up");
                             }
-                            objectHits.add("up");
-                        } else if (posY - height * i >= 0 && checkedUp.equals("item") && !objectHits.contains("up")) {
-                            exp.directions.add("up");
-                            items.get(roomNr).remove((AbstractItem) map.get(roomNr).blockMatrix[xU][yU]);
-                            map.get(roomNr).blockMatrix[xU][yU] = null;
-                            exp.ranges.put("up", exp.ranges.get("up") + 1);
-                            objectHits.add("up");
-                            itemsChanged.put(roomNr, true);
-                        } else if (posY - height * i >= 0 && !checkedUp.equals("wall") && !objectHits.contains("up")) {
-                            exp.directions.add("up");
-                            exp.ranges.put("up", exp.ranges.get("up") + 1);
-                            //System.out.println("empty up");
                         }
                     }
 
