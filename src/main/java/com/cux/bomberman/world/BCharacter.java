@@ -12,6 +12,9 @@ import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
 import java.io.IOException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
@@ -19,8 +22,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import javax.websocket.Session;
-//import java.util.logging.Level;
-//import java.util.logging.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 
@@ -31,7 +32,7 @@ import org.codehaus.jackson.map.ObjectWriter;
 public class BCharacter extends AbstractBlock{
     
     protected String name;
-    private HashMap<String, Integer> textures = new HashMap<>(); // direction+state, texture = int(.gif)
+    private static HashMap<String, Integer> textures = new HashMap<>(); // direction+state, texture = int(.gif)
     public int crtTexture = 2; // can also be {1, 3, 4, 14, 15, 16, 17, 20, 22, 23, 24}
     private String state = "Normal"; // can also be "Bomb", "Blow", "Win" and "Trapped"
     private String direction = "Right"; // can also be "Up", "Down" and "Left"
@@ -49,8 +50,9 @@ public class BCharacter extends AbstractBlock{
     private boolean dropBombs = false;
     public boolean ready = false;
     private int plantedBombs = 0;
+    private int dbId = 0;
     
-    {
+    static {
         // walk in normal state
         textures.put("walkUpNormal", 1);
         textures.put("walkRightNormal", 2);
@@ -115,6 +117,16 @@ public class BCharacter extends AbstractBlock{
 
     public void setId(String id) {
         this.id = id;
+        this.saveToDB();
+    }
+    
+    public int getDbId() {
+        return dbId;
+    }
+
+    public void setId(int dbId) {
+        this.dbId = dbId;
+        this.saveToDB();
     }
     
     public boolean getReady(){
@@ -131,6 +143,7 @@ public class BCharacter extends AbstractBlock{
 
     public void setMaxBombs(int maxBombs) {
         this.maxBombs = maxBombs;
+        this.saveToDB();
     }
     
     public boolean isTriggered() {
@@ -139,6 +152,7 @@ public class BCharacter extends AbstractBlock{
 
     public void setTriggered(boolean triggered) {
         this.triggered = triggered;
+        this.saveToDB();
     }
     
     public boolean isWalking() {
@@ -155,6 +169,7 @@ public class BCharacter extends AbstractBlock{
 
     public void setBombRange(int bombRange) {
         this.bombRange = bombRange;
+        this.saveToDB();
     }
 
     public int getSpeed() {
@@ -172,6 +187,7 @@ public class BCharacter extends AbstractBlock{
 
     public void setName(String name) {
         this.name = name;
+        this.saveToDB();
     }
     
     // uncomment to make the original drop bomb movement (2 buttons ;)))
@@ -221,6 +237,7 @@ public class BCharacter extends AbstractBlock{
     
     public void setKills(int kills){
         this.kills = kills;
+        this.saveToDB();
     }
     
     public int getDeaths(){
@@ -229,6 +246,7 @@ public class BCharacter extends AbstractBlock{
     
     public void setDeaths(int deaths){
         this.deaths = deaths;
+        this.saveToDB();
     }
     
     public void resetScore(){
@@ -238,14 +256,17 @@ public class BCharacter extends AbstractBlock{
     
     public void incDeaths(){
         this.deaths++;
+        this.saveToDB();
     }
     
     public void incKills(){
         this.kills++;
+        this.saveToDB();
     }
     
     public void decKills(){
         this.kills--;
+        this.saveToDB();
     }
     
     public void moveUp(){
@@ -527,6 +548,61 @@ public class BCharacter extends AbstractBlock{
         ret.roomIndex = this.roomIndex;
         
         return ret;
+    }
+    
+    public int saveToDB(){
+        try {
+            String query = "";
+            if (this.dbId == 0){
+                query = "INSERT INTO `characters` SET "
+                        + "`name`=?,"
+                        + "`speed`=?,"
+                        + "`bomb_range`=?,"
+                        + "`max_bombs`=?,"
+                        + "`triggered`=?,"
+                        + "`kills`=?,"
+                        + "`deaths`=?,"
+                        + "`creation_time`=NOW();";
+            }
+            else{
+                query = "UPDATE `characters` SET "
+                        + "`name`=?,"
+                        + "`speed`=?,"
+                        + "`bomb_range`=?,"
+                        + "`max_bombs`=?,"
+                        + "`triggered`=?,"
+                        + "`kills`=?,"
+                        + "`deaths`=?,"
+                        + "`modification_time`=NOW()"
+                        + "WHERE `id`=?";
+            }
+            PreparedStatement st = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(query);
+            st.setString(1, this.name);
+            st.setInt(2, this.speed);
+            st.setInt(3, this.bombRange);
+            st.setInt(4, this.maxBombs);
+            st.setInt(5, this.triggered ? 1 : 0);
+            st.setInt(6, this.kills);
+            st.setInt(7, this.deaths);
+            if (this.dbId != 0){
+                st.setInt(8, this.dbId);
+            }
+            int affectedRows = st.executeUpdate();
+            if (affectedRows == 0){
+                throw new SQLException("Cannot save character");
+            }
+            else{
+                ResultSet rs = st.getGeneratedKeys();
+                if(rs.next())
+                {
+                    this.dbId = rs.getInt(1);
+                }
+            }
+            return 1;
+        } catch (SQLException ex) {
+            BLogger.getInstance().logException2(ex);
+            return 0;
+        }
     }
     
 }

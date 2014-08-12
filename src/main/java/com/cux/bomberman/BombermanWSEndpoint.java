@@ -1,12 +1,27 @@
 /**
  * Query-uri pentru baza de date.
  * CREATE DATABASE `bomberman`;
+ * 
  * CREATE TABLE `chat_message` (
  `id` int(11) NOT NULL AUTO_INCREMENT,
  `peer_id` varchar(128) NOT NULL,
  `peer_name` varchar(128) NOT NULL,
  `message_time` DATETIME NOT NULL,
  `message` TEXT NOT NULL,
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+* 
+* CREATE TABLE `characters` (
+ `id` int(11) NOT NULL AUTO_INCREMENT,
+ `name` varchar(128) NOT NULL,
+ `speed` tinyint(2) NOT NULL,
+ `bomb_range` tinyint(2) NOT NULL,
+ `max_bombs` tinyint(3) NOT NULL,
+ `triggered` tinyint(1) NOT NULL DEFAULT 0,
+ `kills` int(11) NOT NULL DEFAULT 0,
+ `deaths` int(11) NOT NULL DEFAULT 0,
+ `creation_time` DATETIME NULL,
+ `modification_time` DATETIME NULL,
  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
  */
@@ -42,6 +57,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.servlet.http.HttpSession;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
@@ -58,7 +76,7 @@ import javax.websocket.server.ServerEndpoint;
  * C:\Users\mihaicux\AppData\Roaming\NetBeans\7.4\config\GF_4.0\domain1\config
  * Linux : TBD
  */
-@ServerEndpoint("/bombermanendpoint/")
+@ServerEndpoint(value = "/bombermanendpoint/", configurator = BombermanHttpSessionConfigurator.class)
 public class BombermanWSEndpoint {
 
     public static final Map<String, Session> peers = Collections.synchronizedMap(new HashMap<String, Session>());
@@ -78,6 +96,8 @@ public class BombermanWSEndpoint {
     private static final Map<Integer, Set<String>> blownWalls = Collections.synchronizedMap(new HashMap<Integer, Set<String>>());
     
     public static Map<Integer, Set<AbstractItem>> items = Collections.synchronizedMap(new HashMap<Integer, Set<AbstractItem>>());
+    
+    private static final Map<String, HttpSession> httpSessions = Collections.synchronizedMap(new HashMap<String, HttpSession>());
 
     private static boolean isFirst = true;
 
@@ -102,7 +122,7 @@ public class BombermanWSEndpoint {
     
     private static BombermanWSEndpoint instance = null;
     
-    private static Connection con = null;
+    public static Connection con = null;
     
     private static final String DBConnectionString = "jdbc:mysql://localhost:3306/";
     private static final String DBName = "bomberman";
@@ -260,14 +280,42 @@ public class BombermanWSEndpoint {
 //        if (peers.size() == 0){
 //            BombermanWSEndpoint.initialized = false;
 //        }
+        playSoundAll(roomNr, "sounds/elvis.mp3");
         sendMessageAll(roomNr, "<b>ELVIS [ "+initialName+" ]  has left the building </b>");
     }
 
     @OnOpen
-    public synchronized void onOpen(Session peer, @PathParam("room") final String room) {
+    public synchronized void onOpen(Session peer, @PathParam("room") final String room, EndpointConfig config) {
 
+        HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
+        String sessionId = httpSession.getId();
+        
+        if (httpSessions.containsKey(sessionId)){
+            Iterator it = peers.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pairs = (Map.Entry) it.next();
+                Session peer2 = (Session) pairs.getValue();
+                // daca exista deja conectat, inchide vechea conexiune
+                if (peer2.getUserProperties().get("sessionId").equals(sessionId)){
+                    int mapNr = getRoom(peer2);
+                    mapPlayers.put(mapNr, mapPlayers.get(mapNr)-1);
+                    peers.remove(peer2.getId());
+                    chars.remove(peer2.getId());
+                    chars2.get(mapNumber).remove(peer2);
+                    stopThread(peer2.getId());
+                    sendMessage(" esti deja conenctat", peer);
+                    break;
+                }
+            }
+        }
+        
+        httpSessions.put(sessionId, (HttpSession) config.getUserProperties()
+                                           .get(HttpSession.class.getName()));
+        peer.getUserProperties().put("sessionId", sessionId);
         peers.put(peer.getId(), peer);
 
+        //sendMessage(httpSession.getId(), peer);
+        
         workingThreads.add(peer.getId());
 
         if (peers.size() == 1) { // this is the first player?
@@ -370,6 +418,7 @@ public class BombermanWSEndpoint {
             }
         }
         
+        newChar.saveToDB();
         sendMessageAll(mapNumber, "<b>"+newChar.getName()+" has joined");
         
     }
@@ -445,6 +494,10 @@ public class BombermanWSEndpoint {
                                 for (BBomb bomb : bombs2) {
                                     if (bomb == null) continue;
                                     Session peer = peers.get(bomb.getOwner().getId());
+                                    if (peer == null){
+                                        bombs.get(roomNr).remove(bomb);
+                                        continue;
+                                    }
                                     if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime()) / 1000 >= bomb.getLifeTime() && !alreadyMarked(peer, bomb)) {
                                         markForRemove(peer, bomb);
                                     }
