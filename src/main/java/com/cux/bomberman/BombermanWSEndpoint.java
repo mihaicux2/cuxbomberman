@@ -873,12 +873,14 @@ public class BombermanWSEndpoint {
                 playSoundAll(roomNr, "sounds/burn.wav");
                 myChar.setState("Blow");
                 charsChanged.put(roomNr, true);
+                myChar.setWalking(false);
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
                     BLogger.getInstance().logException2(ex);
                 }
                 myChar.setReady(false);
+                myChar.setWalking(false);
                 new Thread(new Runnable() {
 
                     @Override
@@ -1422,21 +1424,33 @@ public class BombermanWSEndpoint {
         crtChar.setReady(true);
     }
 
-    public synchronized void setCharPosition(int mapNumber, BCharacter newChar) {
-        Random r = new Random();
-        int Low = 0;
-        int HighW = World.getWidth() / World.wallDim - 1;
-        int HighH = World.getHeight() / World.wallDim - 1;
-        int X = r.nextInt(HighW - Low) + Low;
-        int Y = r.nextInt(HighH) + Low;
-        while (!BombermanWSEndpoint.checkWorldMatrix(mapNumber, X, Y).equals("empty")) {
-            X = r.nextInt(HighW - Low) + Low;
-            Y = r.nextInt(HighH) + Low;
-        }
+    public synchronized void setCharPosition(final int mapNumber, final BCharacter newChar) {
+        new Thread(new Runnable(){
 
-        newChar.setPosX(X * World.wallDim);
-        newChar.setPosY(Y * World.wallDim);
-        map.get(mapNumber).chars[X][Y].put(newChar.getId(), newChar);
+            @Override
+            public void run() {
+                newChar.setWalking(false);
+                Random r = new Random();
+                int Low = 0;
+                int HighW = World.getWidth() / World.wallDim - 1;
+                int HighH = World.getHeight() / World.wallDim - 1;
+                int X = r.nextInt(HighW - Low) + Low;
+                int Y = r.nextInt(HighH) + Low;
+                while (!BombermanWSEndpoint.checkWorldMatrix(mapNumber, X, Y).equals("empty")) {
+                    X = r.nextInt(HighW - Low) + Low;
+                    Y = r.nextInt(HighH) + Low;
+                }
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                newChar.setPosX(X * World.wallDim);
+                newChar.setPosY(Y * World.wallDim);
+                map.get(mapNumber).chars[X][Y].put(newChar.getId(), newChar);
+            }
+            
+        }).start();
     }
 
     public void sendReadyMessage(Session peer) {

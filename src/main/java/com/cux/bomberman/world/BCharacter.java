@@ -333,12 +333,16 @@ public class BCharacter extends AbstractBlock{
                     x2++;
                 }
                 
+                BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
                 BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.id);
                 BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.id, myChar);
                 
-                BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
-                
                 for (int i = 0; i < World.wallDim; i++){
+                    if (!myChar.isWalking()){
+                        myChar.posX = (myChar.posX / World.wallDim) * World.wallDim;
+                        myChar.posY = (myChar.posY / World.wallDim) * World.wallDim;
+                        break;
+                    }
                     switch(direction){
                         case "up":
                             myChar.posY--;
@@ -361,8 +365,10 @@ public class BCharacter extends AbstractBlock{
                     }
                     BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
                 }
-                //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.id);
-                //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.id, myChar);
+                
+                myChar.posX = (myChar.posX / World.wallDim) * World.wallDim;
+                myChar.posY = (myChar.posY / World.wallDim) * World.wallDim;
+                
                 myChar.walking = false;
                 BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
             }
