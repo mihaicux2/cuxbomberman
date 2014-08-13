@@ -190,8 +190,17 @@ BombermanClient.init = function(){
             //var x = JSON.parse(toProc);
             switch (op) {
                 case "ready":
-                    BombermanClient.hideGameOptions();
+                    BombermanClient.hideLoginOptions();
                     BombermanClient.initGame();
+                    break;
+                case "alreadyTaken":
+                    BombermanClient.alreadyTaken();
+                    break;
+                case "registerFailed":
+                    BombermanClient.showRegisterFailed();
+                    break;
+                case "registerSuccess":
+                    BombermanClient.registrationSuccess();
                     break;
                 case "loginFirst":
                     BombermanClient.showGameOptions();
@@ -251,6 +260,14 @@ BombermanClient.showLogInFailed = function(){
     alert("Login Failed");
 }
 
+BombermanClient.showRegisterFailed = function(){
+    alert("Login Failed");
+}
+
+BombermanClient.alreadyTaken = function(){
+    alert("This email address is already in use");
+}
+
 BombermanClient.login = function(){
     var username = jQuery.trim(jQuery("#username").val());
     var password = jQuery.trim(jQuery("#password").val());
@@ -264,15 +281,56 @@ BombermanClient.login = function(){
     try{ BombermanClient.socket.send(loginMsg); } catch(ex){BombermanClient.log(ex); } // request info about the other users
 }
 
+BombermanClient.register = function(){
+    var email    = jQuery.trim(jQuery("#email2").val());
+    var username = jQuery.trim(jQuery("#username2").val());
+    var password = jQuery.trim(jQuery("#password2").val());
+    if (email.length == 0 || username.length == 0 || password.length == 0){
+        alert("Enter credentials!");
+        jQuery("#email2").focus();
+        return;
+    }
+    var registerMsg = "register "+btoa(username)+"#"+btoa(password)+"#"+btoa(email);
+    BombermanClient.log(registerMsg);
+    try{ BombermanClient.socket.send(registerMsg); } catch(ex){BombermanClient.log(ex); } // request info about the other users
+}
+
+BombermanClient.registrationSuccess = function(){
+    alert("Registration success! You can now login with your username and password");
+    BombermanClient.showLoginOptions();
+}
+
 BombermanClient.showGameOptions = function(){
+    BombermanClient.hideRegisterOptions();
+    BombermanClient.hideLoginOptions();
+    jQuery("#optionsBox").css("display", "block");
+}
+
+BombermanClient.hideGameOptions = function(){
+    jQuery("#optionsBox").css("display", "none");
+}
+
+BombermanClient.showLoginOptions = function(){
+    BombermanClient.hideRegisterOptions();
+    BombermanClient.hideGameOptions();
     jQuery("#loginBox").css("display", "block");
     jQuery("#username").focus();
     jQuery("#username").val("");
     jQuery("#password").val("");
 }
 
-BombermanClient.hideGameOptions = function(){
+BombermanClient.hideLoginOptions = function(){
     jQuery("#loginBox").css("display", "none");
+}
+
+BombermanClient.showRegisterOptions = function(){
+    BombermanClient.hideLoginOptions();
+    BombermanClient.hideGameOptions();
+    jQuery("#registerBox").css("display", "block");
+}
+
+BombermanClient.hideRegisterOptions = function(){
+    jQuery("#registerBox").css("display", "none");
 }
 
 BombermanClient.log = function(msg){

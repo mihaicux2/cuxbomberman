@@ -87,9 +87,9 @@ public class BCharacter extends AbstractBlock{
         textures.put("walkLeftWin", 10);
     }
     
-    public BCharacter(String id, int roomIndex, EndpointConfig config){
+    public BCharacter(String id, String name, int roomIndex, EndpointConfig config){
         this.id = id;
-        this.name = id;
+        this.name = name;
         this.roomIndex = roomIndex;
         this.creationTime = new Date();
         this.config = config;
@@ -548,7 +548,7 @@ public class BCharacter extends AbstractBlock{
     
     @Override
     public BCharacter clone(){
-        BCharacter ret = new BCharacter(this.id, this.roomIndex, this.config);
+        BCharacter ret = new BCharacter(this.id, this.name, this.roomIndex, this.config);
         ret.posX = this.posX;
         ret.posY = this.posY;
         ret.width = this.width;

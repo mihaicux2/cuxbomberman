@@ -74,7 +74,7 @@
                 background: #ffffff;
                 padding: 5px;
             }
-            #loginBox{
+            .dialogBox{
                 position: fixed;
                 display: none;
                 bottom: 25%;
@@ -82,7 +82,6 @@
                 left: 25%;
                 right: 25%;
                 width: 40%;
-                height: 80px;
                 padding: 10px;
                 background-color: rgba(44, 100, 150, 0.5);
                 border: 2px solid #aacccc;
@@ -109,6 +108,22 @@
                 padding: 5px;
                 color:#fff;
             }
+            .header{
+                text-align: center;
+            }
+            .title{
+                font-size:30px;
+                color:#FFCC33;
+                font-weight: bold;
+            }
+            .subtitile{
+                font-size:20px;
+                font-weight: bold;
+            }
+            a{
+                color:blue;
+                text-decoration:none;
+            }
         </style>
     </head>
     <body>
@@ -124,9 +139,23 @@
             <tbody>
             </tbody>
         </table>
-        <div id="loginBox">
+        <div id="optionsBox" class='dialogBox'>
+            <div style="position:relative;">
+                <div class='header title'>CuxBomberman</div>
+                <div class='header subtitile'>A websocket implementation of the well known Atomic Bomberman</div>
+                <div class='header'>
+                    You need to <a href='javascript:BombermanClient.showLoginOptions();'>login</a> or <a href='javascript:BombermanClient.showRegisterOptions();'>register</a> in order to play our fabulous game
+                </div>
+            </div>
+        </div>
+        <div id="loginBox" class='dialogBox'>
             <div style="position:relative;">
                 <table>
+                    <thead>
+                        <tr>
+                            <th colspan="2" align="center">LOGIN</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         <tr>
                             <td width="40%">Username</td>
@@ -140,7 +169,44 @@
                         </tr>
                         <tr>
                             <td>&nbsp;</td>
-                            <td><input type="button" id="loginBtn" value="LOGIN" onclick="BombermanClient.login();" /></td>
+                            <td>
+                                <input type="button" id="loginBtn" value="LOGIN" onclick="BombermanClient.login();" />
+                                <a href='javascript:BombermanClient.showRegisterOptions();'>Register here!</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div id="registerBox" class='dialogBox'>
+            <div style="position:relative;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th colspan="2" align="center">REGISTER</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td width="40%">Email</td>
+                            <td width="60%"><input type="text" name="email2" id="email2" placeholder="you@yourdomain.com" /></td>
+                        </tr>
+                        <tr>
+                            <td width="40%">Username</td>
+                            <td width="60%"><input type="text" name="username2" id="username2" placeholder="username" /></td>
+                        </tr>
+                        <tr>
+                            <td width="40%">Password</td>
+                            <td width="60%">
+                                <input type="password" name="password2" id="password2" placeholder="password" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td>
+                                <input type="button" id="loginBtn" value="REGISTER" onclick="BombermanClient.register();" />
+                                <a href='javascript:BombermanClient.showLoginOptions();'>Login here!</a>
+                            </td>
                         </tr>
                     </tbody>
                 </table>

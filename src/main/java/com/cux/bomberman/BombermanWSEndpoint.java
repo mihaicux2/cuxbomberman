@@ -275,6 +275,15 @@ public class BombermanWSEndpoint {
             logIn(peer, username, password, config);
         }
         
+        if (message.length() > 9 && message.substring(0, 9).toLowerCase().equals("register ")){
+            String credentials = message.substring(9).trim();
+            String username = decodeBase64(credentials.substring(0, credentials.indexOf("#")));
+            String password = decodeBase64(credentials.substring(credentials.indexOf("#")+1, credentials.lastIndexOf("#")));
+            String email    = decodeBase64(credentials.substring(credentials.lastIndexOf("#")+1));
+            //System.out.println("register :  " + username + ", " + password + ", " + email);
+            register(peer, username, password, email, config);
+        }
+        
         //System.out.println(message);
         return null; // any string will be send to the requesting peer
     }
@@ -352,6 +361,33 @@ public class BombermanWSEndpoint {
 
     }
     
+    public void register(Session peer, String user, String pass, String email, EndpointConfig config){
+        try {
+            String query = "SELECT id FROM `user` WHERE `username`=?";
+            PreparedStatement st2 = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
+            st2.setString(1, email);
+            ResultSet ret = st2.executeQuery();
+            if (ret.next()){
+                sendAlreadyRegisteredMessage(peer);
+                return;
+            }
+            
+            query = "INSERT INTO `user` SET `email`=?, `username`=?, `password`=?, `registered_at`=NOW()";
+            PreparedStatement st = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
+            st.setString(1, email);
+            st.setString(2, user);
+            st.setString(3, md5Java(pass));
+            int affectedRows = st.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Cannot register user "+email);
+            }
+            sendRegistrationSuccessMessage(peer);
+        } catch (SQLException ex) {
+            BLogger.getInstance().logException2(ex);
+            sendRegisterFailedMessage(peer);
+        }
+    }
+    
     public void logIn(Session peer, String user, String pass, EndpointConfig config) {
         try {
             String query = "SELECT id FROM `user` WHERE `username`=? AND `password`=?;";
@@ -369,7 +405,7 @@ public class BombermanWSEndpoint {
             }
         } catch (SQLException ex) {
             BLogger.getInstance().logException2(ex);
-            ex.printStackTrace();
+            sendLoginFailedMessage(peer);
         }
     }
 
@@ -444,7 +480,7 @@ public class BombermanWSEndpoint {
         }
 
         //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected2 ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
-        BCharacter newChar = new BCharacter(peer.getId(), mapNumber, config);
+        BCharacter newChar = new BCharacter(peer.getId(), username, mapNumber, config);
         newChar.setPosX(0);
         newChar.setPosY(0);
         newChar.setWidth(World.wallDim);
@@ -1453,6 +1489,18 @@ public class BombermanWSEndpoint {
         }).start();
     }
 
+    public void sendAlreadyRegisteredMessage(Session peer){
+        try {
+            peer.getBasicRemote().sendText("alreadyTaken:[{}");
+        } catch (IOException ex) {
+            BLogger.getInstance().logException2(ex);
+        } catch (IllegalStateException ex) {
+            BLogger.getInstance().logException2(ex);
+        } catch (ConcurrentModificationException ex) {
+            BLogger.getInstance().logException2(ex);
+        }
+    }
+    
     public void sendReadyMessage(Session peer) {
         try {
             peer.getBasicRemote().sendText("ready:[{}");
@@ -1465,9 +1513,25 @@ public class BombermanWSEndpoint {
         }
     }
 
+    public void sendRegistrationSuccessMessage(Session peer){
+        sendClearMessage("registerSuccess:[{}", peer);
+    }
+    
+    public void sendRegisterFailedMessage(Session peer){
+        sendClearMessage("registerFailed:[{}", peer);
+    }
+    
     public void sendLoginFailedMessage(Session peer){
+        sendClearMessage("loginFailed:[{}", peer);
+    }
+    
+    public void sendLoginFirstMessage(Session peer) {
+        sendClearMessage("loginFirst:[{}", peer);
+    }
+
+    public void sendClearMessage(String msg, Session peer) {
         try {
-            peer.getBasicRemote().sendText("loginFailed:[{}");
+            peer.getBasicRemote().sendText(msg);
         } catch (IOException ex) {
             BLogger.getInstance().logException2(ex);
         } catch (IllegalStateException ex) {
@@ -1477,18 +1541,6 @@ public class BombermanWSEndpoint {
         }
     }
     
-    public void sendLoginFirstMessage(Session peer) {
-        try {
-            peer.getBasicRemote().sendText("loginFirst:[{}");
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (IllegalStateException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (ConcurrentModificationException ex) {
-            BLogger.getInstance().logException2(ex);
-        }
-    }
-
     public void sendMessage(String msg, Session peer) {
         try {
             peer.getBasicRemote().sendText("msg:[" + msg);
