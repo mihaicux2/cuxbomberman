@@ -21,6 +21,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import javax.websocket.EndpointConfig;
 import javax.websocket.Session;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
@@ -51,6 +52,8 @@ public class BCharacter extends AbstractBlock{
     public boolean ready = false;
     private int plantedBombs = 0;
     private int dbId = 0;
+    private EndpointConfig config = null;
+    private int userId = 0;
     
     static {
         // walk in normal state
@@ -84,11 +87,12 @@ public class BCharacter extends AbstractBlock{
         textures.put("walkLeftWin", 10);
     }
     
-    public BCharacter(String id, int roomIndex){
+    public BCharacter(String id, int roomIndex, EndpointConfig config){
         this.id = id;
         this.name = id;
         this.roomIndex = roomIndex;
         this.creationTime = new Date();
+        this.config = config;
     }
 
     public void incPlantedBombs(){
@@ -120,11 +124,19 @@ public class BCharacter extends AbstractBlock{
         this.saveToDB();
     }
     
+    public int getUserId() {
+        return this.userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+    
     public int getDbId() {
         return dbId;
     }
 
-    public void setId(int dbId) {
+    public void setDbId(int dbId) {
         this.dbId = dbId;
         this.saveToDB();
     }
@@ -478,7 +490,7 @@ public class BCharacter extends AbstractBlock{
                             Map.Entry pairs = (Map.Entry) it.next();
                             Session peer = (Session) pairs.getValue();
                             if (peer.getId() == myChar.getId()){
-                                BombermanWSEndpoint.getInstance().onMessage("bomb", peer);
+                                BombermanWSEndpoint.getInstance().onMessage("bomb", peer, myChar.config);
                                 break;
                             }
                         }
@@ -530,7 +542,7 @@ public class BCharacter extends AbstractBlock{
     
     @Override
     public BCharacter clone(){
-        BCharacter ret = new BCharacter(this.id, this.roomIndex);
+        BCharacter ret = new BCharacter(this.id, this.roomIndex, this.config);
         ret.posX = this.posX;
         ret.posY = this.posY;
         ret.width = this.width;
@@ -550,6 +562,27 @@ public class BCharacter extends AbstractBlock{
         return ret;
     }
     
+    public void restoreFromDB(){
+        try {
+            String query = "SELECT * FROM `characters` WHERE `user_id`=?";
+            PreparedStatement st = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
+            st.setInt(1, userId);
+            ResultSet ret = st.executeQuery();
+            if (ret.next()){
+                this.setDbId(ret.getInt("id"));
+                this.setName(ret.getString("name"));
+                this.setSpeed(ret.getInt("speed"));
+                this.setBombRange(ret.getInt("bomb_range"));
+                this.setMaxBombs(ret.getInt("max_bombs"));
+                this.setTriggered((ret.getInt("triggered") == 1) ? true : false);
+                this.setKills(ret.getInt("kills"));
+                this.setDeaths(ret.getInt("deaths"));
+            }
+        } catch (SQLException ex) {
+            BLogger.getInstance().logException2(ex);
+        }
+    }
+    
     public int saveToDB(){
         try {
             String query = "";
@@ -562,6 +595,7 @@ public class BCharacter extends AbstractBlock{
                         + "`triggered`=?,"
                         + "`kills`=?,"
                         + "`deaths`=?,"
+                        + "`user_id`=?,"
                         + "`creation_time`=NOW();";
             }
             else{
@@ -573,6 +607,7 @@ public class BCharacter extends AbstractBlock{
                         + "`triggered`=?,"
                         + "`kills`=?,"
                         + "`deaths`=?,"
+                        + "`user_id`=?,"
                         + "`modification_time`=NOW()"
                         + "WHERE `id`=?";
             }
@@ -584,8 +619,9 @@ public class BCharacter extends AbstractBlock{
             st.setInt(5, this.triggered ? 1 : 0);
             st.setInt(6, this.kills);
             st.setInt(7, this.deaths);
+            st.setInt(8, this.userId);
             if (this.dbId != 0){
-                st.setInt(8, this.dbId);
+                st.setInt(9, this.dbId);
             }
             int affectedRows = st.executeUpdate();
             if (affectedRows == 0){

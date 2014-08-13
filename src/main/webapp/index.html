@@ -10,7 +10,7 @@
                 cursor:none;
             }
             #world{
-                width:660px;
+                width:100%;
                 height:510px;
                 border:1px solid #ccc;
                 position:relative;
@@ -74,7 +74,22 @@
                 background: #ffffff;
                 padding: 5px;
             }
-            
+            #loginBox{
+                position: fixed;
+                display: none;
+                bottom: 25%;
+                top:25%;
+                left: 25%;
+                right: 25%;
+                width: 40%;
+                height: 80px;
+                padding: 10px;
+                background-color: rgba(44, 100, 150, 0.5);
+                border: 2px solid #aacccc;
+                border-radius: 5px;
+                z-index: 9999;
+                color: #ffffff;
+            }
             .messages{
                 position: fixed;
                 top: 20px;
@@ -109,6 +124,28 @@
             <tbody>
             </tbody>
         </table>
+        <div id="loginBox">
+            <div style="position:relative;">
+                <table>
+                    <tbody>
+                        <tr>
+                            <td width="40%">Username</td>
+                            <td width="60%"><input type="text" name="username" id="username" placeholder="username" /></td>
+                        </tr>
+                        <tr>
+                            <td width="40%">Password</td>
+                            <td width="60%">
+                                <input type="password" name="password" id="password" placeholder="password" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td><input type="button" id="loginBtn" value="LOGIN" onclick="BombermanClient.login();" /></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
         <div id="options">
             <div style="position:relative;">
                 <img src="images/utils/options.png" onclick="BombermanClient.showNameBox()" />

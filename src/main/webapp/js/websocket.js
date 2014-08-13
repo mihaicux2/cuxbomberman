@@ -28,6 +28,7 @@ var BombermanClient = {};
     BombermanClient.timer = null;
     BombermanClient.charNames = null;
     BombermanClient.changingName = false;
+    BombermanClient.ready = false;
 }
 
 BombermanClient.get_random_color = function() {
@@ -179,12 +180,7 @@ BombermanClient.init = function(){
     try{
         BombermanClient.socket = new WebSocket(BombermanClient.host);
         BombermanClient.socket.onopen = function(msg){
-            BombermanClient.log("Welcome - status "+this.readyState);
-            $.blockUI({message:"<p>Please wait for the map to load</p>"});
-            setTimeout("BombermanClient.getMap()", 100);
-            BombermanClient.bindKeyDown();
-            BombermanClient.bindKeyUp();
-            BombermanClient.timer = setInterval("BombermanClient.updateStatus()", 10); // send requests every 10 miliseconds => limit to 100 FPS (at most)
+            BombermanClient.log("Welcome - status "+this.readyState); // connected to the server
         }
         BombermanClient.socket.onmessage = function(msg){
             var op = msg.data.substr(0, msg.data.indexOf(":["));
@@ -193,6 +189,16 @@ BombermanClient.init = function(){
             //socket.close();
             //var x = JSON.parse(toProc);
             switch (op) {
+                case "ready":
+                    BombermanClient.hideGameOptions();
+                    BombermanClient.initGame();
+                    break;
+                case "loginFirst":
+                    BombermanClient.showGameOptions();
+                    break;
+                case "loginFailed":
+                    BombermanClient.showLogInFailed();
+                    break;
                 case "map":
                     BombermanClient.renderMap(toProc);
                     break;
@@ -225,12 +231,48 @@ BombermanClient.init = function(){
             jQuery("#chatUsers").html("");
             clearInterval(BombermanClient.timer);
         }
-        BombermanClient.showNameBox();
+        //BombermanClient.showNameBox();
         jQuery(window).onclose(function(){
             BombermanClient.socket.send("QUIT");
         });
     }
     catch(ex){ this.log(ex); }
+}
+
+BombermanClient.initGame = function(){
+    $.blockUI({message:"<p>Please wait for the map to load</p>"});
+    setTimeout("BombermanClient.getMap()", 100);
+    BombermanClient.bindKeyDown();
+    BombermanClient.bindKeyUp();
+    BombermanClient.timer = setInterval("BombermanClient.updateStatus()", 10); // send requests every 10 miliseconds => limit to 100 FPS (at most)
+}
+
+BombermanClient.showLogInFailed = function(){
+    alert("Login Failed");
+}
+
+BombermanClient.login = function(){
+    var username = jQuery.trim(jQuery("#username").val());
+    var password = jQuery.trim(jQuery("#password").val());
+    if (username.length == 0 || password.length == 0){
+        alert("Enter credentials!");
+        jQuery("#username").focus();
+        return;
+    }
+    var loginMsg = "login "+btoa(username)+"#"+btoa(password);
+    BombermanClient.log(loginMsg);
+    try{ BombermanClient.socket.send(loginMsg); } catch(ex){BombermanClient.log(ex); } // request info about the other users
+}
+
+BombermanClient.showGameOptions = function(){
+    jQuery("#loginBox").css("display", "block");
+    jQuery("#username").focus();
+    jQuery("#username").val("");
+    jQuery("#password").val("");
+}
+
+BombermanClient.hideGameOptions = function(){
+    jQuery("#loginBox").css("display", "none");
 }
 
 BombermanClient.log = function(msg){
