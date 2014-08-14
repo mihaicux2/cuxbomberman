@@ -589,6 +589,22 @@ public class BCharacter extends AbstractBlock{
         }
     }
     
+    public int logIn(){
+        try {
+            String query = "UPDATE `user` SET last_login=NOW() WHERE `id`=?";
+            PreparedStatement st = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(query);
+            st.setInt(1, this.dbId);
+            int affectedRows = st.executeUpdate();
+            if (affectedRows == 0){
+                throw new SQLException("Cannot save character");
+            }
+            return 1;
+        } catch (SQLException ex) {
+            BLogger.getInstance().logException2(ex);
+            return 0;
+        }
+    }
+    
     public int saveToDB(){
         try {
             String query = "";

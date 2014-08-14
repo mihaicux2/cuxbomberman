@@ -40,6 +40,14 @@ BombermanClient.get_random_color = function() {
     return color;
 }
 
+BombermanClient.unbindKeyDown = function(){
+    jQuery(window).unbind("keydown");
+}
+
+BombermanClient.unbindKeyUp = function(){
+    jQuery(window).unbind("keyup");
+}
+
 BombermanClient.bindKeyDown = function(){
     jQuery(window).keydown(function(e) {
 //        console.log(e.keyCode);
@@ -196,6 +204,9 @@ BombermanClient.init = function(){
                 case "alreadyTaken":
                     BombermanClient.alreadyTaken();
                     break;
+                case "invalidAddress":
+                    BombermanClient.invalidEmailAddress();
+                    break;
                 case "registerFailed":
                     BombermanClient.showRegisterFailed();
                     break;
@@ -239,6 +250,9 @@ BombermanClient.init = function(){
             alert("Connection closed");
             jQuery("#chatUsers").html("");
             clearInterval(BombermanClient.timer);
+            BombermanClient.unbindKeyDown();
+            BombermanClient.unbindKeyUp();
+            BombermanClient.init();
         }
         //BombermanClient.showNameBox();
         jQuery(window).onclose(function(){
@@ -290,9 +304,19 @@ BombermanClient.register = function(){
         jQuery("#email2").focus();
         return;
     }
+    var pattern = /^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/;
+    if (!pattern.test(email)){
+        BombermanClient.invalidEmailAddress();
+        return;
+    }
     var registerMsg = "register "+btoa(username)+"#"+btoa(password)+"#"+btoa(email);
     BombermanClient.log(registerMsg);
     try{ BombermanClient.socket.send(registerMsg); } catch(ex){BombermanClient.log(ex); } // request info about the other users
+}
+
+BombermanClient.invalidEmailAddress = function(){
+    alert("Enter a valid email address!");
+    jQuery("#email2").focus();
 }
 
 BombermanClient.registrationSuccess = function(){
@@ -303,6 +327,7 @@ BombermanClient.registrationSuccess = function(){
 BombermanClient.showGameOptions = function(){
     BombermanClient.hideRegisterOptions();
     BombermanClient.hideLoginOptions();
+    BombermanClient.hideNameBox();
     jQuery("#optionsBox").css("display", "block");
 }
 

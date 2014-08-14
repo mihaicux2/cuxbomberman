@@ -241,6 +241,11 @@ public class BombermanWSEndpoint {
                 makePlayerReady(peer);
                 break;
             case "QUIT":
+                HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
+                String sessionId = httpSession.getId();
+                httpSessions.remove(sessionId);
+                config.getUserProperties().remove(HttpSession.class.getName());
+                peer.getUserProperties().remove("session_id");
                 this.onClose(peer);
             default:
                 break;
@@ -338,32 +343,48 @@ public class BombermanWSEndpoint {
         HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
         String sessionId = httpSession.getId();
 
-        httpSessions.put(sessionId, (HttpSession) config.getUserProperties()
-                .get(HttpSession.class.getName()));
-        peer.getUserProperties().put("sessionId", sessionId);
-
         if (httpSessions.containsKey(sessionId)) {
+            System.out.println("deja am stocat sesiunea asta");
             Iterator it = peers.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry pairs = (Map.Entry) it.next();
                 Session peer2 = (Session) pairs.getValue();
                 // daca exista deja conectat, inchide vechea conexiune
-                if (peer2.getUserProperties().get("sessionId").equals(sessionId) && peer2.getUserProperties().get("loggedIn").equals(true)) {
-                    addPlayerToGame(peer, config, peer2.getUserProperties().get("username").toString(),  Integer.valueOf(peer2.getUserProperties().get("user_id").toString()));
-                    sendReadyMessage(peer);
-                    return;
+                if (peer2.getUserProperties().get("sessionId").equals(sessionId)) { 
+                    // daca esti autentificat, preia setarile conexiunii precedente si inchide vechea conexiune
+                    if (peer2.getUserProperties().get("loggedIn").equals(true)){
+                        System.out.println("esti deja autentificat cumetre");
+                        addPlayerToGame(peer, config, peer2.getUserProperties().get("username").toString(),  Integer.valueOf(peer2.getUserProperties().get("user_id").toString()));
+                        sendReadyMessage(peer);
+                        onClose(peer2);
+                        return;
+                    }
+                    else{ // altfel, doar inchide vechea conexiune
+                        System.out.println("te cunosc de undeva?");
+                        onClose(peer2);
+                    }
                 }
             }
+            System.out.println("finalul iteratiei");
         }
         
+        httpSessions.put(sessionId, (HttpSession) config.getUserProperties()
+                .get(HttpSession.class.getName()));
+        peer.getUserProperties().put("sessionId", sessionId);
         peer.getUserProperties().put("loggedIn", false);
         sendLoginFirstMessage(peer);
 
     }
     
     public void register(Session peer, String user, String pass, String email, EndpointConfig config){
+        String emailPattern = "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\])|(([a-zA-Z\\-0-9]+\\.)+[a-zA-Z]{2,}))$";
+        Pattern p = Pattern.compile(emailPattern);
+        Matcher m = p.matcher(email);
+        if (!m.matches()) {
+            sendInvalidEmailMessage(peer);
+        }
         try {
-            String query = "SELECT id FROM `user` WHERE `username`=?";
+            String query = "SELECT id FROM `user` WHERE `email`=?";
             PreparedStatement st2 = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
             st2.setString(1, email);
             ResultSet ret = st2.executeQuery();
@@ -487,6 +508,7 @@ public class BombermanWSEndpoint {
         newChar.setHeight(World.wallDim);
         newChar.setUserId(user_id);   
         newChar.restoreFromDB();
+        newChar.logIn();
 //        newChar.setPeer(peer);
 
         chars.put(peer.getId(), newChar);
@@ -1261,32 +1283,24 @@ public class BombermanWSEndpoint {
         for (BCharacter crtChar : myChars) {
             ret += crtChar.toString() + "[#charSep#]";
         }
-        try {
-            peer.getBasicRemote().sendText("chars:[" + ret);
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-        }
+        sendClearMessage("chars:[" + ret, peer);
 //            }
 //            
 //        }).start();
     }
 
     protected synchronized void exportMap(final Session peer) {
-        new Thread(new Runnable() {
-
-            @Override
-            public synchronized void run() {
+//        new Thread(new Runnable() {
+//
+//            @Override
+//            public synchronized void run() {
                 String ret = "";
                 int roomNr = getRoom(peer);
                 ret = map.get(roomNr).toString();
-                try {
-                    peer.getBasicRemote().sendText("map:[" + ret);
-                } catch (IOException ex) {
-                    BLogger.getInstance().logException2(ex);
-                }
-            }
-
-        }).start();
+                sendClearMessage("map:[" + ret, peer);
+//            }
+//
+//        }).start();
     }
 
     protected synchronized void exportWalls(final Session peer) {
@@ -1303,11 +1317,7 @@ public class BombermanWSEndpoint {
                 ret += wall + "[#brickSep#]";
             }
         }
-        try {
-            peer.getBasicRemote().sendText("blownWalls:[" + ret);
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-        }
+        sendClearMessage("blownWalls:[" + ret, peer);
 //            }
 //            
 //        }).start();
@@ -1327,12 +1337,7 @@ public class BombermanWSEndpoint {
                 ret += bomb.toString() + "[#bombSep#]";
             }
         }
-        try {
-            peer.getBasicRemote().sendText("bombs:[" + ret);
-
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-        }
+        sendClearMessage("bombs:[" + ret, peer);
 //            }
 //            
 //        }).start();
@@ -1351,12 +1356,7 @@ public class BombermanWSEndpoint {
                 ret += exp.toString() + "[#explosionSep#]";
             }
         }
-        try {
-            peer.getBasicRemote().sendText("explosions:[" + ret);
-
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-        }
+        sendClearMessage("explosions:[" + ret, peer);
 //            }
 //            
 //        }).start();
@@ -1375,12 +1375,7 @@ public class BombermanWSEndpoint {
                 ret += item.toString() + "[#itemSep#]";
             }
         }
-        try {
-            peer.getBasicRemote().sendText("items:[" + ret);
-
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-        }
+        sendClearMessage("items:[" + ret, peer);
 //            }
 //            
 //        }).start();
@@ -1429,15 +1424,7 @@ public class BombermanWSEndpoint {
     }
 
     public void playSound(String sound, Session peer) {
-        try {
-            peer.getBasicRemote().sendText("sound:[" + sound);
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (IllegalStateException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (ConcurrentModificationException ex) {
-            BLogger.getInstance().logException2(ex);
-        }
+        sendClearMessage("sound:[" + sound, peer);
     }
 
     public void playSoundAll(int roomNr, String sound) {
@@ -1489,28 +1476,16 @@ public class BombermanWSEndpoint {
         }).start();
     }
 
+    public void sendInvalidEmailMessage(Session peer){
+        sendClearMessage("invalidAddress:[{}", peer);
+    }
+    
     public void sendAlreadyRegisteredMessage(Session peer){
-        try {
-            peer.getBasicRemote().sendText("alreadyTaken:[{}");
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (IllegalStateException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (ConcurrentModificationException ex) {
-            BLogger.getInstance().logException2(ex);
-        }
+        sendClearMessage("alreadyTaken:[{}", peer);
     }
     
     public void sendReadyMessage(Session peer) {
-        try {
-            peer.getBasicRemote().sendText("ready:[{}");
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (IllegalStateException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (ConcurrentModificationException ex) {
-            BLogger.getInstance().logException2(ex);
-        }
+        sendClearMessage("ready:[{}", peer);
     }
 
     public void sendRegistrationSuccessMessage(Session peer){
@@ -1530,27 +1505,21 @@ public class BombermanWSEndpoint {
     }
 
     public void sendClearMessage(String msg, Session peer) {
-        try {
-            peer.getBasicRemote().sendText(msg);
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (IllegalStateException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (ConcurrentModificationException ex) {
-            BLogger.getInstance().logException2(ex);
+        if (peer.isOpen()){
+            try {
+                peer.getBasicRemote().sendText(msg);
+            } catch (IOException ex) {
+                BLogger.getInstance().logException2(ex);
+            } catch (IllegalStateException ex) {
+                BLogger.getInstance().logException2(ex);
+            } catch (ConcurrentModificationException ex) {
+                BLogger.getInstance().logException2(ex);
+            }
         }
     }
     
     public void sendMessage(String msg, Session peer) {
-        try {
-            peer.getBasicRemote().sendText("msg:[" + msg);
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (IllegalStateException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (ConcurrentModificationException ex) {
-            BLogger.getInstance().logException2(ex);
-        }
+        sendClearMessage("msg:[" + msg, peer);
     }
 
     public void sendMessageAll(int roomNr, String msg) {
