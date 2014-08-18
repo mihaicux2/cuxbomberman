@@ -570,6 +570,9 @@ public class BCharacter extends AbstractBlock{
     
     public void restoreFromDB(){
         try {
+            if (this.dbId == 0){
+                this.saveToDB();
+            }
             String query = "SELECT * FROM `characters` WHERE `user_id`=?";
             PreparedStatement st = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
             st.setInt(1, userId);
@@ -593,10 +596,10 @@ public class BCharacter extends AbstractBlock{
         try {
             String query = "UPDATE `user` SET last_login=NOW() WHERE `id`=?";
             PreparedStatement st = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(query);
-            st.setInt(1, this.dbId);
+            st.setInt(1, this.userId);
             int affectedRows = st.executeUpdate();
             if (affectedRows == 0){
-                throw new SQLException("Cannot save character");
+                throw new SQLException("Cannot save character. UserId : "+this.userId);
             }
             return 1;
         } catch (SQLException ex) {

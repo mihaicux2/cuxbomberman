@@ -241,12 +241,33 @@ public class BombermanWSEndpoint {
                 makePlayerReady(peer);
                 break;
             case "QUIT":
+                String initialName = chars.get(peer.getId()).getName();
+                System.out.println(initialName+" has left the game");
                 HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
                 String sessionId = httpSession.getId();
+                httpSession.invalidate();
                 httpSessions.remove(sessionId);
+                httpSessions.remove(peer.getUserProperties().get("sessionId"));
                 config.getUserProperties().remove(HttpSession.class.getName());
-                peer.getUserProperties().remove("session_id");
+                peer.getUserProperties().remove("sessionId");
+                peer.getUserProperties().remove("loggedIn");
+                peer.getUserProperties().remove("username");
+                peer.getUserProperties().remove("user_id");
                 this.onClose(peer);
+                
+                if (!httpSessions.isEmpty() && httpSessions.containsKey(sessionId)) {
+                    if (!peers.isEmpty()){
+                        Iterator it = peers.entrySet().iterator();
+                        while (it.hasNext()) {
+                            Map.Entry pairs = (Map.Entry) it.next();
+                            Session peer2 = (Session) pairs.getValue();
+                            // daca exista deja conectat, inchide vechea conexiune
+                            if (peer2.getUserProperties().containsKey("sessionId") && peer2.getUserProperties().get("sessionId").equals(sessionId)) { 
+                                this.onMessage("QUIT", peer2, config);
+                            }
+                        }
+                    }
+                }
             default:
                 break;
         }
@@ -295,13 +316,9 @@ public class BombermanWSEndpoint {
 
     @OnClose
     public synchronized void onClose(Session peer) {
-        this.delayedRemove(peer.getId());
-        this.stopThread(peer.getId());
         int roomNr = getRoom(peer);
         String initialName = chars.get(peer.getId()).getName();
-        chars2.get(roomNr).remove(chars.get(peer.getId()));
-        chars.remove(peer.getId());
-        peers.remove(peer);
+        System.out.println(initialName+" has left the game");
         if (peer.isOpen()) {
             try {
                 peer.close();
@@ -309,6 +326,12 @@ public class BombermanWSEndpoint {
                 BLogger.getInstance().logException2(ex);
             }
         }
+        this.stopThread(peer.getId());
+        chars2.get(roomNr).remove(chars.get(peer.getId()));
+        chars.remove(peer.getId());
+        peers.remove(peer);
+//        httpSessions.remove(peer.getUserProperties().get("sessionId"));
+        
         charsChanged.put(roomNr, true);
         //mapChanged.put(roomNr, true);
         mapPlayers.put(roomNr, mapPlayers.get(roomNr) - 1);
@@ -343,25 +366,33 @@ public class BombermanWSEndpoint {
         HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
         String sessionId = httpSession.getId();
 
-        if (httpSessions.containsKey(sessionId)) {
+        if (!httpSessions.isEmpty() && httpSessions.containsKey(sessionId)) {
             System.out.println("deja am stocat sesiunea asta");
-            Iterator it = peers.entrySet().iterator();
-            while (it.hasNext()) {
-                Map.Entry pairs = (Map.Entry) it.next();
-                Session peer2 = (Session) pairs.getValue();
-                // daca exista deja conectat, inchide vechea conexiune
-                if (peer2.getUserProperties().get("sessionId").equals(sessionId)) { 
-                    // daca esti autentificat, preia setarile conexiunii precedente si inchide vechea conexiune
-                    if (peer2.getUserProperties().get("loggedIn").equals(true)){
-                        System.out.println("esti deja autentificat cumetre");
-                        addPlayerToGame(peer, config, peer2.getUserProperties().get("username").toString(),  Integer.valueOf(peer2.getUserProperties().get("user_id").toString()));
-                        sendReadyMessage(peer);
-                        onClose(peer2);
-                        return;
-                    }
-                    else{ // altfel, doar inchide vechea conexiune
-                        System.out.println("te cunosc de undeva?");
-                        onClose(peer2);
+            if (!peers.isEmpty()){
+                System.out.println("avem conexiuni deschise...");
+                Iterator it = peers.entrySet().iterator();
+                while (it.hasNext()) {
+                    Map.Entry pairs = (Map.Entry) it.next();
+                    Session peer2 = (Session) pairs.getValue();
+//                    if (!peer2.isOpen()){
+//                        this.onMessage("QUIT", peer2, config);
+//                        continue;
+//                    }
+                    // daca exista deja conectat, inchide vechea conexiune
+                    if (peer2.getUserProperties().containsKey("sessionId") && peer2.getUserProperties().get("sessionId").equals(sessionId)) { 
+                        System.out.println("te-am recunoscut");
+//                        // daca esti autentificat, preia setarile conexiunii precedente si inchide vechea conexiune
+                        if (peer2.getUserProperties().containsKey("loggedIn") && peer2.getUserProperties().get("loggedIn").equals(true)){
+                            System.out.println("esti deja autentificat cumetre");
+                            addPlayerToGame(peer, config, peer2.getUserProperties().get("username").toString(),  Integer.valueOf(peer2.getUserProperties().get("user_id").toString()));
+                            sendReadyMessage(peer);
+                            this.onMessage("QUIT", peer2, config);
+                            return;
+                        }
+                        else{ // altfel, doar inchide vechea conexiune
+                            System.out.println("te cunosc de undeva?");
+                            this.onMessage("QUIT", peer2, config);
+                        }
                     }
                 }
             }
@@ -794,21 +825,6 @@ public class BombermanWSEndpoint {
         }
         bombsChanged.put(roomNr, true);
         explosionsChanged.put(roomNr, true);
-    }
-
-    protected synchronized void delayedRemove(final String peerId) {
-        new Thread(new Runnable() {
-            @Override
-            public synchronized void run() {
-                try {
-                    Thread.sleep(1000); // wait for a one second before actual removing
-                    chars.remove(peerId);
-                    System.out.println("final");
-                } catch (InterruptedException ex) {
-                    BLogger.getInstance().logException2(ex);
-                }
-            }
-        }).start();
     }
 
     public static synchronized boolean wallExists(AbstractBlock[][] data, int i, int j) {
