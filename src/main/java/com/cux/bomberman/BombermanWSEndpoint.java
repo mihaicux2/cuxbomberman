@@ -326,8 +326,15 @@ public class BombermanWSEndpoint {
                 BLogger.getInstance().logException2(ex);
             }
         }
+        
+        BCharacter myChar = chars.get(peer.getId());
+        int x = myChar.posX / World.wallDim;
+        int y = myChar.posY / World.wallDim;
+        map.get(myChar.roomIndex).chars[x][y].remove(myChar.getId());
+        map.get(myChar.roomIndex).blockMatrix[x][y] = null;
+        
         this.stopThread(peer.getId());
-        chars2.get(roomNr).remove(chars.get(peer.getId()));
+        chars2.get(roomNr).remove(myChar);
         chars.remove(peer.getId());
         peers.remove(peer);
 //        httpSessions.remove(peer.getUserProperties().get("sessionId"));
