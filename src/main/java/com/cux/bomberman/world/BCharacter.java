@@ -130,6 +130,23 @@ public class BCharacter extends AbstractBlock{
 
     public void setUserId(int userId) {
         this.userId = userId;
+        if (this.dbId == 0){
+            try {
+                String query = "SELECT id FROM `characters` WHERE `user_id`=?";
+                PreparedStatement st = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(query);
+                st.setInt(1, this.userId);
+                ResultSet rs = st.executeQuery();
+                if(rs.next())
+                {
+                    this.dbId = rs.getInt("id");
+                }
+                else{
+                    this.saveToDB();
+                }
+            } catch (SQLException ex) {
+                BLogger.getInstance().logException2(ex);
+            }
+        }
     }
     
     public int getDbId() {

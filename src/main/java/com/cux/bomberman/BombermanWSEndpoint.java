@@ -1,5 +1,10 @@
 /**
- * Query-uri pentru baza de date. CREATE DATABASE `bomberman`;
+ * Query-uri pentru baza de date.
+ * CREATE DATABASE `bomberman`;
+ * 
+ * GRANT ALL PRIVILEGES ON `bomberman`.* TO 'bomberman'@'%' IDENTIFIED BY 'bomberman';
+ * 
+ * USE `bomberman`;
  *
  * CREATE TABLE `chat_message`
   ( `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -8,20 +13,20 @@
   `message` TEXT NOT NULL,
   PRIMARY KEY (`id`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
  * 
-* CREATE TABLE `characters`
- ( `id` int(11) NOT NULL AUTO_INCREMENT,
- `user_id` int(11) NOT NULL,
- `name` varchar(128) NOT NULL,
- `speed` tinyint(2) NOT NULL,
- `bomb_range` tinyint(2) NOT NULL,
- `max_bombs` tinyint(3) NOT NULL,
- `triggered` tinyint(1) NOT NULL DEFAULT 0,
- `kills` int(11) NOT NULL DEFAULT 0,
- `deaths` int(11) NOT NULL DEFAULT 0,
- `creation_time` DATETIME NULL,
- `modification_time` DATETIME NULL,
- PRIMARY KEY (`id`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
- * 
+ * CREATE TABLE `characters`
+  ( `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `name` varchar(128) NOT NULL,
+  `speed` tinyint(2) NOT NULL,
+  `bomb_range` tinyint(2) NOT NULL,
+  `max_bombs` tinyint(3) NOT NULL,
+  `triggered` tinyint(1) NOT NULL DEFAULT 0,
+  `kills` int(11) NOT NULL DEFAULT 0,
+  `deaths` int(11) NOT NULL DEFAULT 0,
+  `creation_time` DATETIME NULL,
+  `modification_time` DATETIME NULL,
+  PRIMARY KEY (`id`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  * 
 * CREATE TABLE `user`
   ( `id` int(11) NOT NULL AUTO_INCREMENT,
   `email` varchar(256) NOT NULL,
@@ -137,8 +142,8 @@ public class BombermanWSEndpoint {
 
     private static final String DBConnectionString = "jdbc:mysql://localhost:3306/";
     private static final String DBName = "bomberman";
-    private static final String DBUser = "root";
-    private static final String DBPass = "P@sswordcux";
+    private static final String DBUser = "bomberman";
+    private static final String DBPass = "bomberman";
 
     public Connection getConnection() {
         return BombermanWSEndpoint.con;
@@ -531,8 +536,8 @@ public class BombermanWSEndpoint {
 
         //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
         if (map.size() == 0 || map.get(mapNumber) == null) {
-//            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
-            map.put(mapNumber, new World("/home/mihaicux/NetBeansProjects/bomberman/maps/firstmap.txt"));
+            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
+//            map.put(mapNumber, new World("/home/mihaicux/NetBeansProjects/bomberman/maps/firstmap.txt"));
 //            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/map2.txt"));
 //            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
@@ -590,8 +595,7 @@ public class BombermanWSEndpoint {
         mapChanged.put(mapNumber, true);
         itemsChanged.put(mapNumber, true);
         explosionsChanged.put(mapNumber, true);
-
-        newChar.saveToDB();
+        
         sendMessageAll(mapNumber, "<b>" + newChar.getName() + " has joined");
     }
 
