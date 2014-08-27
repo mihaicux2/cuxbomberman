@@ -1,5 +1,6 @@
 /**
- * Query-uri pentru baza de date.
+ * Database queries.
+ * 
  * CREATE DATABASE `bomberman`;
  * 
  * GRANT ALL PRIVILEGES ON `bomberman`.* TO 'bomberman'@'%' IDENTIFIED BY 'bomberman';
@@ -45,10 +46,9 @@ import com.cux.bomberman.world.BCharacter;
 import com.cux.bomberman.world.Explosion;
 import com.cux.bomberman.world.World;
 import com.cux.bomberman.world.generator.ItemGenerator;
-import com.cux.bomberman.world.generator.WorldGenerator;
+//import com.cux.bomberman.world.generator.WorldGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
-import com.mysql.jdbc.StringUtils;
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -59,7 +59,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+//import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
@@ -75,7 +75,6 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.servlet.http.HttpSession;
-import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
@@ -87,75 +86,236 @@ import javax.websocket.server.ServerEndpoint;
 
 /**
  *
- * @author mihaicux Toate fisierele de citit/scris se pun relativ la originea
- * domeniului Windows :
- * C:\Users\mihaicux\AppData\Roaming\NetBeans\7.4\config\GF_4.0\domain1\config
- * Linux : TBD
+ * @author mihaicux 
+ * Endpoint server
  */
 @ServerEndpoint(value = "/bombermanendpoint/", configurator = BombermanHttpSessionConfigurator.class)
 public class BombermanWSEndpoint {
 
+    /**
+     * Static variable. Collection used to keep track of all the opened connections.<br />
+     * Indexed by peer id
+     */
     public static final Map<String, Session> peers = Collections.synchronizedMap(new HashMap<String, Session>());
 
+    /**
+     * Static variable. Collection used to keep track of all the existing planted bombs.<br />
+     * Indexed by peer map number.<br />
+     * It is constantly changed/updated
+     */
     private static final Map<Integer, ArrayList<BBomb>> bombs = Collections.synchronizedMap(new HashMap<Integer, ArrayList<BBomb>>());
 
+    /**
+     * Static variable. Collection used to keep track of all the existing bombs marked for explosion.<br />
+     * Indexed by peer map number.<br />
+     * It is constantly changed/updated
+     */
     private static final Map<Integer, Set<BBomb>> markedBombs = Collections.synchronizedMap(new HashMap<Integer, Set<BBomb>>());
 
+    /**
+     * Static variable. Collection used to keep track of all the connected users.<br />
+     * Indexed by peer id
+     */
     private static final Map<String, BCharacter> chars = Collections.synchronizedMap(new HashMap<String, BCharacter>());
 
+    /**
+     * Static variable. Collection used to keep track of all the connected users.<br />
+     * Indexed by peer map number
+     */
     private static final Map<Integer, Set<BCharacter>> chars2 = Collections.synchronizedMap(new HashMap<Integer, Set<BCharacter>>());
 
+    /**
+     * Static variable. Collection used to keep track of the threads used for all the opened connections
+     */
     private static final Set<String> workingThreads = Collections.synchronizedSet(new HashSet<String>());
 
+    /**
+     * Static variable. Collection used to keep track of all the current explosions.<br />
+     * Indexed by peer map number.<br />
+     * It is constantly changed/updated
+     */
     private static final Map<Integer, Set<Explosion>> explosions = Collections.synchronizedMap(new HashMap<Integer, Set<Explosion>>());
 
+    /**
+     * Static variable. Collection used to keep track of all the current blown walls.<br />
+     * Indexed by peer map number.<br />
+     * It is constantly changed/updated
+     */
     private static final Map<Integer, Set<String>> blownWalls = Collections.synchronizedMap(new HashMap<Integer, Set<String>>());
 
+    /**
+     * Static variable. Collection used to keep track of all the current existing items.<br />
+     * Indexed by peer map number.<br />
+     * It is constantly changed/updated
+     */
     public static Map<Integer, Set<AbstractItem>> items = Collections.synchronizedMap(new HashMap<Integer, Set<AbstractItem>>());
 
+    /**
+     * Static variable. Collection used to keep track of all the current sessions<br />
+     * Indexed by peer id.<br />
+     * It is used to identify an already connected client
+     */
     private static final Map<String, HttpSession> httpSessions = Collections.synchronizedMap(new HashMap<String, HttpSession>());
 
-    private static boolean isFirst = true;
-
+    /**
+     * Static variable. Collection used to keep track of all the current maps<br />
+     * Indexed by peer map number
+     */
     public static Map<Integer, World> map = Collections.synchronizedMap(new HashMap<Integer, World>());
 
-    private final static int MAX_PLAYERS = 6;
-
+    /**
+     * Static variable. Collection used to keep track of the number of players connected to each map<br />
+     * Indexed by peer map number
+     */
     private static final Map<Integer, Integer> mapPlayers = Collections.synchronizedMap(new HashMap<Integer, Integer>());
 
-    private static int mapNumber = 0;
-
+    /**
+     * Static variable. Collection used to mark if the characters changed.<br />
+     * Indexed by peer map number
+     */
     public static final Map<Integer, Boolean> charsChanged = Collections.synchronizedMap(new HashMap<Integer, Boolean>());
+    
+    /**
+     * Static variable. Collection used to mark if the map has changed.<br />
+     * Indexed by peer map number
+     */
     public static final Map<Integer, Boolean> mapChanged = Collections.synchronizedMap(new HashMap<Integer, Boolean>());
+    
+    /**
+     * Static variable. Collection used to mark if the walls changed.<br />
+     * Indexed by peer map number
+     */
     public static final Map<Integer, Boolean> wallsChanged = Collections.synchronizedMap(new HashMap<Integer, Boolean>());
+    
+    /**
+     * Static variable. Collection used to mark if the bombs changed.<br />
+     * Indexed by peer map number
+     */
     public static final Map<Integer, Boolean> bombsChanged = Collections.synchronizedMap(new HashMap<Integer, Boolean>());
+    
+    /**
+     * Static variable. Collection used to mark if the explosions changed.<br />
+     * Indexed by peer map number
+     */
     public static final Map<Integer, Boolean> explosionsChanged = Collections.synchronizedMap(new HashMap<Integer, Boolean>());
+    
+    /**
+     * Static variable. Collection used to mark if the items changed.<br />
+     * Indexed by peer map number
+     */
     public static final Map<Integer, Boolean> itemsChanged = Collections.synchronizedMap(new HashMap<Integer, Boolean>());
 
+    /**
+     * Static variable. Collection used store the room number for each connected user.<br />
+     * Indexed by peer map number
+     */
     public static final Map<String, Integer> peerRooms = Collections.synchronizedMap(new HashMap<String, Integer>());
 
+    /**
+     * Static variable. Used to keep track of the last opened map
+     */
+    private static int mapNumber = 0;
+    
+    /**
+     * Static constant. Used to limit the maximum number of players connected to one map
+     */
+    private final static int MAX_PLAYERS = 6;
+    
+    /**
+     * Static variable. Used to check if the server should start monitoring the generated games
+     */
     private static boolean initialized = false;
 
+    /**
+     * Static variable. Singleton pattern, giving the only allowed instance of the Server class
+     */
     private static BombermanWSEndpoint instance = null;
 
+    /**
+     * Static variable. Used to communicate with the existing database
+     */
     public static Connection con = null;
 
+    /**
+     * Static constant. Used to define the database connection string
+     */
     private static final String DBConnectionString = "jdbc:mysql://localhost:3306/";
+    
+    /**
+     * Static constant. Used to define the database name
+     */
     private static final String DBName = "bomberman";
+    
+    /**
+     * Static constant. Used to define the database user
+     */
     private static final String DBUser = "bomberman";
+    
+    /**
+     * Static constant. Used to define the database user password
+     */
     private static final String DBPass = "bomberman";
 
+    /**
+     * Public method, enhancing access to the application database wrapper
+     * @return Connection  : database connection wrapper
+     */
     public Connection getConnection() {
         return BombermanWSEndpoint.con;
     }
 
+    /**
+     * Public static method giving access to the instance of the current class
+     * @return BombermanWSEndpoint : the instance of the server class (this)
+     */
     public static BombermanWSEndpoint getInstance() {
         return BombermanWSEndpoint.instance;
     }
 
+    /**
+     * Public synchronized method handling messages received from connected peer.
+     * @param message - String containting the message sent by the connected peer
+     * @param peer    - The connected peer
+     * @param config  - The endpoint config, containg information about the peer session (if any)
+     * @return null   - any returned message will be sent back to the peer
+     */
     @OnMessage
     public synchronized String onMessage(String message, final Session peer, EndpointConfig config) {
         
+        // player is ready to join the game
+        if (message.equals("ready")){
+            makePlayerReady(peer);
+            return null;
+        }
+        
+        // send the world data to the current peer (one time only :> )
+        if (message.equals("getEnvironment")){
+            exportEnvironment(peer);
+            return null;
+        }
+        
+        // login
+        if (message.length() > 6 && message.substring(0, 6).toLowerCase().equals("login ")){
+            String credentials = message.substring(6).trim();
+            String username = decodeBase64(credentials.substring(0, credentials.indexOf("#")));
+            String password = decodeBase64(credentials.substring(credentials.indexOf("#")+1));
+            //System.out.println("login :  " + username + ", " + password);
+            logIn(peer, username, password, config);
+            return null;
+        }
+        
+        // register
+        if (message.length() > 9 && message.substring(0, 9).toLowerCase().equals("register ")){
+            String credentials = message.substring(9).trim();
+            String username = decodeBase64(credentials.substring(0, credentials.indexOf("#")));
+            String password = decodeBase64(credentials.substring(credentials.indexOf("#")+1, credentials.lastIndexOf("#")));
+            String email    = decodeBase64(credentials.substring(credentials.lastIndexOf("#")+1));
+            //System.out.println("register :  " + username + ", " + password + ", " + email);
+            register(peer, username, password, email, config);
+            return null;
+        }
+        
+        // any other message must be from an already logged in player
         BCharacter crtChar = null;
         int roomNr = 0;
         if (peer.getUserProperties().get("loggedIn").equals(true)){
@@ -163,7 +323,31 @@ public class BombermanWSEndpoint {
             roomNr = getRoom(peer);
         }
         
-        //BLogger.getInstance().log(BLogger.LEVEL_FINE, "client message : "+message);
+        if (crtChar == null) return null; // message from non-logged in user
+        
+        // change player name
+        if (message.length() > 5 && message.substring(0, 5).toLowerCase().equals("name ")) {
+            String name = message.substring(message.indexOf(" ")).trim();
+            if (name.length() > 0) {
+                String initialName = crtChar.getName();
+                crtChar.setName(name);
+                sendMessageAll(roomNr, "<b>" + initialName + " is now known as <u>" + name + "</u> </b>");
+                return null;
+            }
+        }
+
+        // the current player sends a message to all players from the same room
+        if (message.length() > 4 && message.substring(0, 4).toLowerCase().equals("msg ")) {
+            //System.out.println("message for chat");
+            String msg = message.substring(message.indexOf(" ")).trim();
+            if (msg.length() > 0) {
+                logChatMessage(chars.get(peer.getId()), msg);
+                sendMessageAll(roomNr, "<b>" + chars.get(peer.getId()).getName() + " : </b>" + msg);
+                return null;
+            }
+        }
+        
+        // other messages from the current player
         switch (message) {
             case "up":
                 crtChar.setDirection("Up");
@@ -200,12 +384,12 @@ public class BombermanWSEndpoint {
             case "bomb":
                 crtChar.addOrDropBomb(); // change character state
                 boolean isAllowed = canPlantNewBomb(peer, crtChar);
-                if (crtChar.getState() == "Normal" && isAllowed) { // if he dropped the bomb, add the bomb to the screen
+                if (isAllowed && crtChar.getState().equals("Normal")) { // if he dropped the bomb, add the bomb to the screen
                     final BBomb b = new BBomb(crtChar);
                     if (bombExists(map.get(roomNr).blockMatrix, b.getPosX() / World.wallDim, b.getPosY() / World.wallDim)) {
                         break;
                     }
-                    this.bombs.get(roomNr).add(b);
+                    BombermanWSEndpoint.bombs.get(roomNr).add(b);
                     map.get(roomNr).blockMatrix[b.getPosX() / World.wallDim][b.getPosY() / World.wallDim] = b;
                     //crtChar.incPlantedBombs();
                 } else if (!isAllowed) {
@@ -236,17 +420,8 @@ public class BombermanWSEndpoint {
                 crtChar.setState("Win");
                 charsChanged.put(roomNr, true);
                 break;
-            case "reset":
-                //resetMap();
-                break;
-            case "getEnvironment":
-                exportEnvironment(peer);
-                break;
-            case "ready":
-                makePlayerReady(peer);
-                break;
             case "QUIT":
-                String initialName = chars.get(peer.getId()).getName();
+                String initialName = crtChar.getName();
                 System.out.println(initialName+" has left the game");
                 HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
                 String sessionId = httpSession.getId();
@@ -277,48 +452,14 @@ public class BombermanWSEndpoint {
                 break;
         }
         
-        String namePattern = "name ([a-zA-Z0-9. _-]+)";
-        Pattern p = Pattern.compile(namePattern);
-        Matcher m = p.matcher(message);
-        if (m.matches()) {
-            String name = message.substring(message.indexOf(" ")).trim();
-            if (name.length() > 0) {
-                String initialName = chars.get(peer.getId()).getName();
-                chars.get(peer.getId()).setName(name);
-                sendMessageAll(roomNr, "<b>" + initialName + " is now known as <u>" + name + "</u> </b>");
-            }
-        }
-
-        if (message.length() > 4 && message.substring(0, 4).toLowerCase().equals("msg ")) {
-            System.out.println("message for chat");
-            String msg = message.substring(message.indexOf(" ")).trim();
-            if (msg.length() > 0) {
-                logChatMessage(chars.get(peer.getId()), msg);
-                sendMessageAll(roomNr, "<b>" + chars.get(peer.getId()).getName() + " : </b>" + msg);
-            }
-        }
-        
-        if (message.length() > 6 && message.substring(0, 6).toLowerCase().equals("login ")){
-            String credentials = message.substring(6).trim();
-            String username = decodeBase64(credentials.substring(0, credentials.indexOf("#")));
-            String password = decodeBase64(credentials.substring(credentials.indexOf("#")+1));
-//            System.out.println("login :  " + username + ", " + password);
-            logIn(peer, username, password, config);
-        }
-        
-        if (message.length() > 9 && message.substring(0, 9).toLowerCase().equals("register ")){
-            String credentials = message.substring(9).trim();
-            String username = decodeBase64(credentials.substring(0, credentials.indexOf("#")));
-            String password = decodeBase64(credentials.substring(credentials.indexOf("#")+1, credentials.lastIndexOf("#")));
-            String email    = decodeBase64(credentials.substring(credentials.lastIndexOf("#")+1));
-            //System.out.println("register :  " + username + ", " + password + ", " + email);
-            register(peer, username, password, email, config);
-        }
-        
         //System.out.println(message);
         return null; // any string will be send to the requesting peer
     }
 
+    /**
+     * Public synchronized method handling the closing connection of the peer
+     * @param peer    - The connected peer
+     */
     @OnClose
     public synchronized void onClose(Session peer) {
         int roomNr = getRoom(peer);
@@ -355,6 +496,12 @@ public class BombermanWSEndpoint {
         sendMessageAll(roomNr, "<b>ELVIS [ " + initialName + " ]  has left the building </b>");
     }
 
+    /**
+     * Public synchronized method handling a new connection
+     * @param peer    - The connected peer
+     * @param room    - The room of the connected peer
+     * @param config  - The endpoint config, containg information about the peer session (if any)
+     */
     @OnOpen
     public synchronized void onOpen(Session peer, @PathParam("room") final String room, EndpointConfig config) {
 
@@ -378,37 +525,34 @@ public class BombermanWSEndpoint {
         HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
         String sessionId = httpSession.getId();
 
+        // check to see if the user isn't already recognized by the server (has a known cookie)
         if (!httpSessions.isEmpty() && httpSessions.containsKey(sessionId)) {
-            System.out.println("deja am stocat sesiunea asta");
-            if (!peers.isEmpty()){
-                System.out.println("avem conexiuni deschise...");
+//            System.out.println("session id recognized");
+            if (!peers.isEmpty()){ // foreach stored httpSession
+//                System.out.println("we have active connections");
                 Iterator it = peers.entrySet().iterator();
-                while (it.hasNext()) {
+                while (it.hasNext()) { // foreach connected peer
                     Map.Entry pairs = (Map.Entry) it.next();
                     Session peer2 = (Session) pairs.getValue();
-//                    if (!peer2.isOpen()){
-//                        this.onMessage("QUIT", peer2, config);
-//                        continue;
-//                    }
-                    // daca exista deja conectat, inchide vechea conexiune
+                    // close the old connection
                     if (peer2.getUserProperties().containsKey("sessionId") && peer2.getUserProperties().get("sessionId").equals(sessionId)) { 
-                        System.out.println("te-am recunoscut");
-//                        // daca esti autentificat, preia setarile conexiunii precedente si inchide vechea conexiune
+                        //System.out.println("I know you");
+                        // if the current user is already loggedIn, restore it's properties and close the old connection
                         if (peer2.getUserProperties().containsKey("loggedIn") && peer2.getUserProperties().get("loggedIn").equals(true)){
-                            System.out.println("esti deja autentificat cumetre");
+                            //System.out.println("You are already logged in");
                             addPlayerToGame(peer, config, peer2.getUserProperties().get("username").toString(),  Integer.valueOf(peer2.getUserProperties().get("user_id").toString()));
                             sendReadyMessage(peer);
                             this.onMessage("QUIT", peer2, config);
                             return;
                         }
-                        else{ // altfel, doar inchide vechea conexiune
-                            System.out.println("te cunosc de undeva?");
+                        else{ // else, just close the old connection
+                            //System.out.println("Somehow, I feel like I know you...");
                             this.onMessage("QUIT", peer2, config);
                         }
                     }
-                }
+                } // end loop for connected peers
             }
-            System.out.println("finalul iteratiei");
+            //System.out.println("end httpSession loop");
         }
         
         httpSessions.put(sessionId, (HttpSession) config.getUserProperties()
@@ -419,6 +563,14 @@ public class BombermanWSEndpoint {
 
     }
     
+    /**
+     * Public method used to store a new player in the database
+     * @param peer    - The connected peer
+     * @param user    - The name of the player trying to register
+     * @param pass    - The password of the player trying to register
+     * @param email   - The email address of the player trying to register
+     * @param config  - The endpoint config, containg information about the peer session (if any)
+     */
     public void register(Session peer, String user, String pass, String email, EndpointConfig config){
         String emailPattern = "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\])|(([a-zA-Z\\-0-9]+\\.)+[a-zA-Z]{2,}))$";
         Pattern p = Pattern.compile(emailPattern);
@@ -427,9 +579,10 @@ public class BombermanWSEndpoint {
             sendInvalidEmailMessage(peer);
         }
         try {
-            String query = "SELECT id FROM `user` WHERE `email`=?";
+            String query = "SELECT id FROM `user` WHERE `email`=? OR `username`=?";
             PreparedStatement st2 = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
             st2.setString(1, email);
+            st2.setString(2, user);
             ResultSet ret = st2.executeQuery();
             if (ret.next()){
                 sendAlreadyRegisteredMessage(peer);
@@ -452,6 +605,13 @@ public class BombermanWSEndpoint {
         }
     }
     
+    /**
+     * Public method used to login an existing player
+     * @param peer    - The connected peer
+     * @param user    - The name of the player trying to register
+     * @param pass    - The password of the player trying to register
+     * @param config  - The endpoint config, containg information about the peer session (if any)
+     */
     public void logIn(Session peer, String user, String pass, EndpointConfig config) {
         try {
             String query = "SELECT id FROM `user` WHERE `username`=? AND `password`=?;";
@@ -473,13 +633,29 @@ public class BombermanWSEndpoint {
         }
     }
 
+    /**
+     * Public static method that decodes an encoded string using the base64_decode algorithm
+     * @param s - the string to be decoded
+     * @return the decoded string
+     */
     public static String decodeBase64(String s) {
         return new String(Base64.decode(s));
     }
+    
+    /**
+     * Public static method that encodes a string using the base64 algorithm
+     * @param s - the string to be encoded
+     * @return the encoded string
+     */
     public static String encodeBase64(String s) {
         return Base64.encode(s.getBytes());
     }
     
+    /**
+     * Public static method that hashes a string using the MD5 algorithm
+     * @param message - the string to be hashed
+     * @return the hashed string
+     */
     public static String md5Java(String message) {
         String digest = null;
         try {
@@ -490,14 +666,19 @@ public class BombermanWSEndpoint {
                 sb.append(String.format("%02x", b & 0xff));
             }
             digest = sb.toString();
-        } catch (UnsupportedEncodingException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (NoSuchAlgorithmException ex) {
+        } catch (UnsupportedEncodingException | NoSuchAlgorithmException ex) {
             BLogger.getInstance().logException2(ex);
         }
         return digest;
     }
 
+    /**
+     * Public method used add a player to the game
+     * @param peer    - The connected peer
+     * @param config  - The endpoint config, containg information about the peer session (if any)
+     * @param user    - The name of the player trying to connect
+     * @param user_id - The id of the player trying to connect
+     */
     public void addPlayerToGame(Session peer, EndpointConfig config, String username, int user_id) {
         HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
         String sessionId = httpSession.getId();
@@ -535,9 +716,9 @@ public class BombermanWSEndpoint {
         peer.getUserProperties().put("room", mapNumber);
 
         //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
-        if (map.size() == 0 || map.get(mapNumber) == null) {
-            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
-//            map.put(mapNumber, new World("/home/mihaicux/NetBeansProjects/bomberman/maps/firstmap.txt"));
+        if (map.isEmpty() || map.get(mapNumber) == null) {
+//            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
+            map.put(mapNumber, new World("/home/mihaicux/NetBeansProjects/bomberman_sf/maps/firstmap.txt"));
 //            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/map2.txt"));
 //            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
@@ -558,31 +739,31 @@ public class BombermanWSEndpoint {
 
         setCharPosition(mapNumber, newChar);
 
-        if (blownWalls.size() == 0 || blownWalls.get(mapNumber) == null) {
+        if (blownWalls.isEmpty() || blownWalls.get(mapNumber) == null) {
             blownWalls.put(mapNumber, new HashSet<String>());
         }
 
-        if (markedBombs.size() == 0 || markedBombs.get(mapNumber) == null) {
+        if (markedBombs.isEmpty() || markedBombs.get(mapNumber) == null) {
             markedBombs.put(mapNumber, new HashSet<BBomb>());
         }
 
-        if (chars2.size() == 0 || chars2.get(mapNumber) == null) {
+        if (chars2.isEmpty() || chars2.get(mapNumber) == null) {
             chars2.put(mapNumber, new HashSet<BCharacter>());
         }
 
-        if (explosions.size() == 0 || explosions.get(mapNumber) == null) {
+        if (explosions.isEmpty() || explosions.get(mapNumber) == null) {
             explosions.put(mapNumber, new HashSet<Explosion>());
         }
 
-        if (items.size() == 0 || items.get(mapNumber) == null) {
+        if (items.isEmpty() || items.get(mapNumber) == null) {
             items.put(mapNumber, new HashSet<AbstractItem>());
         }
 
-        if (bombs.size() == 0 || bombs.get(mapNumber) == null) {
+        if (bombs.isEmpty() || bombs.get(mapNumber) == null) {
             bombs.put(mapNumber, new ArrayList<BBomb>());
         }
 
-        if (wallsChanged.size() == 0 || wallsChanged.get(mapNumber) == null) {
+        if (wallsChanged.isEmpty() || wallsChanged.get(mapNumber) == null) {
             wallsChanged.put(mapNumber, true);
         }
 
@@ -599,46 +780,45 @@ public class BombermanWSEndpoint {
         sendMessageAll(mapNumber, "<b>" + newChar.getName() + " has joined");
     }
 
+    /**
+     * Public synchronized method used to manage the server errors. Only mentioned here...
+     * @param t    - the Throwable exception
+     */
     @OnError
     public synchronized void onError(Throwable t) {
     }
 
+    /**
+     * Public synchronized method used add send the whole environment to the current player
+     * @param peer    - The connected peer
+     */
     public synchronized void exportEnvironment(Session peer) {
         int roomNr = getRoom(peer);
         try {
-            //if (charsChanged.get(roomNr)){
-            //peer.getBasicRemote().sendText("chars:[" + exportChars(peer));
             exportChars(peer);
-            //}
-            //if (mapChanged.get(roomNr)){
-            //peer.getBasicRemote().sendText("map:[" + exportMap(peer));
             exportMap(peer);
-            //}
-            //if (bombsChanged.get(roomNr)){
-            //peer.getBasicRemote().sendText("bombs:[" + exportBombs(peer));
             exportBombs(peer);
-            //}
-            //if (explosionsChanged.get(roomNr)){
-            //peer.getBasicRemote().sendText("explosions:[" + exportExplosions(peer));
             exportExplosions(peer);
-            //}
-            //if (itemsChanged.get(roomNr)){
-            //peer.getBasicRemote().sendText("items:[" + exportItems(peer));
             exportItems(peer);
-            //}
-        /*} catch (IOException ex) {
-             BLogger.getInstance().logException2(ex);*/
-        } catch (IllegalStateException ex) {
-            BLogger.getInstance().logException2(ex);
-        } catch (ConcurrentModificationException ex) {
+        } catch (IllegalStateException | ConcurrentModificationException ex) {
             BLogger.getInstance().logException2(ex);
         }
     }
 
+    /**
+     * Public synchronized method used stop a working thread - used for monitoring informations to be sent to a player
+     * @param threadId - The connected peer id
+     */
     public synchronized void stopThread(String threadId) {
         workingThreads.remove(threadId);
     }
 
+    /**
+     * Public synchronized method used stop a working thread - used for monitoring informations to be sent to a player
+     * @param crtChar - The current connected player
+     * @param peer - The connected peer
+     * @return Returns true if the current player if blocked (ie. it cannot move anymore)
+     */
     public synchronized boolean isTrapped(BCharacter crtChar, Session peer) {
         if (crtChar == null) {
             return false;
@@ -658,7 +838,9 @@ public class BombermanWSEndpoint {
                 && (y + h >= World.getHeight() || wallExists(map.get(roomNr).blockMatrix, x / World.wallDim, down) || bombExists(map.get(roomNr).blockMatrix, x / World.wallDim, down)));
     }
 
-    // separate thread for watching the bombs
+    /**
+     * Public method using a separate thread for watching the bombs (useful to check if a bomb is about to detonate).
+     */
     public void watchBombs() {
         new Thread(new Runnable() {
 
@@ -698,6 +880,9 @@ public class BombermanWSEndpoint {
 
     }
 
+    /**
+     * Public method using a separate thread for watching the connected players (useful to check if we need to send messages to each player).
+     */
     public void watchPeers() {
         final BombermanWSEndpoint environment = this;
         new Thread(new Runnable() {
@@ -821,6 +1006,11 @@ public class BombermanWSEndpoint {
         }).start();
     }
 
+    /**
+     * Protected synchronized method used to detonate bombs of a given player
+     * @param myChar - The current connected player
+     * @param peer - The connected peer 
+     */
     protected synchronized void detonateBomb(BCharacter myChar, Session peer) {
         int roomNr = getRoom(peer);
         try {
@@ -838,6 +1028,13 @@ public class BombermanWSEndpoint {
         explosionsChanged.put(roomNr, true);
     }
 
+    /**
+     * Public static synchronized method used to check if a wall exists in a given position
+     * @param data - The block matrix
+     * @param i - The x coordinate of the checked position
+     * @param j - The y coordinate of the checked position
+     * @return True if there is a wall at the given position
+     */
     public static synchronized boolean wallExists(AbstractBlock[][] data, int i, int j) {
         if (i < 0 || j < 0) {
             return false;
@@ -857,6 +1054,13 @@ public class BombermanWSEndpoint {
         }
     }
 
+    /**
+     * Public static synchronized method used to check if a bomb exists in a given position
+     * @param data - The block matrix
+     * @param i - The x coordinate of the checked position
+     * @param j - The y coordinate of the checked position
+     * @return True if there is a bomb at the given position
+     */
     public static synchronized boolean bombExists(AbstractBlock[][] data, int i, int j) {
         if (i < 0 || j < 0) {
             return false;
@@ -869,10 +1073,7 @@ public class BombermanWSEndpoint {
             if (data[i][j] == null) {
                 return false;
             }
-            if (!BBomb.class.isAssignableFrom(data[i][j].getClass())) {
-                return false;
-            }
-            return true;
+            return BBomb.class.isAssignableFrom(data[i][j].getClass());
         } catch (ArrayIndexOutOfBoundsException e) {
             BLogger.getInstance().logException2(e);
             return false;
@@ -880,6 +1081,13 @@ public class BombermanWSEndpoint {
 
     }
 
+    /**
+     * Public static synchronized method used to check if an item exists in a given position
+     * @param data - The block matrix
+     * @param i - The x coordinate of the checked position
+     * @param j - The y coordinate of the checked position
+     * @return True if there is an item at the given position
+     */
     public static synchronized boolean itemExists(AbstractBlock[][] data, int i, int j) {
         if (i < 0 || j < 0) {
             return false;
@@ -889,16 +1097,20 @@ public class BombermanWSEndpoint {
             if (data[i][j] == null) {
                 return false;
             }
-            if (!AbstractItem.class.isAssignableFrom(data[i][j].getClass())) {
-                return false;
-            }
-            return true;
+            return AbstractItem.class.isAssignableFrom(data[i][j].getClass());
         } catch (ArrayIndexOutOfBoundsException e) {
             BLogger.getInstance().logException2(e);
             return false;
         }
     }
 
+    /**
+     * Public static synchronized method used to check if a player exists in a given position
+     * @param peer - The connected peer
+     * @param i - The x coordinate of the checked position
+     * @param j - The y coordinate of the checked position
+     * @return True if there is a character at the given position
+     */
     public static synchronized boolean characterExists(Session peer, int i, int j) {
         if (i < 0 || j < 0) {
             return false;
@@ -911,6 +1123,12 @@ public class BombermanWSEndpoint {
         return !world.chars[i][j].isEmpty();
     }
 
+    /**
+     * Protected synchronized method used to explode a given player (if it has in the way of an explosion)
+     * @param peer - The connected peer
+     * @param x - The x coordinate of the checked position
+     * @param y - The y coordinate of the checked position
+     */
     protected synchronized void triggerBlewCharacter(final Session peer, final int x, final int y) {
         System.out.println("hit...");
         new Thread(new Runnable() {
@@ -950,6 +1168,11 @@ public class BombermanWSEndpoint {
         }).start();
     }
 
+    /**
+     * Protected synchronized method used to revert the state of a given player to "Normal"
+     * @param peer - The connected peer
+     * @param myChar - The current connected player
+     */
     protected synchronized void revertState(final Session peer, final BCharacter myChar) {
         new Thread(new Runnable() {
             @Override
@@ -985,6 +1208,11 @@ public class BombermanWSEndpoint {
         }).start();
     }
 
+    /**
+     * Public synchronized method used to detonate the bomb of a given player
+     * @param peer - The connected peer
+     * @param bomb - The detonated bomb
+     */
     public synchronized void markForRemove(final Session peer, final BBomb bomb) {
 
         if (bomb == null) {
@@ -1268,6 +1496,12 @@ public class BombermanWSEndpoint {
         }).start();
     }
 
+    /**
+     * Protected synchronized method used to check if there is an item behind a given blown wall
+     * @param peer - The connected peer
+     * @param x - The x coordinate of the checked position
+     * @param y - The y coordinate of the checked position
+     */
     protected synchronized void flipForItems(Session peer, int x, int y) {
         int roomNr = getRoom(peer);
         Random r = new Random();
@@ -1294,15 +1528,21 @@ public class BombermanWSEndpoint {
 //        wallsChanged.put(roomNr, true);
     }
 
+    /**
+     * Protected synchronized method used to check if a given bomb isn't already marker for removal
+     * @param peer - The connected peer
+     * @param bomb - The checked bomb
+     * @return True if the given bomb is already marked
+     */
     public synchronized boolean alreadyMarked(Session peer, BBomb bomb) {
         return markedBombs.get(getRoom(peer)).contains(bomb);
     }
 
+    /**
+     * Protected synchronized method used to send the characters to a given player
+     * @param peer - The connected peer
+     */
     protected synchronized void exportChars(final Session peer) {
-//        new Thread(new Runnable(){
-//
-//            @Override
-//            public synchronized void run() {
         String ret = "";
         ret += peer.getId() + "[#chars#]";
         int roomNr = getRoom(peer);
@@ -1311,30 +1551,24 @@ public class BombermanWSEndpoint {
             ret += crtChar.toString() + "[#charSep#]";
         }
         sendClearMessage("chars:[" + ret, peer);
-//            }
-//            
-//        }).start();
     }
 
+    /**
+     * Protected synchronized method used to send the map to a given player
+     * @param peer - The connected peer
+     */
     protected synchronized void exportMap(final Session peer) {
-//        new Thread(new Runnable() {
-//
-//            @Override
-//            public synchronized void run() {
-                String ret = "";
-                int roomNr = getRoom(peer);
-                ret = map.get(roomNr).toString();
-                sendClearMessage("map:[" + ret, peer);
-//            }
-//
-//        }).start();
+        String ret = "";
+        int roomNr = getRoom(peer);
+        ret = map.get(roomNr).toString();
+        sendClearMessage("map:[" + ret, peer);
     }
 
+    /**
+     * Protected synchronized method used to send the walls to a given player
+     * @param peer - The connected peer
+     */
     protected synchronized void exportWalls(final Session peer) {
-//        new Thread(new Runnable(){
-//
-//            @Override
-//            public synchronized void run() {
         String ret = "";
         int roomNr = getRoom(peer);
         //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting bombs...");
@@ -1345,16 +1579,13 @@ public class BombermanWSEndpoint {
             }
         }
         sendClearMessage("blownWalls:[" + ret, peer);
-//            }
-//            
-//        }).start();
     }
 
+    /**
+     * Protected synchronized method used to send the bombs to a given player
+     * @param peer - The connected peer
+     */
     protected synchronized void exportBombs(final Session peer) {
-//        new Thread(new Runnable(){
-//
-//            @Override
-//            public synchronized void run() {
         String ret = "";
         int roomNr = getRoom(peer);
         //BLogger.getInstance().log(BLogger.LEVEL_FINE, "exporting bombs...");
@@ -1365,16 +1596,13 @@ public class BombermanWSEndpoint {
             }
         }
         sendClearMessage("bombs:[" + ret, peer);
-//            }
-//            
-//        }).start();
     }
 
+    /**
+     * Protected synchronized method used to send the explosions to a given player
+     * @param peer - The connected peer
+     */
     protected synchronized void exportExplosions(final Session peer) {
-//        new Thread(new Runnable(){
-//
-//            @Override
-//            public synchronized void run() {
         String ret = "";
         int roomNr = getRoom(peer);
         if (explosions.get(roomNr) != null) {
@@ -1384,16 +1612,13 @@ public class BombermanWSEndpoint {
             }
         }
         sendClearMessage("explosions:[" + ret, peer);
-//            }
-//            
-//        }).start();
     }
 
+    /**
+     * Protected synchronized method used to send the items to a given player
+     * @param peer - The connected peer
+     */
     protected synchronized void exportItems(final Session peer) {
-//        new Thread(new Runnable(){
-//
-//            @Override
-//            public synchronized void run() {
         String ret = "";
         int roomNr = getRoom(peer);
         if (items.get(roomNr) != null) {
@@ -1403,11 +1628,14 @@ public class BombermanWSEndpoint {
             }
         }
         sendClearMessage("items:[" + ret, peer);
-//            }
-//            
-//        }).start();
     }
 
+    /**
+     * Public method used to check if a given player can plant a new bomb
+     * @param peer - The connected peer
+     * @param crtChar - The current connected player
+     * @return True if the player can plant a new bomb
+     */
     public boolean canPlantNewBomb(Session peer, BCharacter crtChar) {
         //return crtChar.getPlantedBombs() < crtChar.getMaxBombs();
         int maxBombs = crtChar.getMaxBombs();
@@ -1425,6 +1653,13 @@ public class BombermanWSEndpoint {
 
     }
 
+    /**
+     * Public static synhronized method used to check the type of a given block from the world
+     * @param roomNr - The room to be checked
+     * @param i - The x coordinate of the checked position
+     * @param j - The y coordinate of the checked position
+     * @return Strings expressing the type of the block existing at the given position
+     */
     public static synchronized String checkWorldMatrix(int roomNr, int i, int j) {
         HashMap<String, BCharacter>[][] chars = map.get(roomNr).chars;
         AbstractBlock[][] data = map.get(roomNr).blockMatrix;
@@ -1450,10 +1685,20 @@ public class BombermanWSEndpoint {
         }
     }
 
+    /**
+     * Public method used to send make a given peer play a given sound
+     * @param sound - The sound to be played
+     * @param peer  - The connected peer
+     */
     public void playSound(String sound, Session peer) {
         sendClearMessage("sound:[" + sound, peer);
     }
 
+    /**
+     * Public method used to make all players from a given map play a given sound
+     * @param roomNr - The room number
+     * @param sound  - The sound to be played
+     */
     public void playSoundAll(int roomNr, String sound) {
         Set<BCharacter> myChars = Collections.synchronizedSet(new HashSet<BCharacter>(chars2.get(roomNr)));
         for (BCharacter crtChar : myChars) {
@@ -1461,6 +1706,11 @@ public class BombermanWSEndpoint {
         }
     }
 
+    /**
+     * Private static method returning the map number of a given player
+     * @param peer - The connected peer
+     * @return - The room of the connected player
+     */
     private static int getRoom(Session peer) {
         int roomNr = Integer.parseInt(peer.getUserProperties().get("room").toString());
         if (!peerRooms.containsKey(peer.getId())) {
@@ -1535,11 +1785,7 @@ public class BombermanWSEndpoint {
         if (peer.isOpen()){
             try {
                 peer.getBasicRemote().sendText(msg);
-            } catch (IOException ex) {
-                BLogger.getInstance().logException2(ex);
-            } catch (IllegalStateException ex) {
-                BLogger.getInstance().logException2(ex);
-            } catch (ConcurrentModificationException ex) {
+            } catch (IOException | IllegalStateException | ConcurrentModificationException ex) {
                 BLogger.getInstance().logException2(ex);
             }
         }

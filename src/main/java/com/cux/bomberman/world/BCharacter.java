@@ -33,7 +33,7 @@ import org.codehaus.jackson.map.ObjectWriter;
 public class BCharacter extends AbstractBlock{
     
     protected String name;
-    private static HashMap<String, Integer> textures = new HashMap<>(); // direction+state, texture = int(.gif)
+    private static final HashMap<String, Integer> textures = new HashMap<>(); // direction+state, texture = int(.gif)
     public int crtTexture = 2; // can also be {1, 3, 4, 14, 15, 16, 17, 20, 22, 23, 24}
     private String state = "Normal"; // can also be "Bomb", "Blow", "Win" and "Trapped"
     private String direction = "Right"; // can also be "Up", "Down" and "Left"
