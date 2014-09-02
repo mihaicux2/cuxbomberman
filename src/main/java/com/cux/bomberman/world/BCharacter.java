@@ -21,6 +21,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.websocket.EndpointConfig;
 import javax.websocket.Session;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -32,29 +34,119 @@ import org.codehaus.jackson.map.ObjectWriter;
  */
 public class BCharacter extends AbstractBlock{
     
+    /**
+     * The player name
+     */
     protected String name;
+    
+    /**
+     * A list of all textures a player can hage
+     */
     private static final HashMap<String, Integer> textures = new HashMap<>(); // direction+state, texture = int(.gif)
+    
+    /**
+     * Associations for the player textures
+     */
     public int crtTexture = 2; // can also be {1, 3, 4, 14, 15, 16, 17, 20, 22, 23, 24}
+    
+    /**
+     * A player state can be as follows: Normal, Bomb, Blow, Win and Trapped
+     */
     private String state = "Normal"; // can also be "Bomb", "Blow", "Win" and "Trapped"
+    
+    /**
+     * A player direction can be as follows: Right, Up, Left, Down
+     */
     private String direction = "Right"; // can also be "Up", "Down" and "Left"
+    
+    /**
+     * The id of the player (associated peed ID)
+     */
     private String id;
+    
+    /**
+     * The maximum range an exploding bomb can reach
+     */
     protected int bombRange = 1;
+    
+    /**
+     * The moving speed of the player
+     */
     protected int speed = 1; // first gear :)
+    
+    /**
+     * The number of simultaneous bombs a player cand drop
+     */
     protected int maxBombs = 1; 
+    
+    /**
+     * Check to see if the player is moving or stopped
+     */
     protected boolean walking = false;
+    
+    /**
+     * Check to see if the player can detonate bombs with a trigger
+     */
     protected boolean triggered = false; // checks if the character has a trigger for the "planted" bombs
+    
+    /**
+     * Stores the room to which the player is connected
+     */
     public int roomIndex;
+    
+    /**
+     * Number of kills the player made
+     */
     protected int kills = 0;
+    
+    /**
+     * Numbers of player deaths
+     */
     protected int deaths = 0;
+    
+    /**
+     * Stores the number of seconds that passed since the player entered the game
+     */
     public long connectionTime = 0; // in seconds
+    
+    /**
+     * Stores the date when the player entered the game
+     */
     public Date creationTime;
+    
+    /**
+     * If true, this property will make the player drop bombs unwillingly
+     */
     private boolean dropBombs = false;
+    
+    /**
+     * Checks to see if the player is ready to play the game
+     */
     public boolean ready = false;
+    
+    /**
+     * The number of planted, unexploded bombs of the player
+     */
     private int plantedBombs = 0;
+    
+    /**
+     * The database id of the player (from the table `characters`)
+     */
     private int dbId = 0;
+    
+    /**
+     * The information about the player, stored in the cookies
+     */
     private EndpointConfig config = null;
+    
+    /**
+     * The database id of the player (from the table `user`)
+     */
     private int userId = 0;
     
+    /**
+     * Static initialization of the player textures
+     */
     static {
         // walk in normal state
         textures.put("walkUpNormal", 1);
@@ -87,6 +179,13 @@ public class BCharacter extends AbstractBlock{
         textures.put("walkLeftWin", 10);
     }
     
+    /**
+     * Public constructor of the current class
+     * @param id - the id of the connected peer
+     * @param name - the name of the connected peer
+     * @param roomIndex - the room associated with the player
+     * @param config - the config information (restored from cookies)
+     */
     public BCharacter(String id, String name, int roomIndex, EndpointConfig config){
         this.id = id;
         this.name = name;
@@ -95,22 +194,36 @@ public class BCharacter extends AbstractBlock{
         this.config = config;
     }
 
+    /**
+     * Increase the number of bombs a player can drop simultaneously
+     */
     public void incPlantedBombs(){
         if (this.plantedBombs < this.maxBombs){
             this.plantedBombs++;
         }
     }
     
+    /**
+     * Decrease the number of bombs a player can drop simultaneously
+     */
     public void decPlantedBombs(){
         if (this.plantedBombs > 0){
             this.plantedBombs--;
         }
     }
     
+    /**
+     * Get the number of bombs a player can drop simultaneously
+     * @return the number of bombs a player can drop
+     */
     public int getPlantedBombs(){
         return this.plantedBombs;
     }
     
+    /**
+     * Set the number of bombs a player can drop simultaneously
+     * @param plantedBombs - the new number of bombs that can be dropped in the same time
+     */
     public void setPlantedBombs(int plantedBombs){
         this.plantedBombs = plantedBombs;
     }
@@ -299,29 +412,21 @@ public class BCharacter extends AbstractBlock{
     }
     
     public void moveUp(){
-        //this.posY-=speed;
-        //this.posY-=speed;
         walking = true;
         this.IAmWalking(this, "up");
     }
     
     public void moveDown(){
-        //this.posY+=speed;
-        //this.posY+=speed;
         walking = true;
         this.IAmWalking(this, "down");
     }
     
     public void moveLeft(){
-        //this.posX-=speed;
-        //this.posX-=speed;
         walking = true;
         this.IAmWalking(this, "left");
     }
     
     public void moveRight(){
-        //this.posX+=speed;
-        //this.posX+=speed;
         walking = true;
         this.IAmWalking(this, "right");
     }
@@ -337,17 +442,19 @@ public class BCharacter extends AbstractBlock{
                 int x2 = x;
                 int y2 = y;
                 //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.id);
-                if (direction.equals("up")){
-                    y2--;
-                }
-                else if (direction.equals("down")){
-                    y2++;
-                }
-                else if (direction.equals("left")){
-                    x2--;
-                }
-                else{
-                    x2++;
+                switch (direction) {
+                    case "up":
+                        y2--;
+                        break;
+                    case "down":
+                        y2++;
+                        break;
+                    case "left":
+                        x2--;
+                        break;
+                    default:
+                        x2++;
+                        break;
                 }
                 
                 BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
@@ -409,10 +516,10 @@ public class BCharacter extends AbstractBlock{
        int x12 = x11 + block.getWidth();
        int y11 = block.getPosY();
        int y12 = y11 + block.getHeight();
-       if (this.direction == "Right" && x2 >= x11 && x2 < x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) ret = true;
-       if (this.direction == "Left" && x1 > x11 && x1 <= x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) ret = true;
-       if (this.direction == "Up" && y1 > y11 && y1 <= y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) ret = true;
-       if (this.direction == "Down" && y2 >= y11 && y2 < y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) ret = true;
+       if ("Right".equals(this.direction) && x2 >= x11 && x2 < x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) ret = true;
+       if ("Left".equals(this.direction) && x1 > x11 && x1 <= x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) ret = true;
+       if ("Up".equals(this.direction) && y1 > y11 && y1 <= y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) ret = true;
+       if ("Down".equals(this.direction) && y2 >= y11 && y2 < y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) ret = true;
        
        if (ret == true && AbstractItem.class.isAssignableFrom(block.getClass())){
            this.attachEvent((AbstractItem)block);
@@ -467,10 +574,10 @@ public class BCharacter extends AbstractBlock{
         return this.dropBombs;
     }
     
-    private synchronized void cycleEvent(final BCharacter myChar, final AbstractItem item){
+    private void cycleEvent(final BCharacter myChar, final AbstractItem item){
         new Thread(new Runnable(){
             @Override
-            public synchronized void run() {
+            public void run() {
                 try {
                     Thread.sleep(1000*item.getLifeTime());
                     switch(item.getName()){
@@ -512,7 +619,7 @@ public class BCharacter extends AbstractBlock{
                         while (it.hasNext()) {
                             Map.Entry pairs = (Map.Entry) it.next();
                             Session peer = (Session) pairs.getValue();
-                            if (peer.getId() == myChar.getId()){
+                            if (peer.getId() == null ? myChar.getId() == null : peer.getId().equals(myChar.getId())){
                                 BombermanWSEndpoint.getInstance().onMessage("bomb", peer, myChar.config);
                                 break;
                             }
@@ -528,10 +635,10 @@ public class BCharacter extends AbstractBlock{
     
     public void stepBack(AbstractBlock block){
         
-        if (this.direction == "Right") this.posX--;
-        if (this.direction == "Left") this.posX++;
-        if (this.direction == "Down") this.posY--;
-        if (this.direction == "Up") this.posY++;
+        if ("Right".equals(this.direction)) this.posX--;
+        if ("Left".equals(this.direction)) this.posX++;
+        if ("Down".equals(this.direction)) this.posY--;
+        if ("Up".equals(this.direction)) this.posY++;
         
 //        if (this.posX + this.width > block.getPosX()) this.posX++;
 //        else this.posX--;
@@ -541,11 +648,10 @@ public class BCharacter extends AbstractBlock{
     }
     
     public boolean walksTo(AbstractBlock block){
-        if (this.direction == "Right" && this.posX + this.width <= block.getPosX()) return true;
-        if (this.direction == "Left" && this.posX >= block.getPosX() + block.getWidth()) return true;
-        if (this.direction == "Down" && this.posY +this.height <= block.getPosY()) return true;
-        if (this.direction == "Up" && this.posY >= block.getPosY() + block.getHeight()) return true;
-        return false;
+        if ("Right".equals(this.direction) && this.posX + this.width <= block.getPosX()) return true;
+        if ("Left".equals(this.direction) && this.posX >= block.getPosX() + block.getWidth()) return true;
+        if ("Down".equals(this.direction) && this.posY +this.height <= block.getPosY()) return true;
+        return "Up".equals(this.direction) && this.posY >= block.getPosY() + block.getHeight();
     }
     
     @Override
@@ -600,7 +706,7 @@ public class BCharacter extends AbstractBlock{
                 this.setSpeed(ret.getInt("speed"));
                 this.setBombRange(ret.getInt("bomb_range"));
                 this.setMaxBombs(ret.getInt("max_bombs"));
-                this.setTriggered((ret.getInt("triggered") == 1) ? true : false);
+                this.setTriggered((ret.getInt("triggered") == 1));
                 this.setKills(ret.getInt("kills"));
                 this.setDeaths(ret.getInt("deaths"));
             }
@@ -627,7 +733,7 @@ public class BCharacter extends AbstractBlock{
     
     public int saveToDB(){
         try {
-            String query = "";
+            String query;
             if (this.dbId == 0){
                 query = "INSERT INTO `characters` SET "
                         + "`name`=?,"

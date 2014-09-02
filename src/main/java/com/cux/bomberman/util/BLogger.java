@@ -18,17 +18,24 @@ public final class BLogger {
     private static BLogger instance = null;
     private Boolean echoErrors = false;
 
-    // nivelul de severitate al mesajului de salvat
+    /**
+     * Logged message security lever
+     */
     public static Integer LEVEL_FINE = 0;
     public static Integer LEVEL_INFO = 1;
     public static Integer LEVEL_WARNING = 2;
     public static Integer LEVEL_EXCEPTION = 3;
     public static Integer LEVEL_ERROR = 4;
 
-    // constructor ce duce la evitarea instantierii directe
+    /**
+     * Private constructor to disallow direct instanciation
+     */
     private BLogger(){}
 
-    // evita instantierea mai multor obiecte de acest tip si in cazul thread-urilor
+    /**
+     * Public static method used to implement the Singleton pattern. Only one instance of this class is allowed
+     * @return The only allowed instance of this class
+     */
     public static synchronized BLogger getInstance(){
         if (instance == null){
             instance = new BLogger();
@@ -36,25 +43,39 @@ public final class BLogger {
         return instance;
     }
 
-    // nu permite clonarea obiectului
+    /**
+     * Overwritten method to disallow cloning of the instanciated object. [Singleton pattern]
+     * @return
+     * @throws CloneNotSupportedException 
+     */
     @Override
     public Object clone() throws CloneNotSupportedException {
         throw new CloneNotSupportedException();
     }
 
-    // seteaza daca la salvarea unui mesaj in log, afiseaza mesajul printr-un popUp
+    /**
+     * Public method used to tell the logger if it should also raise a popup during the logged messages
+     * @param echo - boolean to set the echoErrors property
+     */
     public void setEcho(Boolean echo){
         echoErrors = echo;
     }
 
-    // afla data curenta
+    /**
+     * Private method used to get the current time, used for logging the messages
+     * @return The curent datetime, in a precise method
+     */
     private String getDateTime() {
         DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
         Date date = new Date();
         return dateFormat.format(date);
     }
 
-    // salveaza mesaje in log
+    /**
+     * Public method used to store the messages
+     * @param level - the security level of the stored messages
+     * @param message - the message to be stored
+     */
     public void log(Integer level, String message){
        if (level.equals(LEVEL_FINE)) logFine(message+"\r\n");
        if (level.equals(LEVEL_INFO)) logInfo(message+"\r\n");
@@ -63,7 +84,12 @@ public final class BLogger {
        if (level.equals(LEVEL_ERROR)) logError(message+"\r\n");
     }
 
-    // afiseaza mesaje [daca e setat in config.ini, deschide popUp]
+    /**
+     * Private method used to show the logged messages on the screen. Also, if the echoErrors property<br />
+     * is set to true, a pop-up will appear foreach logged message
+     * @param message - the message to be shown
+     * @param level - the security level of the given message
+     */
     private void echo(String message, Integer level){
         System.out.println(message);
         if (echoErrors.equals(true)){
@@ -71,7 +97,10 @@ public final class BLogger {
         }
     }
 
-    // salveaza in log exceptiile [cu tot cu tracking - fisierul, linia etc.]
+    /**
+     * Public method used to log raised exceptions
+     * @param e - The exception to be logged
+     */
     public void logException2(Exception e){
         StackTraceElement[] tracker = e.getStackTrace();
         String exceptionStr = "";
@@ -86,7 +115,10 @@ public final class BLogger {
         echo(sw.toString(), LEVEL_EXCEPTION);
     }
 
-    // salveaza in log erorile Throwable [cu tot cu tracking - fisierul, linia etc.]
+    /**
+     * Public method used to log throwables
+     * @param e - The throwable to be logged
+     */
     public void logThrowable(Throwable e){
         StackTraceElement[] tracker = e.getStackTrace();
         String exceptionStr = "";
@@ -99,10 +131,13 @@ public final class BLogger {
     }
 
     ////////////////////////////////////////////////////////////
-    // METODE PRIVATE PENTRU SALVAREA MESAJELOR
+    // PRIVATE METHODS FOR SAVING THE LOG MESSAGES
     ////////////////////////////////////////////////////////////
 
-    // salveaza mesaj in log [nivelul FINE]
+    /**
+     * Private method used to log a normal message
+     * @param fineMessage - the message to be logged
+     */
     private void logFine(String fineMessage){
         String str = "FINE [ "+getDateTime()+" ] : "+fineMessage;
         try{
@@ -118,7 +153,10 @@ public final class BLogger {
         echo(str, LEVEL_FINE);
     }
 
-    // salveaza mesaj in log [nivelul INFO]
+    /**
+     * Private method used to log an information message
+     * @param infoMessage - the message to be logged
+     */
     private void logInfo(String infoMessage){
         String str = "INFO [ "+getDateTime()+" ] : "+infoMessage;
         try{
@@ -134,7 +172,10 @@ public final class BLogger {
         echo(str, LEVEL_INFO);
     }
 
-    // salveaza mesaj in log [nivelul WARNING]
+    /**
+     * Private method used to log a warning message
+     * @param warningMessage - the message to be logged
+     */
     private void logWarning(String warningMessage){
         String str = "WARNING [ "+getDateTime()+" ] : "+warningMessage;
         try{
@@ -150,9 +191,12 @@ public final class BLogger {
         echo(str, LEVEL_WARNING);
     }
 
-    // salveaza mesaj in log [nivelul EXCEPTION]
-    private void logException(String errorMessage){
-        String str = "EXCEPTION [ "+getDateTime()+" ] : "+errorMessage;
+    /**
+     * Private method used to log an exception message
+     * @param exceptionMessage - the message to be logged
+     */
+    private void logException(String exceptionMessage){
+        String str = "EXCEPTION [ "+getDateTime()+" ] : "+exceptionMessage;
         try{
             FileWriter fstream = new FileWriter("log.txt", true);
             BufferedWriter out = new BufferedWriter(fstream);
@@ -166,7 +210,10 @@ public final class BLogger {
         echo(str, LEVEL_EXCEPTION);
     }
 
-    // salveaza mesaj in log [nivelul ERROR]
+    /**
+     * Private method used to log an error message
+     * @param errorMessage - the message to be logged
+     */
     private void logError(String errorMessage){
         String str = "ERROR [ "+getDateTime()+" ] : "+errorMessage;
         try{
