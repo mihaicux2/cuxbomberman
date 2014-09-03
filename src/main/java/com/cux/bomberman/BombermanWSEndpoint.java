@@ -1904,9 +1904,15 @@ public class BombermanWSEndpoint {
                 } catch (InterruptedException ex) {
                     Logger.getLogger(BombermanWSEndpoint.class.getName()).log(Level.SEVERE, null, ex);
                 }
+                // character's previous position
+                int X1 = newChar.getPosX() / World.wallDim;
+                int Y1 = newChar.getPosY() / World.wallDim;
                 newChar.setPosX(X * World.wallDim);
                 newChar.setPosY(Y * World.wallDim);
                 map.get(mapNumber).chars[X][Y].put(newChar.getId(), newChar);
+                // clear character's previuos position
+                map.get(mapNumber).chars[X1][Y1].remove(newChar.getId());
+                map.get(mapNumber).blockMatrix[X1][Y1] = null;
             }
 
         }).start();
