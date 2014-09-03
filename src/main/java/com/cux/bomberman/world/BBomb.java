@@ -24,13 +24,15 @@ import org.codehaus.jackson.map.ObjectWriter;
 public class BBomb extends AbstractBlock {
 
     //protected String charId = "";
-    protected BCharacter owner;
+    protected BCharacter owner, ownerOrig;
     protected Date creationTime = null;
     protected Double lifeTime = 1.5;
     protected boolean volatileB = true;
     
     public BBomb(BCharacter owner){
-        this.owner = owner.clone();        
+//        this.owner = owner.clone();        
+        this.owner = owner;        
+        this.ownerOrig = owner.clone();
         this.posX = (owner.getPosX()/World.wallDim)*World.wallDim;
         this.posY = (owner.getPosY()/World.wallDim)*World.wallDim;
         this.creationTime = new Date();
@@ -41,6 +43,10 @@ public class BBomb extends AbstractBlock {
     
     public BCharacter getOwner(){
         return this.owner;
+    }
+    
+    public BCharacter getOwnerOrig(){
+        return this.ownerOrig;
     }
     
     public String getCharId() {

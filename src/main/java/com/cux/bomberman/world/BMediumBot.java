@@ -25,6 +25,14 @@ public class BMediumBot extends BBaseBot{
         
         //System.out.println("search & destroy");
         
+        // random bomb add...
+        Random r = new Random();
+        int rand = r.nextInt(100000);
+        if (rand % 10 == 0){
+            this.dropBomb();
+        }
+        
+        
         int x = this.posX / World.wallDim;
         int y = this.posY / World.wallDim;
         
@@ -127,17 +135,11 @@ public class BMediumBot extends BBaseBot{
                 expandDown = false;
             }
         }
-        
-        // random bomb add...
-        Random r = new Random();
-        int rand = r.nextInt(100);
-        if (rand % 2 == 0){
-            this.dropBomb();
-        }
     }
 
-    private void avoidBomb(String bombLocation, int x, int y){
-        System.out.println("bomb detected "+bombLocation);
+    @Override
+    public void avoidBomb(String bombLocation, int x, int y){
+//        System.out.println("bomb detected "+bombLocation);
         boolean move = true;
         switch(bombLocation){
             case "up":

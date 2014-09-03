@@ -17,6 +17,6 @@ public interface BBaseBotI {
      */
     public void searchAndDestroy();
      
-    
+    public void avoidBomb(String bombLocation, int x, int y);
     
 }

@@ -25,7 +25,7 @@
  * varchar(256) NOT NULL, `registered_at` DATETIME NULL, `last_login` DATETIME
  * NULL, PRIMARY KEY (`id`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
  * 
- * insert into user set `id`='4', `email`='slow_bot@cux.com', `username`='slow_bot', `registered_at`=NOW();
+ * insert into user set `id`='4', `email`='slow_bot@cux.com', `username`='BOT_medium_1', `registered_at`=NOW();
  * 
  */
 package com.cux.bomberman;
@@ -412,7 +412,7 @@ public class BombermanWSEndpoint {
                 break;
             case "bomb":
                 crtChar.addOrDropBomb(); // change character state
-                boolean isAllowed = canPlantNewBomb(peer, crtChar);
+                boolean isAllowed = canPlantNewBomb(crtChar);
                 if (isAllowed && crtChar.getState().equals("Normal")) { // if he dropped the bomb, add the bomb to the screen
                     final BBomb b = new BBomb(crtChar);
                     if (bombExists(map.get(roomNr).blockMatrix, b.getPosX() / World.wallDim, b.getPosY() / World.wallDim)) {
@@ -789,10 +789,6 @@ public class BombermanWSEndpoint {
         newChar.restoreFromDB();
         newChar.logIn();
 //        newChar.setPeer(peer);
-
-        chars.put(peer.getId(), newChar);
-
-        setCharPosition(mapNumber, newChar);
         
         if (blownWalls.isEmpty() || blownWalls.get(mapNumber) == null) {
             blownWalls.put(mapNumber, new HashSet<String>());
@@ -822,12 +818,14 @@ public class BombermanWSEndpoint {
             wallsChanged.put(mapNumber, true);
         }
 
+        chars.put(peer.getId(), newChar);
         chars2.get(mapNumber).add(newChar);
+        setCharPosition(mapNumber, newChar);
 
         // if the retarded bot is not added, "just do it"
-        if (!peers.containsKey("slow_bot_ID")){
+        if (!peers.containsKey("BOT_medium_1")){
             // add a very, very retard bot....
-            BMediumBot bot = new BMediumBot("slow_bot_ID", "slow_bot", mapNumber, null);
+            BMediumBot bot = new BMediumBot("BOT_medium_1", "BOT_medium_1", mapNumber, null);
             bot.setPosX(0);
             bot.setPosY(0);
             bot.setWidth(World.wallDim);
@@ -836,30 +834,29 @@ public class BombermanWSEndpoint {
             bot.restoreFromDB(); // bullshit... :-@
             bot.logIn(); // bullshit... :-@
 
-            chars.put("slow_bot_ID", bot);
+            chars.put("BOT_medium_1", bot);
             chars2.get(mapNumber).add(bot);
-
             setCharPosition(mapNumber, bot);
-
             new Thread(bot).start();
+            
+            //Session botPeer = peer;
+            
+            //peers.put("BOT_medium_1", botPeer); // what to do here....
 
-            peers.put("slow_bot_ID", peer); // what to do here....
-
-            //sendMessage(httpSession.getId(), peer);
-            workingThreads.add("slow_bot_ID");
+            //workingThreads.add("BOT_medium_1");
 
             bot.setReady(true);
 
-            mapPlayers.put(mapNumber, 1 + mapPlayers.get(mapNumber));
+            //mapPlayers.put(mapNumber, 1 + mapPlayers.get(mapNumber));
 
-            System.out.println("slow_bot added...");
+            System.out.println("medium_bot added...");
         }
         
         BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected [" + peer.getId() + "], room " + peer.getUserProperties().get("room"));
         //System.exit(0);
         charsChanged.put(mapNumber, true);
         bombsChanged.put(mapNumber, true);
-        mapChanged.put(mapNumber, true);
+        //mapChanged.put(mapNumber, true);
         itemsChanged.put(mapNumber, true);
         explosionsChanged.put(mapNumber, true);
 
@@ -951,13 +948,8 @@ public class BombermanWSEndpoint {
                                     if (bomb == null) {
                                         continue;
                                     }
-                                    Session peer = peers.get(bomb.getOwner().getId());
-                                    if (peer == null) {
-                                        bombs.get(roomNr).remove(bomb);
-                                        continue;
-                                    }
-                                    if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime()) / 1000 >= bomb.getLifeTime() && !alreadyMarked(peer, bomb)) {
-                                        markForRemove(peer, bomb);
+                                    if (bomb.isVolatileB() && (new Date().getTime() - bomb.getCreationTime().getTime()) / 1000 >= bomb.getLifeTime() && !alreadyMarked(bomb)) {
+                                        markForRemove(bomb);
                                     }
                                 }
                             }
@@ -1000,17 +992,22 @@ public class BombermanWSEndpoint {
                         while (it.hasNext()) {
                             Map.Entry pairs = (Map.Entry) it.next();
                             Session peer = (Session) pairs.getValue();
+                            if (peer == null) continue;
 
                             if (peer.isOpen() && workingThreads.contains(peer.getId())) {
                                 if (peer.getUserProperties().get("room") == null || peer.getUserProperties().get("room").equals(-1)) {
                                     peer.getUserProperties().put("room", 1);
                                 }
                                 BCharacter crtChar = chars.get(peer.getId());
+                                if (crtChar == null) continue;
 
                                 int roomNr = getRoom(peer);
+                                
+                                if (roomNr == -1) continue;
+                                
                                 if (isTrapped(crtChar, peer)) {
                                     crtChar.setState("Trapped"); // will be automated reverted when a bomb kills him >:)
-                                    charsChanged.put(roomNr, true);
+                                    //charsChanged.put(roomNr, true);
                                 }
                                 try {
                                     // export chars?
@@ -1022,44 +1019,41 @@ public class BombermanWSEndpoint {
                                     //}
 
                                     // export map?
-                                    if (mapChanged.get(roomNr)) {
-//                                        peer.getBasicRemote().sendText("map:[" + environment.exportMap(peer));
+                                    if (mapChanged.containsKey(roomNr) && mapChanged.get(roomNr)) {
                                         environment.exportMap(peer);
                                         map2Changed[roomNr] = true;
                                     }
 
                                     // export walls?
-                                    if (wallsChanged.get(roomNr)) {
+                                    if (wallsChanged.containsKey(roomNr) && wallsChanged.get(roomNr)) {
                                         //peer.getBasicRemote().sendText("blownWalls:[" + environment.exportWalls(peer));
                                         exportWalls(peer);
                                         wallChanged[roomNr] = true;
                                     }
 
                                     // export bombs?
-                                    if (bombsChanged.get(roomNr)) {
+                                    if (bombsChanged.containsKey(roomNr) && bombsChanged.get(roomNr)) {
                                         //peer.getBasicRemote().sendText("bombs:[" + environment.exportBombs(peer));
                                         environment.exportBombs(peer);
                                         bombChanged[roomNr] = true;
                                     }
 
                                     // export explosions?
-                                    if (explosionsChanged.get(roomNr)) {
+                                    if (explosionsChanged.containsKey(roomNr) && explosionsChanged.get(roomNr)) {
                                         //peer.getBasicRemote().sendText("explosions:[" + environment.exportExplosions(peer));
                                         exportExplosions(peer);
                                         explosionChanged[roomNr] = true;
                                     }
 
                                     // eport items?
-                                    if (itemsChanged.get(roomNr)) {
+                                    if (itemsChanged.containsKey(roomNr) && itemsChanged.get(roomNr)) {
                                         //peer.getBasicRemote().sendText("items:[" + environment.exportItems(peer));
                                         environment.exportItems(peer);
                                         itemChanged[roomNr] = true;
                                     }
                                     /*} catch (IOException ex) {
                                      BLogger.getInstance().logException2(ex);*/
-                                } catch (IllegalStateException ex) {
-                                    BLogger.getInstance().logException2(ex);
-                                } catch (ConcurrentModificationException ex) {
+                                } catch (ConcurrentModificationException | IllegalStateException ex) {
                                     BLogger.getInstance().logException2(ex);
                                 } catch (RuntimeException ex) {
                                     BLogger.getInstance().logException2(ex);
@@ -1092,9 +1086,7 @@ public class BombermanWSEndpoint {
                             }
                         }
                         Thread.sleep(10); // limiteaza la 100FPS comunicarea cu clientul
-                    } catch (InterruptedException ex) {
-                        BLogger.getInstance().logException2(ex);
-                    } catch (java.util.ConcurrentModificationException ex) {
+                    } catch (ConcurrentModificationException | InterruptedException ex) {
                         BLogger.getInstance().logException2(ex);
                     }
                 }
@@ -1110,12 +1102,13 @@ public class BombermanWSEndpoint {
      * @param peer - The connected peer
      */
     protected synchronized void detonateBomb(BCharacter myChar, Session peer) {
-        int roomNr = getRoom(peer);
+        //int roomNr = getRoom(peer);
+        int roomNr = myChar.roomIndex;
         try {
             for (BBomb bomb : bombs.get(roomNr)) {
                 if (bomb.getCharId().equals(myChar.getName())) {
                     bomb.setVolatileB(true);
-                    markForRemove(peer, bomb);
+                    markForRemove(bomb);
                     break;
                 }
             }
@@ -1217,11 +1210,11 @@ public class BombermanWSEndpoint {
      * @param j - The y coordinate of the checked position
      * @return True if there is a character at the given position
      */
-    public static synchronized boolean characterExists(Session peer, int i, int j) {
+    public static synchronized boolean characterExists(int roomNr, int i, int j) {
         if (i < 0 || j < 0) {
             return false;
         }
-        int roomNr = getRoom(peer);
+
         World world = map.get(roomNr);
         if (world == null) {
             return false;
@@ -1237,16 +1230,19 @@ public class BombermanWSEndpoint {
      * @param x - The x coordinate of the checked position
      * @param y - The y coordinate of the checked position
      */
-    protected synchronized void triggerBlewCharacter(final Session peer, final int x, final int y) {
+//    protected synchronized void triggerBlewCharacter(final Session peer, final int x, final int y) {
+    protected synchronized void triggerBlewCharacter(final BCharacter winner, final int x, final int y) {
         System.out.println("hit...");
         new Thread(new Runnable() {
             @Override
             public synchronized void run() {
-                BCharacter winner = chars.get(peer.getId());
+                //BCharacter winner = chars.get(peer.getId());
+                
                 if (winner == null) {
                     return;
                 }
-                int roomNr = getRoom(peer);
+                //int roomNr = getRoom(peer);
+                int roomNr = winner.roomIndex;
                 Iterator it = map.get(roomNr).chars[x][y].entrySet().iterator();
                 while (it.hasNext()) {
                     Map.Entry pairs = (Map.Entry) it.next();
@@ -1259,7 +1255,8 @@ public class BombermanWSEndpoint {
                             looser.decKills(); // first, revert the initial kill
                             looser.decKills(); // second, "steal" one of the user kills (suicide is a crime)
                         }
-                        revertState(peer, looser);
+//                        revertState(peer, looser);
+                        revertState(looser);
                         // clear the block containing the character
                         map.get(roomNr).chars[x][y].remove(looser);
                         map.get(roomNr).blockMatrix[x][y] = null;
@@ -1283,11 +1280,13 @@ public class BombermanWSEndpoint {
      * @param peer - The connected peer
      * @param myChar - The current connected player
      */
-    protected synchronized void revertState(final Session peer, final BCharacter myChar) {
+//    protected synchronized void revertState(final Session peer, final BCharacter myChar) {
+    protected synchronized void revertState(final BCharacter myChar) {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                int roomNr = getRoom(peer);
+                //int roomNr = getRoom(peer);
+                int roomNr = myChar.roomIndex;
                 playSoundAll(roomNr, "sounds/burn.wav");
                 myChar.setState("Blow");
                 charsChanged.put(roomNr, true);
@@ -1324,7 +1323,7 @@ public class BombermanWSEndpoint {
      * @param peer - The connected peer
      * @param bomb - The detonated bomb
      */
-    public synchronized void markForRemove(final Session peer, final BBomb bomb) {
+    public synchronized void markForRemove(final BBomb bomb) {
 
         if (bomb == null) {
             return;
@@ -1333,19 +1332,28 @@ public class BombermanWSEndpoint {
         new Thread(new Runnable() {
             @Override
             public synchronized void run() {
-
+                final BCharacter crtChar = bomb.getOwner();
+                
                 try {
-                    final int roomNr = getRoom(peer);
+                    //final int roomNr = getRoom(peer);
+                    final int roomNr = crtChar.roomIndex;
+                    if (roomNr == -1) return;
                     playSoundAll(roomNr, "sounds/explosion.wav");
-                    chars.get(peer.getId()).decPlantedBombs();
-                    final Explosion exp = new Explosion(bomb.getOwner());
+                    //System.out.println("BombermanWSEndpoint.markForRemove : "+crtChar.getId()+", pot pune "+crtChar.getMaxBombs()+" bombe, am pus "+crtChar.getPlantedBombs());
+                    crtChar.decPlantedBombs();
+                    
+                    //if (crtChar.getId().substring(0, 3).equals("BOT")){
+                        //System.out.println("BombermanWSEndpoint.markForRemove (2) : "+crtChar.getId()+", pot pune "+crtChar.getMaxBombs()+" bombe, am pus "+crtChar.getPlantedBombs());
+                    //}
+                    
+//                    final Explosion exp = new Explosion(bomb.getOwner());
+                    final Explosion exp = new Explosion(bomb.getOwnerOrig());
                     Set<String> objectHits = Collections.synchronizedSet(new HashSet<String>());
                     map.get(roomNr).blockMatrix[bomb.getPosX() / World.wallDim][bomb.getPosY() / World.wallDim] = null;
                     int charRange = bomb.getOwner().getBombRange();
 
                     markedBombs.get(roomNr).add(bomb);
 
-                    //bomb.getOwner().decPlantedBombs();
                     explosions.get(roomNr).add(exp);
 
                     explosionsChanged.put(roomNr, true);
@@ -1383,8 +1391,10 @@ public class BombermanWSEndpoint {
                      * range
                      */
                     // in it's  current position                    
-                    if (posX + width <= wWidth && BombermanWSEndpoint.characterExists(peer, (posX / World.wallDim), posY / World.wallDim)) {
-                        triggerBlewCharacter(peer, (posX / World.wallDim), posY / World.wallDim);
+                    if (posX + width <= wWidth && BombermanWSEndpoint.characterExists(crtChar.roomIndex, (posX / World.wallDim), posY / World.wallDim)) {
+                        bomb.getOwner().decPlantedBombs();
+                        //triggerBlewCharacter(peer, (posX / World.wallDim), posY / World.wallDim);
+                        triggerBlewCharacter(crtChar, (posX / World.wallDim), posY / World.wallDim);
                     }
                     // in it's external range
                     for (int i = 1; i <= charRange; i++) {
@@ -1399,7 +1409,7 @@ public class BombermanWSEndpoint {
                                 new Thread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xR][yR]);
+                                        markForRemove((BBomb) map.get(roomNr).blockMatrix[xR][yR]);
                                     }
                                 }).start();
                                 objectHits.add("right");
@@ -1408,7 +1418,8 @@ public class BombermanWSEndpoint {
                                 new Thread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        triggerBlewCharacter(peer, xR, yR);
+                                        //triggerBlewCharacter(peer, xR, yR);
+                                        triggerBlewCharacter(crtChar, xR, yR);
                                     }
                                 }).start();
                                 //objectHits.add("right");
@@ -1421,7 +1432,7 @@ public class BombermanWSEndpoint {
                                 if (wall.isBlowable()) {
                                     map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xR][yR]);
                                     exp.ranges.put("right", exp.ranges.get("right") + 1);
-                                    flipForItems(peer, xR, yR);
+                                    flipForItems(crtChar.roomIndex, xR, yR);
                                     //mapChanged.put(roomNr, true);
                                     blownWalls.get(roomNr).add(wall.wallId);
                                     wallsChanged.put(roomNr, true);
@@ -1452,7 +1463,7 @@ public class BombermanWSEndpoint {
                                 new Thread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xL][yL]);
+                                        markForRemove((BBomb) map.get(roomNr).blockMatrix[xL][yL]);
                                     }
                                 }).start();
                                 objectHits.add("left");
@@ -1461,7 +1472,8 @@ public class BombermanWSEndpoint {
                                 new Thread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        triggerBlewCharacter(peer, xL, yL);
+                                        //triggerBlewCharacter(peer, xL, yL);
+                                        triggerBlewCharacter(crtChar, xL, yL);
                                     }
                                 }).start();
                                 //objectHits.add("left");
@@ -1474,8 +1486,8 @@ public class BombermanWSEndpoint {
                                 if (wall.isBlowable()) {
                                     map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xL][yL]);
                                     exp.ranges.put("left", exp.ranges.get("left") + 1);
-                                    flipForItems(peer, xL, yL);
-                                    //                                mapChanged.put(roomNr, true);
+                                    flipForItems(crtChar.roomIndex, xL, yL);
+                                    //mapChanged.put(roomNr, true);
                                     blownWalls.get(roomNr).add(wall.wallId);
                                     wallsChanged.put(roomNr, true);
                                 }
@@ -1505,7 +1517,7 @@ public class BombermanWSEndpoint {
                                 new Thread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xD][yD]);
+                                        markForRemove((BBomb) map.get(roomNr).blockMatrix[xD][yD]);
                                     }
                                 }).start();
                                 objectHits.add("down");
@@ -1514,7 +1526,8 @@ public class BombermanWSEndpoint {
                                 new Thread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        triggerBlewCharacter(peer, xD, yD);
+                                        //triggerBlewCharacter(peer, xD, yD);
+                                        triggerBlewCharacter(crtChar, xD, yD);
                                     }
                                 }).start();
                                 //objectHits.add("down");
@@ -1527,8 +1540,8 @@ public class BombermanWSEndpoint {
                                 if (wall.isBlowable()) {
                                     map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xD][yD]);
                                     exp.ranges.put("down", exp.ranges.get("down") + 1);
-                                    flipForItems(peer, xD, yD);
-                                    //                                mapChanged.put(roomNr, true);
+                                    flipForItems(crtChar.roomIndex, xD, yD);
+                                    //mapChanged.put(roomNr, true);
                                     blownWalls.get(roomNr).add(wall.wallId);
                                     wallsChanged.put(roomNr, true);
                                 }
@@ -1558,7 +1571,7 @@ public class BombermanWSEndpoint {
                                 new Thread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        markForRemove(peer, (BBomb) map.get(roomNr).blockMatrix[xU][yU]);
+                                        markForRemove((BBomb) map.get(roomNr).blockMatrix[xU][yU]);
                                     }
                                 }).start();
                                 objectHits.add("up");
@@ -1567,7 +1580,8 @@ public class BombermanWSEndpoint {
                                 new Thread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        triggerBlewCharacter(peer, xU, yU);
+                                        //triggerBlewCharacter(peer, xU, yU);
+                                        triggerBlewCharacter(crtChar, xU, yU);
                                     }
                                 }).start();
                                 //objectHits.add("up");
@@ -1580,8 +1594,8 @@ public class BombermanWSEndpoint {
                                 if (wall.isBlowable()) {
                                     map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xU][yU]);
                                     exp.ranges.put("up", exp.ranges.get("up") + 1);
-                                    flipForItems(peer, xU, yU);
-                                    //                                mapChanged.put(roomNr, true);
+                                    flipForItems(crtChar.roomIndex, xU, yU);
+                                    //mapChanged.put(roomNr, true);
                                     blownWalls.get(roomNr).add(wall.wallId);
                                     wallsChanged.put(roomNr, true);
                                 }
@@ -1616,8 +1630,7 @@ public class BombermanWSEndpoint {
      * @param x - The x coordinate of the checked position
      * @param y - The y coordinate of the checked position
      */
-    protected synchronized void flipForItems(Session peer, int x, int y) {
-        int roomNr = getRoom(peer);
+    protected synchronized void flipForItems(int roomNr, int x, int y) {
         Random r = new Random();
         int rand = r.nextInt(1000000);
         if (rand % 5 == 0) { // 20% chance to find a hidden item behind the wall ;))
@@ -1650,8 +1663,8 @@ public class BombermanWSEndpoint {
      * @param bomb - The checked bomb
      * @return True if the given bomb is already marked
      */
-    public synchronized boolean alreadyMarked(Session peer, BBomb bomb) {
-        return markedBombs.get(getRoom(peer)).contains(bomb);
+    public synchronized boolean alreadyMarked(BBomb bomb) {
+        return markedBombs.get(bomb.getOwner().roomIndex).contains(bomb);
     }
 
     /**
@@ -1664,6 +1677,10 @@ public class BombermanWSEndpoint {
         String ret = "";
         ret += peer.getId() + "[#chars#]";
         int roomNr = getRoom(peer);
+        if (chars2.get(roomNr) == null){
+            roomNr--;
+        }
+        if (chars2.get(roomNr) == null) return;
         Set<BCharacter> myChars = Collections.synchronizedSet(new HashSet<BCharacter>(chars2.get(roomNr)));
         for (BCharacter crtChar : myChars) {
             ret += crtChar.toString() + "[#charSep#]";
@@ -1761,21 +1778,8 @@ public class BombermanWSEndpoint {
      * @param crtChar - The current connected player
      * @return True if the player can plant a new bomb
      */
-    public boolean canPlantNewBomb(Session peer, BCharacter crtChar) {
+    public boolean canPlantNewBomb(BCharacter crtChar) {
         return crtChar.getPlantedBombs() < crtChar.getMaxBombs();
-//        int maxBombs = crtChar.getMaxBombs();
-//        int plantedBombs = 0;
-//        int roomNr = getRoom(peer);
-//        if (bombs.get(roomNr) != null) {
-//            HashSet<BBomb> bombs2 = new HashSet<BBomb>(bombs.get(roomNr));
-//            for (BBomb bomb : bombs2) {
-//                if (bomb.getOwner().getId() == crtChar.getId()) {
-//                    plantedBombs++;
-//                }
-//            }
-//        }
-//        return (plantedBombs < maxBombs);
-
     }
 
     /**
@@ -1820,6 +1824,7 @@ public class BombermanWSEndpoint {
      * @param peer - The connected peer
      */
     public void playSound(String sound, Session peer) {
+        if (peer == null) return;
         sendClearMessage("sound:[" + sound, peer);
     }
 
@@ -1833,6 +1838,7 @@ public class BombermanWSEndpoint {
     public void playSoundAll(int roomNr, String sound) {
         Set<BCharacter> myChars = Collections.synchronizedSet(new HashSet<BCharacter>(chars2.get(roomNr)));
         for (BCharacter crtChar : myChars) {
+            if (peers.get(crtChar.getId()) == null) continue;
             playSound(sound, peers.get(crtChar.getId()));
         }
     }
@@ -1844,11 +1850,20 @@ public class BombermanWSEndpoint {
      * @return - The room of the connected player
      */
     private static int getRoom(Session peer) {
-        int roomNr = Integer.parseInt(peer.getUserProperties().get("room").toString());
-        if (!peerRooms.containsKey(peer.getId())) {
-            peerRooms.put(peer.getId(), roomNr);
+        if (peer == null) return -1;
+        try{
+            int roomNr = Integer.parseInt(peer.getUserProperties().get("room").toString());
+            if (roomNr <= 0){
+                return -1;
+            }
+            if (!peerRooms.containsKey(peer.getId())) {
+                peerRooms.put(peer.getId(), roomNr);
+            }
+            return peerRooms.get(peer.getId());
         }
-        return peerRooms.get(peer.getId());
+        catch (NumberFormatException ex){
+            return -1;
+        }
     }
 
     /**
@@ -1971,6 +1986,7 @@ public class BombermanWSEndpoint {
      * @param peer - The connected peer
      */
     public void sendClearMessage(String msg, Session peer) {
+        if (peer == null) return;
         if (peer.isOpen()) {
             try {
                 peer.getBasicRemote().sendText(msg);

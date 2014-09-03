@@ -77,14 +77,18 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
     public void dropBomb(){
         this.addOrDropBomb(); // change character state
         boolean isAllowed = this.getPlantedBombs() < this.getMaxBombs();
+        //boolean isAllowed = true;
+//        System.out.println("BBaseBot.drop : trying to plant bomb..." + (isAllowed ? "can do" : "can't do"));
+//        System.out.println("BBaseBot.drop : pot pune "+this.getMaxBombs()+" bombe, am pus "+this.getPlantedBombs());
         if (isAllowed && this.getState().equals("Normal")) { // if he dropped the bomb, add the bomb to the screen
             final BBomb b = new BBomb(this);
-            if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, b.getPosX() / World.wallDim, b.getPosY() / World.wallDim)) {
-                return;
-            }
+//            if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, b.getPosX() / World.wallDim, b.getPosY() / World.wallDim)) {
+//                return;
+//            }
             BombermanWSEndpoint.bombs.get(this.roomIndex).add(b);
             map.get(this.roomIndex).blockMatrix[b.getPosX() / World.wallDim][b.getPosY() / World.wallDim] = b;
             this.incPlantedBombs();
+            this.avoidBomb("left", this.posX /  World.wallDim, this.posY / World.wallDim);
         } else if (!isAllowed) {
             this.addOrDropBomb();
         }

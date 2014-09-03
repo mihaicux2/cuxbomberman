@@ -200,6 +200,7 @@ public class BCharacter extends AbstractBlock{
     public void incPlantedBombs(){
         if (this.plantedBombs < this.maxBombs){
             this.plantedBombs++;
+//            System.out.println("BCharacter.inc - " + this.getId()+" : am pus " + this.getPlantedBombs());
         }
     }
     
@@ -209,6 +210,7 @@ public class BCharacter extends AbstractBlock{
     public void decPlantedBombs(){
         if (this.plantedBombs > 0){
             this.plantedBombs--;
+//            System.out.println("BCharacter.dec - " + this.getId()+" : am pus " + this.getPlantedBombs());
         }
     }
     

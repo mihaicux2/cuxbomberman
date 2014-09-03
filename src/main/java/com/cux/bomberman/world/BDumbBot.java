@@ -42,6 +42,10 @@ public class BDumbBot extends BBaseBot{
         }
     }
 
+    public void avoidBomb(String bombLocation, int x, int y){
+//        System.out.println("bomb detected "+bombLocation);
+    }
+    
     @Override
     public void run() {
         while (true) {
