@@ -96,4 +96,19 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
         BombermanWSEndpoint.bombsChanged.put(this.roomIndex, true);
     }
     
+    @Override
+    public int saveToDB(){
+         return 1;
+    }
+    
+    @Override
+    public int logIn(){
+        return 1;
+    }
+    
+    @Override
+    public void restoreFromDB(){
+        
+    }
+    
 }

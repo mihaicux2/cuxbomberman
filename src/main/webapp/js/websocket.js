@@ -29,6 +29,9 @@ var BombermanClient = {};
     BombermanClient.charNames = null;
     BombermanClient.changingName = false;
     BombermanClient.ready = false;
+    BombermanClient.currentPlayer = {};
+    BombermanClient.typeCommand = false;
+    BombermanClient.isAdmin = false;
 }
 
 BombermanClient.get_random_color = function() {
@@ -146,6 +149,9 @@ BombermanClient.bindKeyUp = function(){
                 BombermanClient.DETONATE = false;
                 break;
             case 13: // ENTER
+                if (BombermanClient.typeCommand == true){
+                    break;
+                }
                 if (BombermanClient.changingName == true){
                     BombermanClient.changingName = false;
                     if (BombermanClient.changeName()){
@@ -243,6 +249,15 @@ BombermanClient.init = function(){
                 case "msg":
                     BombermanClient.showMessage(toProc);
                     break;
+                case "admin":
+                    BombermanClient.makeAdmin();
+                    break;
+                case "notadmin":
+                    BombermanClient.notAdmin();
+                    break;
+                case "status":
+                    BombermanClient.writeStatus(toProc);
+                    break;
             }
         }
         BombermanClient.socket.onclose = function(msg){
@@ -269,6 +284,61 @@ BombermanClient.initGame = function(){
     BombermanClient.bindKeyUp();
     BombermanClient.timer = setInterval("BombermanClient.updateStatus()", 10); // send requests every 10 miliseconds => limit to 100 FPS (at most)
 }
+
+BombermanClient.writeStatus = function(msg){
+    $("#consoleStatus").val(msg);
+}
+
+ BombermanClient.sendAdminCommand = function(command){
+    var command =  jQuery.trim(jQuery("#adminConsole").val());
+    if (command == ""){
+        BombermanClient.writeStatus("Enter a command before sending it to the server");
+        return;
+    }
+    try {
+        BombermanClient.socket.send(command);
+    } catch (ex) {
+        BombermanClient.log(ex);
+    }
+    jQuery("#adminConsole").val("");
+ }
+
+BombermanClient.makeAdmin = function(){
+    BombermanClient.log("you are now admin");
+    BombermanClient.isAdmin = true;
+    var str = "";
+    str += "<div style='background: #ccc;color: #000;'>";
+    str += "<span id='adminConsoleSpan'></span>";
+    str += "<input type='text' id='adminConsole' style='border:0px;'/>";
+    str += "<input type='button' id='sendAdminCommand' onClick='BombermanClient.sendAdminCommand()' value='Send' />";
+    str += "<br />";
+    str += "<textarea style='width:100%; height:45px;' disabled='disabled' id='consoleStatus'></textarea>";
+    str += '</div>';
+    jQuery("#nameBox").append(str);
+    
+    jQuery("#adminConsole").keydown(function(e) {
+        if (e.keyCode == 13){ // ENTER
+            BombermanClient.typeCommand = true;
+            e.preventDefault();
+            return false;
+        }
+    });
+    
+    jQuery("#adminConsole").keyup(function(e) {
+        if (e.keyCode == 13){ // ENTER
+            BombermanClient.sendAdminCommand();
+            BombermanClient.typeCommand = false;
+            e.preventDefault();
+            return false;
+        }
+    });
+    
+}
+
+BombermanClient.notAdmin = function(){
+    alert("You are not admin!");
+}
+
 
 BombermanClient.showLogInFailed = function(){
     alert("Login Failed");
@@ -605,6 +675,12 @@ BombermanClient.renderChars = function(toProc){
            BombermanClient.stats[x.id]["deaths"] = x.deaths;
            BombermanClient.stats[x.id]["connectionTime"] = x.connectionTime;
            BombermanClient.stats[x.id]["name"] = x.name;
+           
+           if (x.id == BombermanClient.charID){
+               BombermanClient.currentPlayer = x;
+               $("#adminConsoleSpan").html(BombermanClient.currentPlayer.name+"@cuxBomberman:~$ ");
+           }
+           
 //           log(x);
            if (jQuery("#char_"+x.id).length > 0){
                 var ob = jQuery("#char_"+x.id);

@@ -144,6 +144,12 @@ public class BCharacter extends AbstractBlock{
      */
     private int userId = 0;
     
+    
+    /**
+     * Set to 1 if the current player has admin privileges
+     */
+    private boolean isAdmin = false;
+    
     /**
      * Static initialization of the player textures
      */
@@ -212,6 +218,22 @@ public class BCharacter extends AbstractBlock{
             this.plantedBombs--;
 //            System.out.println("BCharacter.dec - " + this.getId()+" : am pus " + this.getPlantedBombs());
         }
+    }
+    
+    /**
+     * Check if the current player has admin privileges
+     * @return true if the user has admin privileges
+     */
+    public boolean getIsAdmin(){
+        return this.isAdmin;
+    }
+    
+    /**
+     * Gives/revokes admin privileges on the current player
+     * @param isAdmin - the new value for the <b>isAdmin</b> property
+     */
+    public void setIsAdmin(boolean isAdmin){
+        this.isAdmin = isAdmin;
     }
     
     /**

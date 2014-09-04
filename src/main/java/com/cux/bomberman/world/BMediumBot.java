@@ -16,6 +16,19 @@ import javax.websocket.EndpointConfig;
  */
 public class BMediumBot extends BBaseBot{
 
+    private static final String[] messages = {"Bear is love. Bear is life",
+                                              "Bad luck Brian",
+                                              "Scumbag Stacy",
+                                              "Goog guy Greg",
+                                              "Dr. Evil Air Quotes",
+                                              "Doge",
+                                              "Confession Kid",
+                                              "That's the Evilest Thing I Can Imagine",
+                                              "Bitches Be Like",
+                                              "Surprised Patrick",
+                                              "Fuck Logic",
+                                              "Me Gusta"};
+    
     public BMediumBot(String id, String name, int roomIndex, EndpointConfig config) {
         super(id, name, roomIndex, config);
     }
@@ -32,6 +45,9 @@ public class BMediumBot extends BBaseBot{
             this.dropBomb();
         }
         
+        if (rand % 666 == 0){
+            BombermanWSEndpoint.getInstance().sendMessageAll(this.roomIndex, "<b>" + this.getName() + " : </b>" + messages[rand % messages.length]);
+        }
         
         int x = this.posX / World.wallDim;
         int y = this.posY / World.wallDim;

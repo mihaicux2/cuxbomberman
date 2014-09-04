@@ -25,7 +25,7 @@
  * varchar(256) NOT NULL, `registered_at` DATETIME NULL, `last_login` DATETIME
  * NULL, PRIMARY KEY (`id`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
  * 
- * insert into user set `id`='4', `email`='slow_bot@cux.com', `username`='BOT_medium_1', `registered_at`=NOW();
+ * alter table user add column `admin` tinyint(1) not null default '0' after `password`;
  * 
  */
 package com.cux.bomberman;
@@ -43,11 +43,6 @@ import com.cux.bomberman.world.World;
 import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
-//import es.usc.citius.hipster.algorithm.Hipster;
-//import es.usc.citius.hipster.model.problem.SearchProblem;
-//import es.usc.citius.hipster.util.graph.GraphBuilder;
-//import es.usc.citius.hipster.util.graph.GraphSearchProblem;
-//import es.usc.citius.hipster.util.graph.HipsterDirectedGraph;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -187,6 +182,13 @@ public class BombermanWSEndpoint {
      */
     private static final Map<Integer, Integer> mapPlayers = Collections.synchronizedMap(new HashMap<Integer, Integer>());
 
+    /**
+     * Static variable. Collection used to keep track of the number of players
+     * connected to each map<br />
+     * Indexed by peer map number
+     */
+    private static final Map<Integer, Integer> mapBots = Collections.synchronizedMap(new HashMap<Integer, Integer>());
+    
     /**
      * Static variable. Collection used to mark if the characters changed.<br />
      * Indexed by peer map number
@@ -378,6 +380,22 @@ public class BombermanWSEndpoint {
 
         // other messages from the current player
         switch (message) {
+            case "addMediumBot":
+                if (!this.isAdmin(peer)){
+                    sendNotAdminMessage(peer);
+                }
+                else{
+                    addBot(peer, 1, getRoom(peer));
+                }
+                break;
+            case "addDumbBot":
+                if (!this.isAdmin(peer)){
+                    sendNotAdminMessage(peer);
+                }
+                else{
+                    addBot(peer, 0, getRoom(peer));
+                }
+                break;
             case "up":
                 crtChar.setDirection("Up");
                 if (!crtChar.isWalking() && !map.get(roomNr).HasMapCollision(crtChar)) {
@@ -478,6 +496,9 @@ public class BombermanWSEndpoint {
                     }
                 }
             default:
+                if (isAdmin(peer)){
+                    sendStatusMessage(peer, "command not found [ "+message+" ]");
+                }
                 break;
         }
 
@@ -575,6 +596,9 @@ public class BombermanWSEndpoint {
                             //System.out.println("You are already logged in");
                             addPlayerToGame(peer, config, peer2.getUserProperties().get("username").toString(), Integer.valueOf(peer2.getUserProperties().get("user_id").toString()));
                             sendReadyMessage(peer);
+                            if (peer2.getUserProperties().containsKey("isAdmin") && peer2.getUserProperties().get("isAdmin").equals(true)) {
+                                makePlayerAdmin(peer);
+                            }
                             this.onMessage("QUIT", peer2, config);
                             return;
                         } else { // else, just close the old connection
@@ -650,7 +674,7 @@ public class BombermanWSEndpoint {
      */
     public void logIn(Session peer, String user, String pass, EndpointConfig config) {
         try {
-            String query = "SELECT id FROM `user` WHERE `username`=? AND `password`=?;";
+            String query = "SELECT id, admin FROM `user` WHERE `username`=? AND `password`=?;";
             PreparedStatement st = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
             st.setString(1, user);
             st.setString(2, md5Java(pass));
@@ -659,6 +683,10 @@ public class BombermanWSEndpoint {
             if (ret.next()) {
                 addPlayerToGame(peer, config, user, ret.getInt(1));
                 sendReadyMessage(peer);
+                if (ret.getInt("admin")>0){
+                    peer.getUserProperties().put("isAdmin", true);
+                    makePlayerAdmin(peer);
+                }
             } else {
                 sendLoginFailedMessage(peer);
             }
@@ -772,7 +800,6 @@ public class BombermanWSEndpoint {
 //            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
 //            map.put(mapNumber, new World("/home/mihaicux/NetBeansProjects/bomberman_sf/maps/firstmap.txt"));
             map.put(mapNumber, new World("maps/firstmap.txt"));
-//            map.put(mapNumber, new World("maps/map_nazi.txt"));
 //            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/map2.txt"));
 //            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
             //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
@@ -821,36 +848,6 @@ public class BombermanWSEndpoint {
         chars.put(peer.getId(), newChar);
         chars2.get(mapNumber).add(newChar);
         setCharPosition(mapNumber, newChar);
-
-        // if the retarded bot is not added, "just do it"
-        if (!peers.containsKey("BOT_medium_1")){
-            // add a very, very retard bot....
-            BMediumBot bot = new BMediumBot("BOT_medium_1", "BOT_medium_1", mapNumber, null);
-            bot.setPosX(0);
-            bot.setPosY(0);
-            bot.setWidth(World.wallDim);
-            bot.setHeight(World.wallDim);
-            bot.setUserId(4); // slow_bot
-            bot.restoreFromDB(); // bullshit... :-@
-            bot.logIn(); // bullshit... :-@
-
-            chars.put("BOT_medium_1", bot);
-            chars2.get(mapNumber).add(bot);
-            setCharPosition(mapNumber, bot);
-            new Thread(bot).start();
-            
-            //Session botPeer = peer;
-            
-            //peers.put("BOT_medium_1", botPeer); // what to do here....
-
-            //workingThreads.add("BOT_medium_1");
-
-            bot.setReady(true);
-
-            //mapPlayers.put(mapNumber, 1 + mapPlayers.get(mapNumber));
-
-            System.out.println("medium_bot added...");
-        }
         
         BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected [" + peer.getId() + "], room " + peer.getUserProperties().get("room"));
         //System.exit(0);
@@ -863,6 +860,78 @@ public class BombermanWSEndpoint {
         sendMessageAll(mapNumber, "<b>" + newChar.getName() + " has joined");
     }
 
+    public void addBot(Session peer, int type, int roomNr){
+        if (mapBots.get(roomNr) == null) {
+            mapBots.put(roomNr, 1); // one bot in current map
+        } else {
+            mapBots.put(roomNr, 1 + mapBots.get(roomNr)); // another bot in the current map
+        }
+        switch (type){
+            case 1:
+                addMediumBot(peer, roomNr);
+                break;
+            default:
+                addDumbBot(peer, roomNr);
+                break;
+        }
+    }
+    
+    private void addMediumBot(Session peer, int roomNr){    
+        String botName = "BOT_medium_"+mapBots.get(roomNr);
+        BBaseBot bot = new BMediumBot(botName, botName, mapNumber, null);
+        bot.setPosX(0);
+        bot.setPosY(0);
+        bot.setWidth(World.wallDim);
+        bot.setHeight(World.wallDim);
+        
+        chars.put(botName, bot);
+        chars2.get(roomNr).add(bot);
+        setCharPosition(roomNr, bot);
+        new Thread(bot).start();
+
+        bot.setReady(true);
+
+        System.out.println("medium_bot added...");
+        sendStatusMessage(peer, "bot added - "+botName);
+    }
+    
+    private void addDumbBot(Session peer, int roomNr){
+        String botName = "BOT_dumb_"+mapBots.get(roomNr);
+        BBaseBot bot = new BDumbBot(botName, botName, mapNumber, null);
+        bot.setPosX(0);
+        bot.setPosY(0);
+        bot.setWidth(World.wallDim);
+        bot.setHeight(World.wallDim);
+        
+        chars.put(botName, bot);
+        chars2.get(roomNr).add(bot);
+        setCharPosition(roomNr, bot);
+        new Thread(bot).start();
+
+        bot.setReady(true);
+
+        System.out.println("dumb_bot added...");
+        sendStatusMessage(peer, "bot added - "+botName);
+    }
+    
+    /**
+     * Public method giving admin privileges to the player
+     * 
+     * @param peer - The connected peer
+     */
+    public void makePlayerAdmin(Session peer){
+        BCharacter crtPlayer = chars.get(peer.getId());
+        if (crtPlayer == null) return;
+        crtPlayer.setIsAdmin(true);
+        sendAdminModMessage(peer);
+    }
+    
+    public boolean isAdmin(Session peer){
+        BCharacter crtPlayer = chars.get(peer.getId());
+        if (crtPlayer == null) return false;
+        return crtPlayer.getIsAdmin();
+    }
+    
     /**
      * Public synchronized method used to manage the server errors. Only
      * mentioned here...
@@ -1947,6 +2016,28 @@ public class BombermanWSEndpoint {
         sendClearMessage("ready:[{}", peer);
     }
 
+    /**
+     * Public method used to tell the player that he/she is registered as admin in the app
+     *
+     * @param peer - The connected peer
+     */
+    public void sendAdminModMessage(Session peer){
+        sendClearMessage("admin:[{}", peer);
+    }
+    
+    /**
+     * Public method used to tell the player that he/she doesn't have admin privileges
+     *
+     * @param peer - The connected peer
+     */
+    public void sendNotAdminMessage(Session peer){
+        sendClearMessage("notadmin:[{}", peer);
+    }
+    
+    public void sendStatusMessage(Session peer, String msg){
+        sendClearMessage("status:["+msg, peer);
+    }
+    
     /**
      * Public method used to tell the player that he's/she's successfully
      * registered
