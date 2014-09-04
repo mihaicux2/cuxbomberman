@@ -311,7 +311,7 @@ public class BMediumBot extends BBaseBot{
     
     @Override
     public void run() {
-        while (true) {
+        while (this.running) {
             try {
                 this.searchAndDestroy();
                 Thread.sleep(100); // limit bot action to 10 FPS

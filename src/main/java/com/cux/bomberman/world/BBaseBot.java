@@ -32,10 +32,20 @@ import javax.websocket.Session;
 public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI{
     
     protected boolean markedBlock[][];    
+    protected boolean running = false;
     
     public BBaseBot(String id, String name, int roomIndex, EndpointConfig config) {
         super(id, name, roomIndex, config);
         this.markedBlock = new boolean[World.getWidth()/World.wallDim][World.getHeight()/World.wallDim];
+        this.running = true;
+    }
+    
+    public void setRunning(boolean running){
+        this.running = running;
+    }
+    
+    public boolean getRunning(){
+        return this.running;
     }
     
     @Override

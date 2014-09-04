@@ -307,12 +307,13 @@ BombermanClient.makeAdmin = function(){
     BombermanClient.log("you are now admin");
     BombermanClient.isAdmin = true;
     var str = "";
-    str += "<div style='background: #ccc;color: #000;'>";
+    str += "<div style='background: #000; border-radius:5px; margin:3px;'>";
+    str += "<div class='consoleDiv'>";
     str += "<span id='adminConsoleSpan'></span>";
-    str += "<input type='text' id='adminConsole' style='border:0px;'/>";
+    str += "<input type='text' id='adminConsole' class='consoleInput' style='border-bottom:1px dashed #fff;' />";
     str += "<input type='button' id='sendAdminCommand' onClick='BombermanClient.sendAdminCommand()' value='Send' />";
-    str += "<br />";
-    str += "<textarea style='width:100%; height:45px;' disabled='disabled' id='consoleStatus'></textarea>";
+    str += "</div>";
+    str += "<textarea style='width:100%; border-top: 1px solid #fff;' class='consoleInput' rows='10' disabled='disabled' id='consoleStatus'>TYPE `help` to see the available commands</textarea>";
     str += '</div>';
     jQuery("#nameBox").append(str);
     

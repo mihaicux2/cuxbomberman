@@ -48,7 +48,7 @@ public class BDumbBot extends BBaseBot{
     
     @Override
     public void run() {
-        while (true) {
+        while (this.running) {
             try {
                 this.searchAndDestroy();
                 Thread.sleep(500); // limit dumb bot action to 2 FPS

@@ -99,6 +99,12 @@ public class BombermanWSEndpoint {
      * Indexed by peer id
      */
     public static final Map<String, Session> peers = Collections.synchronizedMap(new HashMap<String, Session>());
+    
+    /**
+     * Static variable. Collection used to find users by their nicknames ( really quick )<br />
+     * Indexed by player name, stores peer id
+     */
+    public static final Map<String, String> charMapByName = Collections.synchronizedMap(new HashMap<String, String>());
 
     /**
      * Static variable. Collection used to keep track of all the existing
@@ -356,6 +362,7 @@ public class BombermanWSEndpoint {
         if (crtChar == null) {
             return null; // message from non-logged in user
         }
+        
         // change player name
         if (message.length() > 5 && message.substring(0, 5).toLowerCase().equals("name ")) {
             String name = message.substring(message.indexOf(" ")).trim();
@@ -378,9 +385,50 @@ public class BombermanWSEndpoint {
             }
         }
 
+        // the current player tries to kick a player out of the game :>
+        if (message.length() > 5 && message.substring(0, 5).toLowerCase().equals("kick ")){
+            if (!isAdmin(peer)){
+                sendNotAdminMessage(peer);
+                return null;
+            }
+            String name = message.substring(message.indexOf(" ")).trim();
+            if (name.length() > 0){
+                BCharacter kickedChar = findCharByName(name);
+                if (kickedChar == null){
+                    sendStatusMessage(peer, name + " is not connected dummy ;)");
+                }
+                else{
+                    BCharacter crtPlayer = chars.get(peer.getId());
+                    if (crtPlayer != null && name.equals(crtPlayer.getName())){
+                        sendStatusMessage(peer, "You cannot kick yourself silly :>");
+                        return null;
+                    }
+                    else if (peers.containsKey(kickedChar.getId())){
+                        this.onMessage("QUIT", peers.get(kickedChar.getId()), config);
+                    }
+                    else{
+                        kickBot((BBaseBot)kickedChar);
+                    }
+                    sendStatusMessage(peer, name + " is out. Are you happy?");
+                }
+            }
+            return null;
+        }
+        
+        if (message.toLowerCase().equals("help")){
+            if (!isAdmin(peer)){
+                sendNotAdminMessage(peer);
+                return null;
+            }
+            sendStatusMessage(peer, getHelpMenu());
+            return null;
+        }
+        
+        String stdMessage = message.toLowerCase();
+        
         // other messages from the current player
-        switch (message) {
-            case "addMediumBot":
+        switch (stdMessage) {
+            case "addmediumbot":
                 if (!this.isAdmin(peer)){
                     sendNotAdminMessage(peer);
                 }
@@ -388,7 +436,7 @@ public class BombermanWSEndpoint {
                     addBot(peer, 1, getRoom(peer));
                 }
                 break;
-            case "addDumbBot":
+            case "adddumbbot":
                 if (!this.isAdmin(peer)){
                     sendNotAdminMessage(peer);
                 }
@@ -467,9 +515,10 @@ public class BombermanWSEndpoint {
                 crtChar.setState("Win");
                 charsChanged.put(roomNr, true);
                 break;
-            case "QUIT":
+            case "quit":
                 String initialName = crtChar.getName();
                 System.out.println(initialName + " has left the game");
+                charMapByName.remove(initialName);
                 HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
                 String sessionId = httpSession.getId();
                 httpSession.invalidate();
@@ -497,7 +546,7 @@ public class BombermanWSEndpoint {
                 }
             default:
                 if (isAdmin(peer)){
-                    sendStatusMessage(peer, "command not found [ "+message+" ]");
+                    sendStatusMessage(peer, "command not found [ "+message+" ]\nTYPE `help` to see the available commands");
                 }
                 break;
         }
@@ -741,6 +790,36 @@ public class BombermanWSEndpoint {
         return digest;
     }
 
+    private String getHelpMenu(){
+        return "cuxBomberman v.07\n"+
+                "TYPE `addMediumBot` to add a new bot to the game\n"+
+                "TYPE `addDumbBot` to add a new dumb bot to the game\n"+
+                "TYPE `kick [username]` to remove a player from the game (bots included)\n"+
+                "TYPE `help` to view this message again\n";
+    }
+    
+    /**
+     * Removes a bot from the game
+     * @param kickedChar - the bot to be kicked
+     */
+    public void kickBot(BBaseBot kickedChar){
+        try{
+            kickedChar.setRunning(false);
+            chars.remove(kickedChar.getId());
+            chars2.get(kickedChar.roomIndex).remove(kickedChar);
+        }
+        catch(Exception e){
+            BLogger.getInstance().logException2(e);
+        }
+    }
+    
+    public BCharacter findCharByName(String name){
+        if (charMapByName.containsKey(name)){
+            return chars.get(charMapByName.get(name));
+        }
+        return null;
+    }
+    
     /**
      * Public method used add a player to the game
      *
@@ -816,6 +895,8 @@ public class BombermanWSEndpoint {
         newChar.restoreFromDB();
         newChar.logIn();
 //        newChar.setPeer(peer);
+        
+        charMapByName.put(username, peer.getId());
         
         if (blownWalls.isEmpty() || blownWalls.get(mapNumber) == null) {
             blownWalls.put(mapNumber, new HashSet<String>());
@@ -893,6 +974,7 @@ public class BombermanWSEndpoint {
 
         System.out.println("medium_bot added...");
         sendStatusMessage(peer, "bot added - "+botName);
+        charMapByName.put(botName, botName);
     }
     
     private void addDumbBot(Session peer, int roomNr){
@@ -912,6 +994,7 @@ public class BombermanWSEndpoint {
 
         System.out.println("dumb_bot added...");
         sendStatusMessage(peer, "bot added - "+botName);
+        charMapByName.put(botName, botName);
     }
     
     /**
