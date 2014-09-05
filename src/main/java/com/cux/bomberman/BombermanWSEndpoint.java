@@ -2221,4 +2221,8 @@ public class BombermanWSEndpoint {
         }
     }
 
+    public boolean bombReaches(BBomb bomb, int minReach){
+        return bomb.getOwner().getBombRange() >= minReach;
+    }
+    
 }

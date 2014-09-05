@@ -33,6 +33,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
     
     protected boolean markedBlock[][];    
     protected boolean running = false;
+    protected int searchRange = 3;
     
     public BBaseBot(String id, String name, int roomIndex, EndpointConfig config) {
         super(id, name, roomIndex, config);
