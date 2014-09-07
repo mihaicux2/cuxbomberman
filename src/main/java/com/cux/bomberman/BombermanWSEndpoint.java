@@ -1384,7 +1384,7 @@ public class BombermanWSEndpoint {
      */
 //    protected synchronized void triggerBlewCharacter(final Session peer, final int x, final int y) {
     protected synchronized void triggerBlewCharacter(final BCharacter winner, final int x, final int y) {
-        System.out.println("hit...");
+        //System.out.println("hit...");
         new Thread(new Runnable() {
             @Override
             public synchronized void run() {
