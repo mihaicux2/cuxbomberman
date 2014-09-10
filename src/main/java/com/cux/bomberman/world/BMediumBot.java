@@ -44,7 +44,7 @@ public class BMediumBot extends BBaseBot{
     
     public BMediumBot(String id, String name, int roomIndex, EndpointConfig config) {
         super(id, name, roomIndex, config);
-        this.searchRange = 5;
+        this.searchRange = 6; // 13 x 13 (13 = 1 + 6*2) matrix for the search area
     }
     
     public void move(String direction){
@@ -62,6 +62,15 @@ public class BMediumBot extends BBaseBot{
                 moveUp();
                 break;
         }
+    }
+    
+    public void moveRandom(){
+        Random r = new Random();
+        int rand = r.nextInt(100000);
+        if (rand % 11 == 0)     move("left");
+        else if (rand % 7 == 0) move("down");
+        else if (rand % 5 == 0) move("up");
+        else                    move("down");
     }
     
     public boolean checkNextBlock(int x, int y, String direction){
@@ -87,10 +96,6 @@ public class BMediumBot extends BBaseBot{
                         break;
                 }
                 break;
-            case "char": // try to kill the bot
-                ret = false;
-                dropBomb();
-                break;
             case "wall": // try to blow it, if it is blowable
                 if (((AbstractWall)block).isBlowable()){
                     ret = false;
@@ -103,8 +108,6 @@ public class BMediumBot extends BBaseBot{
     
     @Override
     public void searchAndDestroy(){
-        
-        //System.out.println("search & destroy");
         
         // current bot position
         int x = this.posX / World.wallDim;
@@ -240,7 +243,12 @@ public class BMediumBot extends BBaseBot{
                 expandDown = false;
             }
         }
-                
+               
+        // if the bot planted a bomb, no searching is required
+        if (this.plantedBombs > 0 && !this.triggered){
+            return;
+        }
+        
         // if there is no danger, check for the best next move
         if (!bombFound){
             boolean panoramicView = true; // tells weather or not to check for further blocks
@@ -280,187 +288,188 @@ public class BMediumBot extends BBaseBot{
              * -2 - negative item
              * 3  - bomb
              * 4  - character
+             * 5  - the bot itself
              */ 
-            int blocks[][]  = new int[xMax-xMin + 2][yMax - yMin +2];
+            int blocks[][]  = new int[xMax-xMin + 1][yMax - yMin + 1];
+            AbstractBlock blocks2[][]  = new AbstractBlock[xMax-xMin + 1][yMax - yMin + 1];
             // adjacency list
             HashMap<AbstractBlock, Queue<SimpleEntry<AbstractBlock, String>>> neighbours = new HashMap<>();
             // detected items
-            ArrayList<AbstractItem> nearItems = new ArrayList<>();
+            ArrayList<AbstractBlock> nearItems = new ArrayList<>();
             // detected walls
-            ArrayList<AbstractWall> nearWalls = new ArrayList<>();
+            ArrayList<AbstractBlock> nearWalls = new ArrayList<>();
             // detected chars
-            ArrayList<BCharacter>   nearChars = new ArrayList<>();
+            ArrayList<AbstractBlock> nearChars = new ArrayList<>();
             
-            // preprocessing
+            // preprocessing : initialize the blocks matrix
             for (i = xMin; i <= xMax; i++){
                 for (j = yMin; j <= yMax; j++){
                     AbstractBlock block = BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[i][j];
                     if (block == null){
                         block = new EmptyWall(i * World.wallDim, j * World.wallDim);
                     }
+                    blocks2[i-xMin][j-yMin] = block;
                     if (!neighbours.containsKey(block)){
                         neighbours.put(block, new LinkedList<SimpleEntry<AbstractBlock, String>>());
                     }
-                    String type = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, i, j);
                     
-                    switch (type){
-                        case "wall":
-                            if (((AbstractWall)block).isBlowable()){
-                                blocks[i-xMin][j-yMin] = 1; // blowable wall
-                                nearWalls.add((AbstractWall)block);
-                            }
-                            else{
-                                blocks[i-xMin][j-yMin] = -1; // unblowable wall...
-                            }
-                            break;
-                        case "item":
-                            String itemType = ((AbstractItem)block).getName();
-                            switch (itemType){
-                                case "ebola":
-                                case "slow":
-                                    blocks[i-xMin][j-yMin] = -2; // items that we don't want
-                                    break;
-                                default:
-                                    blocks[i-xMin][j-yMin] = 2;
-                                    nearItems.add((AbstractItem)block);
-                                    break;
-                            }
-                            break;
-                        case "bomb":
-                            blocks[i-xMin][j-yMin] = 3;
-                            break;
-                        case "char":
-                            HashMap<String, BCharacter>[][] chars = BombermanWSEndpoint.map.get(this.roomIndex).chars;
-                            if (chars[i][j] != null && !chars[i][j].isEmpty()) {
-                                blocks[i-xMin][j-yMin] = 4;
-                                Iterator it = chars[i][j].entrySet().iterator();
-                                // add in the list only one character
+                    HashMap<String, BCharacter>[][] chars = BombermanWSEndpoint.map.get(this.roomIndex).chars;
+                    if (chars[i][j] != null && !chars[i][j].isEmpty()) {
+                        if (chars[i][j].size() == 1 && i == x && j == y){
+                            blocks[i-xMin][j-yMin] = 5; // myself (to be read with irish accent)
+                        }
+                        else{
+                            Iterator it = chars[i][j].entrySet().iterator();
+                            while (it.hasNext()){
                                 Map.Entry pairs = (Map.Entry) it.next();
                                 BCharacter nearChar = (BCharacter)pairs.getValue();
-                                // obviousl
                                 if (!nearChar.getId().equals(this.getId())){
-                                    nearChars.add(nearChar);
+                                    nearChars.add(blocks2[i-xMin][j-yMin]);
+                                    blocks[i-xMin][j-yMin] = 4;
+                                    break;
                                 }
                             }
-                            break;
-                            /**
-                             * The next piece of code is kept only with didactical purpose.
-                             * It is commented out because JAVA, by default, sets all integers to 0
-                             */
-//                        case "empty":
-//                        default:
-//                            blocks[i-xMin][j-yMin] = 0;
+                        }
                     }
+                    else{
+                        String type = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, i, j);
+                        switch (type) {
+                            case "wall":
+                                if (((AbstractWall) block).isBlowable()) {
+                                    blocks[i - xMin][j - yMin] = 1; // blowable wall
+                                    nearWalls.add(blocks2[i-xMin][j-yMin]);
+                                } else {
+                                    blocks[i - xMin][j - yMin] = -1; // unblowable wall...
+                                }
+                                break;
+                            case "item":
+                                String itemType = ((AbstractItem) block).getName();
+                                switch (itemType) {
+                                    case "ebola":
+                                    case "slow":
+                                        blocks[i - xMin][j - yMin] = -2; // items that we don't want
+                                        break;
+                                    default:
+                                        blocks[i - xMin][j - yMin] = 2;
+                                        nearItems.add(blocks2[i-xMin][j-yMin]);
+                                        break;
+                                }
+                                break;
+                            case "bomb":
+                                blocks[i - xMin][j - yMin] = 3;
+                                break;
+                        }
+                    }
+                    
                 }
             }
             
             for (i = xMin; i <= xMax; i++){
                 for (j = yMin; j <= yMax; j++){
-                    AbstractBlock block = BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[i][j];
-                    if (block == null){
-                        block = new EmptyWall(i * World.wallDim, j * World.wallDim);
-                    }
+                    AbstractBlock block = blocks2[i-xMin][j-yMin];
                     if (!neighbours.containsKey(block)){
                         neighbours.put(block, new LinkedList<SimpleEntry<AbstractBlock, String>>());
                     }
-                    if ( i - 1 - xMin > -1 ){ // left block
-                        // item, char or empty
-                        if (blocks[i-1-xMin][j-yMin] == 4 || /*blocks[i-1-xMin][j-yMin] == 2 ||*/ blocks[i-1-xMin][j-yMin] == 0){
-                            AbstractBlock block2 = BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[i-1][j];
-                            if (block2 == null){
-                                neighbours.get(block).add(new SimpleEntry(new EmptyWall( (i - 1) * World.wallDim, j * World.wallDim), "left"));
+                    
+                    if ( i > xMin ){ // left block
+                        // check if the neighbour is an empty block or a character (even the bot itself)
+                        if (blocks[i-1-xMin][j-yMin] == 5 || blocks[i-1-xMin][j-yMin] == 4 || blocks[i-1-xMin][j-yMin] == 0){
+                            AbstractBlock block2 = blocks2[i-1-xMin][j-yMin];
+                            SimpleEntry<AbstractBlock, String> entry = new SimpleEntry(block2, "left");
+                            if (!neighbours.get(block).contains(entry)){
+                                neighbours.get(block).add(entry);
                             }
-                            else{
-                                neighbours.get(block).add(new SimpleEntry(block2, "left"));
-                            }
-                        }
-                    }
-                    if (i + 1 <= xMax){ // right block
-                        // item, char or empty
-                        if (blocks[i+1-xMin][j-yMin] == 4 || /*blocks[i+1-xMin][j-yMin] == 2 ||*/ blocks[i+1-xMin][j-yMin] == 0){
-                            AbstractBlock block2 = BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[i+1][j];
-                            if (block2 == null){
-                                neighbours.get(block).add(new SimpleEntry(new EmptyWall( (i + 1) * World.wallDim, j * World.wallDim), "right"));
-                            }
-                            else{
-                                neighbours.get(block).add(new SimpleEntry(block2, "right"));
+                            
+                            if (blocks[i-xMin][j-yMin] == 5 || blocks[i-xMin][j-yMin] == 4 || blocks[i-xMin][j-yMin] == 0){
+                                // reversed link, opposite direction ;)
+                                if (!neighbours.containsKey(block2)){
+                                    neighbours.put(block2, new LinkedList<SimpleEntry<AbstractBlock, String>>());
+                                }
+                                SimpleEntry<AbstractBlock, String> entry2 = new SimpleEntry(block, "right");
+                                if (!neighbours.get(block2).contains(entry2)){
+                                    neighbours.get(block2).add(entry2);
+                                }
                             }
                         }
                     }
-                    if ( j - 1 - yMin > -1){ // up block
-                        // item, char or empty
-                        if (blocks[i-xMin][j-1-yMin] == 4 || /*blocks[i-xMin][j-1-yMin] == 2 ||*/ blocks[i-xMin][j-1-yMin] == 0){
-                            AbstractBlock block2 = BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[i][j-1];
-                            if (block2 == null){
-                                neighbours.get(block).add(new SimpleEntry(new EmptyWall(i * World.wallDim, (j - 1) * World.wallDim), "up"));
+                    
+                    if ( i < xMax ){ // right block
+                        // check if the neighbour is an empty block or a character (even the bot itself)
+                        if (blocks[i+1-xMin][j-yMin] == 5 || blocks[i+1-xMin][j-yMin] == 4 || blocks[i+1-xMin][j-yMin] == 0){
+                            AbstractBlock block2 = blocks2[i-xMin+1][j-yMin];
+                            SimpleEntry<AbstractBlock, String> entry = new SimpleEntry(block2, "right");
+                            if (!neighbours.get(block).contains(entry)){
+                                neighbours.get(block).add(entry);
                             }
-                            else{
-                                neighbours.get(block).add(new SimpleEntry(block2, "up"));
+                            
+                            if (blocks[i-xMin][j-yMin] == 5 || blocks[i-xMin][j-yMin] == 4 || blocks[i-xMin][j-yMin] == 0){
+                                // reversed link, opposite direction ;)
+                                if (!neighbours.containsKey(block2)){
+                                    neighbours.put(block2, new LinkedList<SimpleEntry<AbstractBlock, String>>());
+                                }
+                                SimpleEntry<AbstractBlock, String> entry2 = new SimpleEntry(block, "left");
+                                if (!neighbours.get(block2).contains(entry2)){
+                                    neighbours.get(block2).add(entry2);
+                                }
                             }
                         }
                     }
-                    if ( j + 1 <= yMax){ // down block
-                        if (blocks[i-xMin][j+1-yMin] == 4 || /*blocks[i-xMin][j+1-yMin] == 2 ||*/ blocks[i-xMin][j+1-yMin] == 0){
-                            AbstractBlock block2 = BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[i][j+1];
-                            if (block2 == null){
-                                neighbours.get(block).add(new SimpleEntry(new EmptyWall(i * World.wallDim, (j + 1) * World.wallDim), "down"));
+                    
+                    if ( j > yMin ){ // up block
+                        // check if the neighbour is an empty block or a character (even the bot itself)
+                        if (blocks[i-xMin][j-1-yMin] == 5 || blocks[i-xMin][j-1-yMin] == 4 || blocks[i-xMin][j-1-yMin] == 0){
+                            AbstractBlock block2 = blocks2[i-xMin][j-yMin-1];
+                            SimpleEntry<AbstractBlock, String> entry = new SimpleEntry(block2, "up");
+                            if (!neighbours.get(block).contains(entry)){
+                                neighbours.get(block).add(entry);
                             }
-                            else{
-                                neighbours.get(block).add(new SimpleEntry(block2, "down"));
+                            
+                            if (blocks[i-xMin][j-yMin] == 5 || blocks[i-xMin][j-yMin] == 4 || blocks[i-xMin][j-yMin] == 0){
+                                // reversed link, opposite direction ;)
+                                if (!neighbours.containsKey(block2)){
+                                    neighbours.put(block2, new LinkedList<SimpleEntry<AbstractBlock, String>>());
+                                }
+                                SimpleEntry<AbstractBlock, String> entry2 = new SimpleEntry(block, "down");
+                                if (!neighbours.get(block2).contains(entry2)){
+                                    neighbours.get(block2).add(entry2);
+                                }
                             }
                         }
                     }
-                }
-            }
-            
-            AbstractBlock block = (AbstractBlock)this;
-            neighbours.put(block, new LinkedList<SimpleEntry<AbstractBlock, String>>());
-            if ( x - 1 - xMin > -1 ){ // left block
-                // item, char or empty
-                if (blocks[x-1-xMin][y-yMin] == 4 || /*blocks[x-1-xMin][y-yMin] == 2 ||*/ blocks[x-1-xMin][y-yMin] == 0){
-                    AbstractBlock block2 = BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[x-1][y];
-                    if (block2 == null){
-                        neighbours.get(block).add(new SimpleEntry(new EmptyWall( (x - 1) * World.wallDim, y * World.wallDim), "left"));
-                    }
-                    else{
-                        neighbours.get(block).add(new SimpleEntry(block2, "left"));
-                    }
-                }
-            }
-            if (x + 1 <= xMax) { // right block
-                // item, char or empty
-                if (blocks[x + 1 - xMin][y - yMin] == 4 || /*blocks[x + 1 - xMin][y - yMin] == 2 ||*/ blocks[x + 1 - xMin][y - yMin] == 0) {
-                    AbstractBlock block2 = BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[x + 1][y];
-                    if (block2 == null) {
-                        neighbours.get(block).add(new SimpleEntry(new EmptyWall((x + 1) * World.wallDim, y * World.wallDim), "right"));
-                    } else {
-                        neighbours.get(block).add(new SimpleEntry(block2, "right"));
-                    }
-                }
-            }
-            if (y - 1 - yMin > -1) { // up block
-                // item, char or empty
-                if (blocks[x - xMin][y - 1 - yMin] == 4 || /*blocks[x - xMin][y - 1 - yMin] == 2 ||*/ blocks[x - xMin][y - 1 - yMin] == 0) {
-                    AbstractBlock block2 = BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[x][y - 1];
-                    if (block2 == null) {
-                        neighbours.get(block).add(new SimpleEntry(new EmptyWall(x * World.wallDim, (y - 1) * World.wallDim), "up"));
-                    } else {
-                        neighbours.get(block).add(new SimpleEntry(block2, "up"));
-                    }
-                }
-            }
-            if (y + 1 <= yMax) { // down block
-                if (blocks[x - xMin][y + 1 - yMin] == 4 || /*blocks[x - xMin][y + 1 - yMin] == 2 ||*/ blocks[x - xMin][y + 1 - yMin] == 0) {
-                    AbstractBlock block2 = BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[x][y + 1];
-                    if (block2 == null) {
-                        neighbours.get(block).add(new SimpleEntry(new EmptyWall(x * World.wallDim, (y + 1) * World.wallDim), "down"));
-                    } else {
-                        neighbours.get(block).add(new SimpleEntry(block2, "down"));
+                    
+                    if ( j < yMax ){ // down block
+                        // check if the neighbour is an empty block or a character (even the bot itself)
+                        if (blocks[i-xMin][j+1-yMin] == 5 || blocks[i-xMin][j+1-yMin] == 4 || blocks[i-xMin][j+1-yMin] == 0){
+                            AbstractBlock block2 = blocks2[i-xMin][j-yMin+1];
+                            SimpleEntry<AbstractBlock, String> entry = new SimpleEntry(block2, "down");
+                            if (!neighbours.get(block).contains(entry)){
+                                neighbours.get(block).add(entry);
+                            }
+                            
+                            if (blocks[i-xMin][j-yMin] == 5 || blocks[i-xMin][j-yMin] == 4 || blocks[i-xMin][j-yMin] == 0){
+                                // reversed link, opposite direction ;)
+                                if (!neighbours.containsKey(block2)){
+                                    neighbours.put(block2, new LinkedList<SimpleEntry<AbstractBlock, String>>());
+                                }
+                                SimpleEntry<AbstractBlock, String> entry2 = new SimpleEntry(block, "up");
+                                if (!neighbours.get(block2).contains(entry2)){
+                                    neighbours.get(block2).add(entry2);
+                                }
+                            }
+                        }
                     }
                 }
             }
             
             /*
+            for (i = xMin; i <= xMax; i++){
+                for (j = yMin; j <= yMax; j++){
+                    int k = i - xMin,
+                        l = j - yMin;
+                    System.out.println("blocks["+i+"]["+j+"] = "+blocks[k][l]);
+                }
+            }
+            
             Iterator it = neighbours.entrySet().iterator();
             while (it.hasNext()){
                 Map.Entry pairs = (Map.Entry) it.next();
@@ -482,68 +491,134 @@ public class BMediumBot extends BBaseBot{
             */
             
             boolean directionFound = false;
+            
             if (!nearItems.isEmpty()){
 //                System.out.println("found near item...");
-                for (AbstractItem item : nearItems){
-                    ArrayList<String> directions = dijkstra((AbstractBlock)this, item, neighbours);
-                    if (directions != null && directions.size() > 0){
-                        System.out.println("am gasit item...");
-                        for (String direction : directions){
-                            System.out.println(direction);
-                            if (!direction.equals("self")){
-                                directionFound = true;
-                                move(direction);
+                for (AbstractBlock item : nearItems){
+                    boolean foundNeighbour = false;
+                    AbstractBlock crtBlock = null;
+                    int x2 = -1,
+                        y2 = -1;
+                    Queue<SimpleEntry<AbstractBlock, String>> neighbs = neighbours.get(item);
+                    if (neighbs != null){
+                        while (!neighbs.isEmpty()){
+                            crtBlock = neighbs.poll().getKey();
+                            x2 = crtBlock.getPosX()/World.wallDim;
+                            y2 = crtBlock.getPosY()/World.wallDim;
+                            
+                            if (blocks[x2-xMin][y2-yMin] == 5 || blocks[x2-xMin][y2-yMin] == 4 || blocks[x2-xMin][y2-yMin] == 0){
+                                foundNeighbour = true;
                                 break;
                             }
                         }
-                        break;
+                    }
+                    if (foundNeighbour){
+                        //System.out.println("Item found... routing");
+                        ArrayList<String> directions = dijkstra(blocks2[x-xMin][y-yMin], blocks2[x2-xMin][y2-yMin], neighbours);
+                        if (directions != null && directions.size() > 0) {
+                            //System.out.println("Item found");
+                            for (String direction : directions) {
+                                //System.out.println(direction);
+                                if (!direction.equals("self")) {
+                                    directionFound = true;
+                                    move(direction);
+                                    break;
+                                }
+                            }
+                            break;
+                        }
                     }
                 }
             }
             
             if (!directionFound && !nearChars.isEmpty()){
-                for (BCharacter crtChar : nearChars){
-                    ArrayList<String> directions = dijkstra((AbstractBlock)this, (AbstractBlock)crtChar, neighbours);
-                    if (directions != null && directions.size() > 0){
-                        System.out.println("am gasit caracter...");
-                        for (String direction : directions){
-                            System.out.println(direction);
-                            if (!direction.equals("self")){
-                                directionFound = true;
-                                move(direction);
+                System.out.println("found characters : "+nearChars.size());
+                for (AbstractBlock crtChar : nearChars){
+                    boolean foundNeighbour = false;
+                    AbstractBlock crtBlock = null;
+                    int x2 = -1,
+                        y2 = -1;
+                    Queue<SimpleEntry<AbstractBlock, String>> neighbs = neighbours.get(crtChar);
+                    if (neighbs != null){
+                        while (!neighbs.isEmpty()){
+                            crtBlock = neighbs.poll().getKey();
+                            x2 = crtBlock.getPosX()/World.wallDim;
+                            y2 = crtBlock.getPosY()/World.wallDim;
+                            if (blocks[x2-xMin][y2-yMin] == 5 || blocks[x2-xMin][y2-yMin] == 4 || blocks[x2-xMin][y2-yMin] == 0){
+                                foundNeighbour = true;
                                 break;
                             }
                         }
-                        break;
+                    }
+                    if (foundNeighbour){
+                        System.out.println("Character found... routing");
+                        ArrayList<String> directions = dijkstra(blocks2[x-xMin][y-yMin], blocks2[x2-xMin][y2-yMin], neighbours);
+                        if (directions != null && directions.size() > 0){
+                            System.out.println("Character found");
+                            for (String direction : directions){
+                                System.out.println(direction);
+                                if (!direction.equals("self")){
+                                    directionFound = true;
+                                    move(direction);
+                                    break;
+                                }
+                            }
+                            break;
+                        }
                     }
                 }
             }
             
             if (!directionFound && !nearWalls.isEmpty()){
-                for (AbstractWall wall : nearWalls){
-                    ArrayList<String> directions = dijkstra((AbstractBlock)this, (AbstractBlock)wall, neighbours);
-                    if (directions != null && directions.size() > 0){
-                        System.out.println("am gasit perete...");
-                        for (String direction : directions){
-                            System.out.println(direction);
-                            if (!direction.equals("self")){
-                                directionFound = true;
-                                move(direction);
+                for (AbstractBlock wall : nearWalls){
+                    boolean foundNeighbour = false;
+                    AbstractBlock crtBlock = null;
+                    int x2 = -1,
+                        y2 = -1;
+                    Queue<SimpleEntry<AbstractBlock, String>> neighbs = neighbours.get(wall);
+                    if (neighbs != null){
+                        while (!neighbs.isEmpty()){
+                            crtBlock = neighbs.poll().getKey();
+                            x2 = crtBlock.getPosX()/World.wallDim;
+                            y2 = crtBlock.getPosY()/World.wallDim;
+                            if (blocks[x2-xMin][y2-yMin] == 5 || blocks[x2-xMin][y2-yMin] == 4 || blocks[x2-xMin][y2-yMin] == 0){
+                                foundNeighbour = true;
                                 break;
                             }
                         }
-                        break;
+                    }
+                    if (foundNeighbour){
+                        //System.out.println("Wall found... routing");
+                        ArrayList<String> directions = dijkstra(blocks2[x-xMin][y-yMin], blocks2[x2-xMin][y2-yMin], neighbours);
+                        if (directions != null && directions.size() > 0){
+                            //System.out.println("Wall found");
+                            for (String direction : directions){
+                                //System.out.println(direction);
+                                if (!direction.equals("self")){
+                                    directionFound = true;
+                                    move(direction);
+                                    break;
+                                }
+                            }
+                            break;
+                        }
                     }
                 }
             }
-         
-            if (1==0 && !directionFound){
+                    
+            if (false && !directionFound){
+                this.moveRandom(); // update the current position :)
+                /*
                 // a new bomb, maby? :D
                 Random r = new Random();
-                int rand = r.nextInt(100);
+                int rand = r.nextInt(100000);
                 if (rand % 5 == 0){
+                    this.moveRandom();
+                }
+                else if (rand % 4 == 0){
                     this.dropBomb();
                 }
+                */
             }
             
         }
@@ -556,7 +631,7 @@ public class BMediumBot extends BBaseBot{
         int x = source.getPosX()/World.wallDim,
             y = source.getPosY()/World.wallDim;
         
-        if (neighbours.containsKey(source) && neighbours.containsKey(dest)){
+        if (neighbours.containsKey(source)/* && neighbours.containsKey(dest)*/){
             Queue<SimpleEntry<AbstractBlock, String>> queue = new LinkedList<>();
             queue.add(new SimpleEntry(source, "self")); // add the first block (source)
             vizited.add(source);
@@ -607,13 +682,14 @@ public class BMediumBot extends BBaseBot{
             
         }
         else{
-//            System.out.println("There is no road");
+//            System.out.println("Unreachable destination ...");
             return null;
         }
         if (vizited.contains(dest)){
             String key = x+"_"+y+"_"+dest.getPosX()/World.wallDim+"_"+dest.getPosY()/World.wallDim;
             return road.get(key);
         }
+//        System.out.println("Route not found...");
         return null;
     }
     
@@ -772,8 +848,10 @@ public class BMediumBot extends BBaseBot{
     public void run() {
         while (this.running) {
             try {
-                this.searchAndDestroy();
-                Thread.sleep(100); // limit bot action to 10 FPS
+                if (!this.walking){
+                    this.searchAndDestroy();
+                }
+                Thread.sleep(100); // limit medium bot action to 10 FPS
             } catch (InterruptedException ex) {
                 BLogger.getInstance().logException2(ex);
             }

@@ -50,7 +50,9 @@ public class BDumbBot extends BBaseBot{
     public void run() {
         while (this.running) {
             try {
-                this.searchAndDestroy();
+                if (!this.walking){
+                    this.searchAndDestroy();
+                }
                 Thread.sleep(500); // limit dumb bot action to 2 FPS
             } catch (InterruptedException ex) {
                 BLogger.getInstance().logException2(ex);

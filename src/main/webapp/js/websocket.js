@@ -271,6 +271,7 @@ BombermanClient.init = function(){
         }
         //BombermanClient.showNameBox();
         jQuery(window).onclose(function(){
+            clearInterval(BombermanClient.timer)
             BombermanClient.socket.send("QUIT");
         });
     }
@@ -907,6 +908,7 @@ BombermanClient.quit = function(){
   	BombermanClient.socket=null;
         jQuery("#world").html("");
         BombermanClient.log("connection closed");
+        clearInterval(BombermanClient.timer);
   }
   catch(ex){ BombermanClient.log(ex); }
 }

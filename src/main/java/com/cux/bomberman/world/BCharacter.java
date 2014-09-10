@@ -42,7 +42,7 @@ public class BCharacter extends AbstractBlock{
     /**
      * A list of all textures a player can hage
      */
-    private static final HashMap<String, Integer> textures = new HashMap<>(); // direction+state, texture = int(.gif)
+    protected static final HashMap<String, Integer> textures = new HashMap<>(); // direction+state, texture = int(.gif)
     
     /**
      * Associations for the player textures
@@ -52,17 +52,17 @@ public class BCharacter extends AbstractBlock{
     /**
      * A player state can be as follows: Normal, Bomb, Blow, Win and Trapped
      */
-    private String state = "Normal"; // can also be "Bomb", "Blow", "Win" and "Trapped"
+    protected String state = "Normal"; // can also be "Bomb", "Blow", "Win" and "Trapped"
     
     /**
      * A player direction can be as follows: Right, Up, Left, Down
      */
-    private String direction = "Right"; // can also be "Up", "Down" and "Left"
+    protected String direction = "Right"; // can also be "Up", "Down" and "Left"
     
     /**
      * The id of the player (associated peed ID)
      */
-    private String id;
+    protected String id;
     
     /**
      * The maximum range an exploding bomb can reach
@@ -117,7 +117,7 @@ public class BCharacter extends AbstractBlock{
     /**
      * If true, this property will make the player drop bombs unwillingly
      */
-    private boolean dropBombs = false;
+    protected boolean dropBombs = false;
     
     /**
      * Checks to see if the player is ready to play the game
@@ -127,28 +127,28 @@ public class BCharacter extends AbstractBlock{
     /**
      * The number of planted, unexploded bombs of the player
      */
-    private int plantedBombs = 0;
+    protected int plantedBombs = 0;
     
     /**
      * The database id of the player (from the table `characters`)
      */
-    private int dbId = 0;
+    protected int dbId = 0;
     
     /**
      * The information about the player, stored in the cookies
      */
-    private EndpointConfig config = null;
+    protected EndpointConfig config = null;
     
     /**
      * The database id of the player (from the table `user`)
      */
-    private int userId = 0;
+    protected int userId = 0;
     
     
     /**
      * Set to 1 if the current player has admin privileges
      */
-    private boolean isAdmin = false;
+    protected boolean isAdmin = false;
     
     /**
      * Static initialization of the player textures
@@ -456,7 +456,7 @@ public class BCharacter extends AbstractBlock{
     }
     
     // change occupied block in the world matrix mapping
-    private synchronized void IAmWalking(final BCharacter myChar, final String direction){
+    protected synchronized void IAmWalking(final BCharacter myChar, final String direction){
         new Thread(new Runnable(){
             @Override
             public synchronized void run() {
@@ -598,7 +598,7 @@ public class BCharacter extends AbstractBlock{
         return this.dropBombs;
     }
     
-    private void cycleEvent(final BCharacter myChar, final AbstractItem item){
+    protected void cycleEvent(final BCharacter myChar, final AbstractItem item){
         new Thread(new Runnable(){
             @Override
             public void run() {
