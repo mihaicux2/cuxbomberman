@@ -129,6 +129,7 @@ public class BMediumBot extends BBaseBot{
         if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, x, y)){
             checkFurther = false;
             Random r = new Random();
+            // random new position...
             int rand = r.nextInt(100000);
             if (rand % 4 == 0){
                 avoidBomb("left", x, y);
@@ -244,9 +245,14 @@ public class BMediumBot extends BBaseBot{
             }
         }
                
-        // if the bot planted a bomb, no searching is required
-        if (this.plantedBombs > 0 && !this.triggered){
+        // if the bot cannot drop new bombs and cannot detonate them, further searching is not required anymore
+        if (this.plantedBombs >= this.maxBombs && !this.triggered){
             return;
+        }
+        
+        // if the bot can detonate bombs, tigger them 
+        if (this.plantedBombs > 0 && this.triggered){
+            BombermanWSEndpoint.getInstance().detonateBomb(this);
         }
         
         // if there is no danger, check for the best next move
@@ -605,20 +611,10 @@ public class BMediumBot extends BBaseBot{
                     }
                 }
             }
-                    
-            if (false && !directionFound){
-                this.moveRandom(); // update the current position :)
-                /*
-                // a new bomb, maby? :D
-                Random r = new Random();
-                int rand = r.nextInt(100000);
-                if (rand % 5 == 0){
-                    this.moveRandom();
-                }
-                else if (rand % 4 == 0){
-                    this.dropBomb();
-                }
-                */
+                
+            // if no decision is made by this point, simply update the current position...purely random
+            if (!directionFound){
+                this.moveRandom();
             }
             
         }

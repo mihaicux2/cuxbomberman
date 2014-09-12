@@ -45,7 +45,7 @@ public class WorldGenerator {
             AbstractWall wall = WallGenerator.getInstance().generateRandomWall();
             x = wall.getPosX() / World.wallDim;
             y = wall.getPosY() / World.wallDim; 
-            if ((x ==0 && y ==0) || BombermanWSEndpoint.wallExists(world.blockMatrix, x, y)){
+            if ((x ==0 && y ==0) || BombermanWSEndpoint.getInstance().wallExists(world.blockMatrix, x, y)){
                 i--;
             }
             else{

@@ -41,6 +41,7 @@ import com.cux.bomberman.world.BMediumBot;
 import com.cux.bomberman.world.Explosion;
 import com.cux.bomberman.world.World;
 import com.cux.bomberman.world.generator.ItemGenerator;
+import com.cux.bomberman.world.generator.WorldGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
 import java.io.FileNotFoundException;
@@ -93,6 +94,11 @@ import javax.websocket.server.ServerEndpoint;
 @ServerEndpoint(value = "/bombermanendpoint/", configurator = BombermanHttpSessionConfigurator.class)
 public class BombermanWSEndpoint {
 
+    /**
+     * Static final variable. Used to track the current application version
+     */
+    public static final double VERSION = 0.75;
+    
     /**
      * Static variable. Collection used to keep track of all the opened
      * connections.<br />
@@ -415,6 +421,31 @@ public class BombermanWSEndpoint {
             return null;
         }
         
+        if (message.length() > 4 && message.substring(0, 4).toLowerCase().equals("map ")){
+             if (!isAdmin(peer)){
+                sendNotAdminMessage(peer);
+                return null;
+            }
+            String mapName = message.substring(message.indexOf(" ")).trim();
+            if (mapName.trim().toLowerCase().equals("random")){
+                map.put(roomNr, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
+            }
+            else{
+                map.put(roomNr, new World("maps/"+mapName+".txt"));
+            }
+            exportMap(peer);
+            setCharPosition(roomNr, chars.get(peer.getId()));
+            if (mapName.length() > 0){
+                if (chars2.get(roomNr) != null && !chars2.get(roomNr).isEmpty()){
+                    for (BCharacter myChar : chars2.get(roomNr)){
+                        exportMap(peers.get(myChar.getId()));
+                        setCharPosition(roomNr, myChar);
+                    }
+                }
+            }
+            return null;
+        }
+        
         if (message.toLowerCase().equals("help")){
             if (!isAdmin(peer)){
                 sendNotAdminMessage(peer);
@@ -495,7 +526,7 @@ public class BombermanWSEndpoint {
                 break;
             case "detonate":
                 if (crtChar.isTriggered()) {
-                    detonateBomb(crtChar, peer);
+                    detonateBomb(crtChar);
                     bombsChanged.put(roomNr, true);
                 }
                 break;
@@ -791,7 +822,7 @@ public class BombermanWSEndpoint {
     }
 
     private String getHelpMenu(){
-        return "cuxBomberman v.07\n"+
+        return "cuxBomberman v."+BombermanWSEndpoint.VERSION+"\n"+
                 "TYPE `addMediumBot` to add a new bot to the game\n"+
                 "TYPE `addDumbBot` to add a new dumb bot to the game\n"+
                 "TYPE `kick [username]` to remove a player from the game (bots included)\n"+
@@ -1253,7 +1284,7 @@ public class BombermanWSEndpoint {
      * @param myChar - The current connected player
      * @param peer - The connected peer
      */
-    protected synchronized void detonateBomb(BCharacter myChar, Session peer) {
+    public synchronized void detonateBomb(BCharacter myChar) {
         //int roomNr = getRoom(peer);
         int roomNr = myChar.roomIndex;
         try {

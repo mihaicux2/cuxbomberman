@@ -3,7 +3,9 @@
     <head>
         <title>AtomicBomberman look-a-like: Java websocket implementation</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
         <style>
+
             body {
                 overflow:hidden;
                 margin:0px;
@@ -16,8 +18,8 @@
                 user-select: none;
             }
             #world{
-                width:100%;
-                height:510px;
+                width:2400px;
+                height:1300px;
                 border:1px solid #ccc;
                 position:relative;
                 background:#9ACD32;
@@ -30,44 +32,22 @@
             }
             #options{
                 position: fixed;
-                top:0px;
-                right:0px;
+                bottom:0px;
+                left:0px;
                 background-color: rgba(44, 100, 150, 0.9);
                 border: 2px solid #aacccc;
                 border-radius: 5px;
                 z-index: 9999;
                 cursor:pointer;
             }
-            #nameBox{
-                position: fixed;
-                display: none;
-                bottom: 15%;
-                top:15%;
-                left: 25%;
-                right: 25%;
-                width: 40%;
-                /*height: 40px;*/
-                background-color: rgba(44, 100, 150, 0.5);
-                border: 2px solid #aacccc;
-                border-radius: 5px;
-                z-index: 9999;
-                color: #ffffff;
-                font-weight: bold;
-                font-family: arial;
-                font-size: 12px;
-            }
-            #nameBox div{
-                padding: 10px;
-            }
+
             #chatBox{
                 position: fixed;
                 display: none;
                 bottom: 0px;
-                left: 25%;
-                right: 25%;
-                width: 40%;
-                height: 80px;
-                padding: 10px;
+                right: 0%;
+                width: 20%;
+                padding: 5px;
                 background-color: rgba(44, 100, 150, 0.5);
                 border: 2px solid #aacccc;
                 border-radius: 5px;
@@ -80,11 +60,11 @@
                 left: 10%;
                 right: 10%;
                 width: 80%;
-                border: 1px solid #ccc;
                 z-index: 9999;
-                border-radius: 5px;
-                background: #ffffff;
-                padding: 5px;
+            }
+            #statsTable{
+                border-collapse: inherit;
+                border-spacing: 3px;
             }
             .dialogBox{
                 position: fixed;
@@ -109,16 +89,10 @@
                 width: 80%;
                 z-index: 9999;
             }
-            
+
             .message{
-                background-color: rgba(44, 100, 150, 0.5);
-                border: 2px solid #aacccc;
-                border-radius: 5px;
-                font-family: verdana;
-                font-size: 12px;
-                margin-bottom: 5px;
-                padding: 5px;
-                color:#fff;
+                background-color: rgba(217, 237, 247, 0.8) !important;
+                padding: 5px !important;
             }
             .header{
                 text-align: center;
@@ -132,143 +106,195 @@
                 font-size:20px;
                 font-weight: bold;
             }
-            a{
-                color:blue;
-                text-decoration:none;
-            }
             .consoleInput{
                 border:none;
-                color:#fff;
-                background:#000;
                 width:50%;
                 margin-left:2px;
                 margin-right:5px;
             }
-            .consoleDiv{
-                background: #000;
-                color: #fff;
-            }
         </style>
     </head>
     <body>
-        <table id="stats">
-            <thead>
-                <tr style="background:#ccc; font-weight:bold;">
-                    <td>Player</td>
-                    <td>Kills</td>
-                    <td>Deaths</td>
-                    <td>Connected (seconds)</td>
-                </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
-        <div id="optionsBox" class='dialogBox'>
-            <div style="position:relative;">
-                <div class='header title'>CuxBomberman</div>
-                <div class='header subtitile'>A websocket implementation of the well known Atomic Bomberman</div>
-                <div class='header'>
-                    You need to <a href='javascript:BombermanClient.showLoginOptions();'>login</a> or <a href='javascript:BombermanClient.showRegisterOptions();'>register</a> in order to play our fabulous game
+
+        <div class="panel panel-primary" id="stats">
+            <div class="panel-heading">
+                <h3 class="panel-title">cuxBomberman - GAME STATS</h3>
+            </div>
+            <div class="panel-body" style="padding:0px;">
+                <table style="width:100%;" id="statsTable">
+                    <thead>
+                        <tr style="font-weight:bold;" class="alert alert-info">
+                            <td>Player</td>
+                            <td>Kills</td>
+                            <td>Deaths</td>
+                            <td>Connected (seconds)</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal fade" id="optionsBox" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="myModalLabel">CuxBomberman</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class='header subtitile'>A websocket implementation of the well known Atomic Bomberman</div>
+                        <div class='header'>
+                            You need to <a href='javascript:BombermanClient.showLoginOptions();'>login</a> or <a href='javascript:BombermanClient.showRegisterOptions();'>register</a> in order to play our fabulous game
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-success" onclick="BombermanClient.showLoginOptions();">Login here!</button>
+                        <button type="button" class="btn btn-primary" onclick="BombermanClient.showRegisterOptions();">Register here!</button>
+                    </div>
                 </div>
             </div>
         </div>
-        <div id="loginBox" class='dialogBox'>
-            <div style="position:relative;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th colspan="2" align="center">LOGIN</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td width="40%">Username</td>
-                            <td width="60%"><input type="text" name="username" id="username" placeholder="username" /></td>
-                        </tr>
-                        <tr>
-                            <td width="40%">Password</td>
-                            <td width="60%">
-                                <input type="password" name="password" id="password" placeholder="password" />
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>&nbsp;</td>
-                            <td>
-                                <input type="button" id="loginBtn" value="LOGIN" onclick="BombermanClient.login();" />
-                                <a href='javascript:BombermanClient.showRegisterOptions();'>Register here!</a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+
+        <div class="modal fade" id="loginBox" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="myModalLabel">LOGIN</h4>
+                    </div>
+                    <div class="modal-body">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td width="40%">Username</td>
+                                    <td width="60%"><input type="text" name="username" id="username" placeholder="username" /></td>
+                                </tr>
+                                <tr>
+                                    <td width="40%">Password</td>
+                                    <td width="60%">
+                                        <input type="password" name="password" id="password" placeholder="password" />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="loginBtn" class="btn btn-primary" onclick="BombermanClient.login();">Login</button>
+                        <button type="button" class="btn btn-success" onclick="BombermanClient.showRegisterOptions();">Register here!</button>
+                    </div>
+                </div>
             </div>
         </div>
-        <div id="registerBox" class='dialogBox'>
-            <div style="position:relative;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th colspan="2" align="center">REGISTER</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td width="40%">Email</td>
-                            <td width="60%"><input type="text" name="email2" id="email2" placeholder="you@yourdomain.com" /></td>
-                        </tr>
-                        <tr>
-                            <td width="40%">Username</td>
-                            <td width="60%"><input type="text" name="username2" id="username2" placeholder="username" /></td>
-                        </tr>
-                        <tr>
-                            <td width="40%">Password</td>
-                            <td width="60%">
-                                <input type="password" name="password2" id="password2" placeholder="password" />
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>&nbsp;</td>
-                            <td>
-                                <input type="button" id="loginBtn" value="REGISTER" onclick="BombermanClient.register();" />
-                                <a href='javascript:BombermanClient.showLoginOptions();'>Login here!</a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+
+        <div class="modal fade" id="registerBox" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="myModalLabel">Register</h4>
+                    </div>
+                    <div class="modal-body">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td width="40%">Email</td>
+                                    <td width="60%"><input type="text" name="email2" id="email2" placeholder="you@yourdomain.com" /></td>
+                                </tr>
+                                <tr>
+                                    <td width="40%">Username</td>
+                                    <td width="60%"><input type="text" name="username2" id="username2" placeholder="username" /></td>
+                                </tr>
+                                <tr>
+                                    <td width="40%">Password</td>
+                                    <td width="60%">
+                                        <input type="password" name="password2" id="password2" placeholder="password" />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="registerBtn" class="btn btn-primary" onclick="BombermanClient.register();">REGISTER</button>
+                        <button type="button" class="btn btn-success" onclick="BombermanClient.showLoginOptions();">Login here!</button>
+                    </div>
+                </div>
             </div>
         </div>
+
         <div id="options">
             <div style="position:relative;">
                 <img src="images/utils/options.png" onclick="BombermanClient.showNameBox()" />
             </div>
         </div>
-        <div id="nameBox">
-            <div style="position:relative;">
-                <input type="text" id="name" value="" placeholder="mihaicux" />
-                <input type="button" value="Change Name" onclick="BombermanClient.changeName()" />
-                <input type="button" value="QUIT" onclick="BombermanClient.quit()" />
-                <img src="images/utils/close.png" style="position:absolute; right:0px; top:0px;" onclick="BombermanClient.hideNameBox()" />
-                <ol>
-                    <li>Press SPACE to drop bomb</li>
-                    <li>Press SHIFT to detonate bomb - if you have the trigger item</li>
-                    <li>Press ENTER to open the chat box</li>
-                    <li>Press ENTER to send a message - if the chat box is opened</li>
-                    <li>Press ESC to close the chat box - if the chat box is opened</li>
-                    <li>Press ESC to close the help box - if the help box is opened</li>
-                    <li>Press and hold TAB to see the game stats</li>
-                    <li>Press CONSOLE KEY (` | ~) to see the help box ( this menu )</li>
-                </ol>
+
+        <div class="modal fade" id="nameBox" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="myModalLabel">OPTIONS</h4>
+                    </div>
+                    <div class="modal-body" id="nameBoxContent">
+                        <ol>
+                            <li>Press SPACE to drop bomb</li>
+                            <li>Press SHIFT to detonate bomb - if you have the trigger item</li>
+                            <li>Press ENTER to open the chat box</li>
+                            <li>Press ENTER to send a message - if the chat box is opened</li>
+                            <li>Press ESC to close the chat box - if the chat box is opened</li>
+                            <li>Press ESC to close the help box - if the help box is opened</li>
+                            <li>Press and hold TAB to see the game stats</li>
+                            <li>Press CONSOLE KEY (` | ~) to see the help box ( this menu )</li>
+                        </ol>
+                    </div>
+                    <div class="modal-footer">
+                        <b class="panel-title">New name</b>
+                        <input type="text" id="name" value="" placeholder="mihaicux" />
+                        <input type="button" class="btn btn-primary"  value="Change Name" onclick="BombermanClient.changeName()" />
+                        <button type="button" class="btn btn-danger" onclick="BombermanClient.quit();">QUIT</button>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <div class="modal fade" id="alertBox" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-body">
+                        <div id="alertContent" class="alert alert-danger"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-danger" data-dismiss="modal" aria-hidden="true">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="confirmBox" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-body">
+                        <p id="confirmMessage">Any confirmation message?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn" id="confirmFalse">Cancel</button>
+                        <button class="btn btn-primary" id="confirmTrue">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div style="position:relative;">
             <div id="world"></div>
             <div id="chatBox">
+                <h3 style="margin-top:3px;">
+                    <span class="label label-success">cuxBomberman - chat system</span>
+                </h3>
                 <textarea id="chatMessage" style="width:100%; height:55px;"></textarea>
-                <input type="button" value="SEND" onclick="BombermanClient.sendMessage()" />
-                <input type="button" value="CLOSE BOX" onclick="BombermanClient.closeChatBox()" />
+                <input type="button" class="btn btn-sm btn-info" value="SEND" onclick="BombermanClient.sendMessage()" />
+                <input type="button" class="btn btn-sm btn-danger" value="CLOSE BOX" onclick="BombermanClient.closeChatBox()" />
             </div>
         </div>
         <div class="messages"></div>
         <script type="text/javascript" src="js/jquery.min.js"></script>
+        <script src="bootstrap/js/bootstrap.min.js"></script>
         <script type="text/javascript" src="js/jquery.blockUI.js"></script>
         <script type="text/javascript" src="js/websocket.js"></script>
     </body>

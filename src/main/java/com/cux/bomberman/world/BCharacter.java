@@ -7,7 +7,7 @@
 package com.cux.bomberman.world;
 
 import com.cux.bomberman.BombermanWSEndpoint;
-import static com.cux.bomberman.BombermanWSEndpoint.peers;
+//import static com.cux.bomberman.BombermanWSEndpoint.peers;
 import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
@@ -481,9 +481,9 @@ public class BCharacter extends AbstractBlock{
                         break;
                 }
                 
-                BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
-                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.id);
-                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.id, myChar);
+                BombermanWSEndpoint.getInstance().charsChanged.put(myChar.roomIndex, true);
+                BombermanWSEndpoint.getInstance().map.get(myChar.roomIndex).chars[x][y].remove(myChar.id);
+                BombermanWSEndpoint.getInstance().map.get(myChar.roomIndex).chars[x2][y2].put(myChar.id, myChar);
                 
                 for (int i = 0; i < World.wallDim; i++){
                     if (!myChar.isWalking()){
@@ -511,14 +511,14 @@ public class BCharacter extends AbstractBlock{
                     } catch (InterruptedException ex) {
                         BLogger.getInstance().logException2(ex);
                     }
-                    BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
+                    BombermanWSEndpoint.getInstance().charsChanged.put(myChar.roomIndex, true);
                 }
                 
                 myChar.posX = (myChar.posX / World.wallDim) * World.wallDim;
                 myChar.posY = (myChar.posY / World.wallDim) * World.wallDim;
                 
                 myChar.walking = false;
-                BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
+                BombermanWSEndpoint.getInstance().charsChanged.put(myChar.roomIndex, true);
             }
         }).start();
     }
@@ -547,14 +547,14 @@ public class BCharacter extends AbstractBlock{
        
        if (ret == true && AbstractItem.class.isAssignableFrom(block.getClass())){
            this.attachEvent((AbstractItem)block);
-           BombermanWSEndpoint.items.get(this.roomIndex).remove((AbstractItem)block);
-           BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[(block.getPosX() / World.wallDim)][block.getPosY() / World.wallDim] = null;
+           BombermanWSEndpoint.getInstance().items.get(this.roomIndex).remove((AbstractItem)block);
+           BombermanWSEndpoint.getInstance().map.get(this.roomIndex).blockMatrix[(block.getPosX() / World.wallDim)][block.getPosY() / World.wallDim] = null;
            try{
-               BombermanWSEndpoint.items.remove((AbstractItem)block); // eliminate the item
+               BombermanWSEndpoint.getInstance().items.remove((AbstractItem)block); // eliminate the item
            } catch (ConcurrentModificationException ex) {
                BLogger.getInstance().logException2(ex);
            }
-           BombermanWSEndpoint.itemsChanged.put(this.roomIndex, true);
+           BombermanWSEndpoint.getInstance().itemsChanged.put(this.roomIndex, true);
            ret = false; // return false ;)
        }
        
@@ -639,7 +639,7 @@ public class BCharacter extends AbstractBlock{
             public synchronized void run() {
                 while (myChar.dropsBombs()){
                     try {
-                        Iterator it = peers.entrySet().iterator();
+                        Iterator it = BombermanWSEndpoint.getInstance().peers.entrySet().iterator();
                         while (it.hasNext()) {
                             Map.Entry pairs = (Map.Entry) it.next();
                             Session peer = (Session) pairs.getValue();
