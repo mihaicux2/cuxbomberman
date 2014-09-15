@@ -7,6 +7,7 @@
 package com.cux.bomberman.world;
 
 import com.cux.bomberman.BombermanWSEndpoint;
+import static com.cux.bomberman.BombermanWSEndpoint.map;
 //import static com.cux.bomberman.BombermanWSEndpoint.peers;
 import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.generator.ItemGenerator;
@@ -586,7 +587,7 @@ public class BCharacter extends AbstractBlock{
                 this.cycleEbola(this);
                 break;
             case "random":
-                this.attachEvent(ItemGenerator.getInstance().generateRandomItem());
+                this.attachEvent(ItemGenerator.getInstance().generateRandomItem(map.get(this.roomIndex).getWidth(), map.get(this.roomIndex).getHeight()));
                 break;
         }
         if (item.isTimed()){

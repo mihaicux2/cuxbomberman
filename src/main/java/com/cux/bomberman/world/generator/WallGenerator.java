@@ -35,10 +35,8 @@ public class WallGenerator {
         return instance;
     }
     
-    public AbstractWall generateRandomWall(){
+    public AbstractWall generateRandomWall(int wW, int wH){
         int rand = (int) (Math.random()*1000000);
-        int wW = World.getWidth();
-        int wH = World.getHeight();
         Random r = new Random();
         int initialX = (r.nextInt(wW) / World.wallDim ) * World.wallDim;
         int initialY = (r.nextInt(wH) / World.wallDim ) * World.wallDim;

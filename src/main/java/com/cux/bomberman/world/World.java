@@ -33,8 +33,8 @@ import java.util.Set;
  */
 public class World {
     
-    private static int WIDTH = 660;
-    private static int HEIGHT = 510;
+    private int WIDTH = 660;
+    private int HEIGHT = 510;
     public final static int wallDim = 30; // width = height
     private String mapContent = "";
     
@@ -48,19 +48,19 @@ public class World {
     
     public HashMap<String, BCharacter>[][] chars = new HashMap[100][100];
     
-    public static int getWidth(){
+    public int getWidth(){
         return WIDTH;
     }
     
-    public static int getHeight(){
+    public int getHeight(){
         return HEIGHT;
     }
     
-    public static void setWidth(int width){
+    public void setWidth(int width){
         WIDTH = width;
     }
     
-    public static void setHeight(int height){
+    public void setHeight(int height){
         HEIGHT = height;
     }
     
@@ -90,13 +90,13 @@ public class World {
             Boolean firstLine = true;
             String first = line = input.readLine();
             String[] dims = line.split("x");
-            World.WIDTH = Integer.parseInt(dims[0]) * World.wallDim;
-            if (World.WIDTH == 0) World.WIDTH = 660;
-            World.HEIGHT = Integer.parseInt(dims[1]) * World.wallDim;
-            if (World.HEIGHT == 0) World.WIDTH = 510;
+            this.WIDTH = Integer.parseInt(dims[0]) * this.wallDim;
+            if (this.WIDTH == 0) this.WIDTH = 660;
+            this.HEIGHT = Integer.parseInt(dims[1]) * this.wallDim;
+            if (this.HEIGHT == 0) this.WIDTH = 510;
             AbstractWall wall = null;
-            int x1 = World.WIDTH / World.wallDim;
-            int y1 = World.HEIGHT / World.wallDim;
+            int x1 = this.WIDTH / World.wallDim;
+            int y1 = this.HEIGHT / World.wallDim;
             int x = 0;
             int y = 0;
             //System.out.println(x1+", "+y1);
@@ -178,7 +178,7 @@ public class World {
         Set<AbstractWall> walls2 = Collections.synchronizedSet(new HashSet<AbstractWall>(walls));
         
         String ret = "";
-        ret += World.WIDTH+"x"+World.HEIGHT+"[#walls#]";
+        ret += this.WIDTH+"x"+this.HEIGHT+"[#walls#]";
         for (AbstractWall wall : walls2){
             ret += wall.toString()+"[#wallSep#]";
         }

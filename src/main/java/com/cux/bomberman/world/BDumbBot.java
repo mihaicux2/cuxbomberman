@@ -6,6 +6,7 @@
 
 package com.cux.bomberman.world;
 
+import com.cux.bomberman.BombermanWSEndpoint;
 import com.cux.bomberman.util.BLogger;
 import java.util.Random;
 import javax.websocket.EndpointConfig;
@@ -41,10 +42,6 @@ public class BDumbBot extends BBaseBot{
             this.dropBomb();
         }
     }
-
-    public void avoidBomb(String bombLocation, int x, int y){
-//        System.out.println("bomb detected "+bombLocation);
-    }
     
     @Override
     public void run() {
@@ -53,11 +50,16 @@ public class BDumbBot extends BBaseBot{
                 if (!this.walking){
                     this.searchAndDestroy();
                 }
-                Thread.sleep(500); // limit dumb bot action to 2 FPS
+                Thread.sleep(200); // limit dumb bot action to 5 FPS
             } catch (InterruptedException ex) {
                 BLogger.getInstance().logException2(ex);
             }
         }
+    }
+
+    @Override
+    public String getDescription() {
+        return "BDumbBot ";
     }
     
 }

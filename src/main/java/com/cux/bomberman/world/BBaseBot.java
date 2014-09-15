@@ -7,23 +7,12 @@
 package com.cux.bomberman.world;
 
 import com.cux.bomberman.BombermanWSEndpoint;
-//import static com.cux.bomberman.BombermanWSEndpoint.bombExists;
-//import static com.cux.bomberman.BombermanWSEndpoint.bombsChanged;
-//import static com.cux.bomberman.BombermanWSEndpoint.charsChanged;
-//import static com.cux.bomberman.BombermanWSEndpoint.map;
-//import static com.cux.bomberman.BombermanWSEndpoint.peers;
-import com.cux.bomberman.util.BLogger;
-import es.usc.citius.hipster.algorithm.Hipster;
-import es.usc.citius.hipster.model.problem.SearchProblem;
-import es.usc.citius.hipster.util.graph.GraphBuilder;
-import es.usc.citius.hipster.util.graph.GraphSearchProblem;
-import es.usc.citius.hipster.util.graph.HipsterDirectedGraph;
-import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
-import java.util.Date;
+import static com.cux.bomberman.BombermanWSEndpoint.map;
+import com.cux.bomberman.world.items.AbstractItem;
+import com.cux.bomberman.world.walls.AbstractWall;
 import java.util.Random;
 import javax.websocket.EndpointConfig;
-import javax.websocket.Session;
+//import javax.websocket.Session;
 
 /**
  *
@@ -37,7 +26,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
     
     public BBaseBot(String id, String name, int roomIndex, EndpointConfig config) {
         super(id, name, roomIndex, config);
-        this.markedBlock = new boolean[World.getWidth()/World.wallDim][World.getHeight()/World.wallDim];
+        this.markedBlock = new boolean[map.get(this.roomIndex).getWidth()/World.wallDim][map.get(this.roomIndex).getHeight()/World.wallDim];
         this.running = true;
     }
     
@@ -52,37 +41,37 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
     @Override
     public void moveUp(){
         this.setDirection("Up");
-        if (!this.isWalking() && !BombermanWSEndpoint.getInstance().map.get(this.roomIndex).HasMapCollision(this)) {
+        if (!this.isWalking() && !BombermanWSEndpoint.map.get(this.roomIndex).HasMapCollision(this)) {
             super.moveUp();
         }
-        BombermanWSEndpoint.getInstance().charsChanged.put(this.roomIndex, true);
+        BombermanWSEndpoint.charsChanged.put(this.roomIndex, true);
     }
     
     @Override
     public void moveLeft(){
         this.setDirection("Left");
-        if (!this.isWalking() && !BombermanWSEndpoint.getInstance().map.get(this.roomIndex).HasMapCollision(this)) {
+        if (!this.isWalking() && !BombermanWSEndpoint.map.get(this.roomIndex).HasMapCollision(this)) {
             super.moveLeft();
         }
-        BombermanWSEndpoint.getInstance().charsChanged.put(this.roomIndex, true);
+        BombermanWSEndpoint.charsChanged.put(this.roomIndex, true);
     }
     
     @Override
     public void moveDown(){
         this.setDirection("Down");
-        if (!this.isWalking() && !BombermanWSEndpoint.getInstance().map.get(this.roomIndex).HasMapCollision(this)) {
+        if (!this.isWalking() && !BombermanWSEndpoint.map.get(this.roomIndex).HasMapCollision(this)) {
             super.moveDown();
         }
-        BombermanWSEndpoint.getInstance().charsChanged.put(this.roomIndex, true);
+        BombermanWSEndpoint.charsChanged.put(this.roomIndex, true);
     }
     
     @Override
     public void moveRight(){
         this.setDirection("Right");
-        if (!this.isWalking() && !BombermanWSEndpoint.getInstance().map.get(this.roomIndex).HasMapCollision(this)) {
+        if (!this.isWalking() && !BombermanWSEndpoint.map.get(this.roomIndex).HasMapCollision(this)) {
             super.moveRight();
         }
-        BombermanWSEndpoint.getInstance().charsChanged.put(this.roomIndex, true);
+        BombermanWSEndpoint.charsChanged.put(this.roomIndex, true);
     }
     
     public void dropBomb(){
@@ -96,15 +85,15 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
 //            if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, b.getPosX() / World.wallDim, b.getPosY() / World.wallDim)) {
 //                return;
 //            }
-            BombermanWSEndpoint.getInstance().bombs.get(this.roomIndex).add(b);
-            BombermanWSEndpoint.getInstance().map.get(this.roomIndex).blockMatrix[b.getPosX() / World.wallDim][b.getPosY() / World.wallDim] = b;
+            BombermanWSEndpoint.bombs.get(this.roomIndex).add(b);
+            BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[b.getPosX() / World.wallDim][b.getPosY() / World.wallDim] = b;
             this.incPlantedBombs();
             this.avoidBomb("left", this.posX /  World.wallDim, this.posY / World.wallDim);
         } else if (!isAllowed) {
             this.addOrDropBomb();
         }
-        BombermanWSEndpoint.getInstance().charsChanged.put(this.roomIndex, true);
-        BombermanWSEndpoint.getInstance().bombsChanged.put(this.roomIndex, true);
+        BombermanWSEndpoint.charsChanged.put(this.roomIndex, true);
+        BombermanWSEndpoint.bombsChanged.put(this.roomIndex, true);
     }
     
     @Override
@@ -120,6 +109,399 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
     @Override
     public void restoreFromDB(){
         
+    }
+    
+    @Override
+    public void avoidBomb(String bombLocation, int x, int y){
+//        System.out.println("bomb detected "+bombLocation);
+        boolean move = true;
+        switch(bombLocation){
+            case "up":
+                if (x > 0 && !this.markedBlock[x-1][y]){ // try to go left
+                    String checkLeft = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x-1, y);
+                    if (checkLeft.equals("char") || checkLeft.equals("empty")){
+                        this.moveLeft();
+                        move = false;
+                        this.markedBlock[x-1][y] = true;
+                    }
+                }
+                else if (x > 0){
+                    this.markedBlock[x-1][y] = false;
+                }
+                
+                if (move && x+1 < map.get(this.roomIndex).getWidth() / World.wallDim && !this.markedBlock[x+1][y]){ // try to go right
+                    String checkRight = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x+1, y);
+                    if (checkRight.equals("char") || checkRight.equals("empty")){
+                        this.moveRight();
+                        move = false;
+                        this.markedBlock[x+1][y] = true;
+                    }
+                }
+                else if (x+1 < map.get(this.roomIndex).getWidth() / World.wallDim){
+                    this.markedBlock[x+1][y] = false;
+                }
+                
+                if (move && y+1 < map.get(this.roomIndex).getHeight() / World.wallDim && !this.markedBlock[x][y+1]){ // try to go down
+                    String checkDown = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, y+1);
+                    if (checkDown.equals("char") || checkDown.equals("empty")){
+                        this.moveDown();
+                        this.markedBlock[x][y+1] = true;
+                    }
+                }
+                else if (y+1 < map.get(this.roomIndex).getHeight() / World.wallDim){
+                    this.markedBlock[x][y+1] = false;
+                }
+                break;
+            case "down":
+                if (x > 0 && !this.markedBlock[x-1][y]){ // try to go left
+                    String checkLeft = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x-1, y);
+                    if (checkLeft.equals("char") || checkLeft.equals("empty")){
+                        this.moveLeft();
+                        move = false;
+                        this.markedBlock[x-1][y] = true;
+                    }
+                }
+                else if (x > 0){
+                    this.markedBlock[x-1][y] = false;
+                }
+                
+                if (move && x+1 < map.get(this.roomIndex).getWidth() / World.wallDim && !this.markedBlock[x+1][y]){ // try to go right
+                    String checkRight = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x+1, y);
+                    if (checkRight.equals("char") || checkRight.equals("empty")){
+                        this.moveRight();
+                        move = false;
+                        this.markedBlock[x+1][y] = true;
+                    }
+                }
+                else if (x+1 < map.get(this.roomIndex).getWidth() / World.wallDim){
+                    this.markedBlock[x+1][y] = false;
+                }
+                
+                if (move && y > 0 && !this.markedBlock[x][y-1]){ // try to go up
+                    String checkUp = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, y-1);
+                    if (checkUp.equals("char") || checkUp.equals("empty")){
+                        this.moveUp();
+                        this.markedBlock[x][y-1] = true;
+                    }
+                }
+                else if (y > 0){
+                    this.markedBlock[x][y-1] = true;
+                }
+                break;
+            case "left":
+                if (move && y > 0 && !this.markedBlock[x][y-1]){ // try to go up
+                    String checkUp = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, y-1);
+                    if (checkUp.equals("char") || checkUp.equals("empty")){
+                        this.moveUp();
+                        move = false;
+                        this.markedBlock[x][y-1] = true;
+                    }
+                }
+                else if (y > 0){
+                    this.markedBlock[x][y-1] = true;
+                }
+                
+                if (move && y+1 < map.get(this.roomIndex).getHeight() / World.wallDim && !this.markedBlock[x][y+1]){ // try to go down
+                    String checkDown = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, y+1);
+                    if (checkDown.equals("char") || checkDown.equals("empty")){
+                        this.moveDown();
+                        move = false;
+                        this.markedBlock[x][y+1] = true;
+                    }
+                }
+                else if (y+1 < map.get(this.roomIndex).getHeight() / World.wallDim){
+                    this.markedBlock[x][y+1] = false;
+                }
+                
+                if (move && x+1 < map.get(this.roomIndex).getWidth() / World.wallDim && !this.markedBlock[x+1][y]){ // try to go right
+                    String checkRight = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x+1, y);
+                    if (checkRight.equals("char") || checkRight.equals("empty")){
+                        this.moveRight();
+                        this.markedBlock[x+1][y] = true;
+                    }
+                }
+                else if (x+1 < map.get(this.roomIndex).getWidth() / World.wallDim){
+                    this.markedBlock[x+1][y] = false;
+                }
+                break;
+            case "right":
+                if (move && y > 0 && !this.markedBlock[x][y-1]){ // try to go up
+                    String checkUp = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, y-1);
+                    if (checkUp.equals("char") || checkUp.equals("empty")){
+                        this.moveUp();
+                        move = false;
+                        this.markedBlock[x][y-1] = true;
+                    }
+                }
+                else if (y > 0){
+                    this.markedBlock[x][y-1] = true;
+                }
+                
+                if (move && y+1 < map.get(this.roomIndex).getHeight() / World.wallDim && !this.markedBlock[x][y+1]){ // try to go down
+                    String checkDown = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, y+1);
+                    if (checkDown.equals("char") || checkDown.equals("empty")){
+                        this.moveDown();
+                        this.markedBlock[x][y+1] = true;
+                    }
+                }
+                else if (y+1 < map.get(this.roomIndex).getHeight() / World.wallDim){
+                    this.markedBlock[x][y+1] = false;
+                }
+                
+                if (x > 0 && !this.markedBlock[x-1][y]){ // try to go left
+                    String checkLeft = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x-1, y);
+                    if (checkLeft.equals("char") || checkLeft.equals("empty")){
+                        this.moveLeft();
+                        this.markedBlock[x-1][y] = true;
+                    }
+                }
+                else if (x > 0){
+                    this.markedBlock[x-1][y] = false;
+                }
+                break;
+        }
+    }
+    
+    /**
+     * This method checks if a bomb is in the same position as the BOT.<br />
+     * It also tries to avoid the bomb's explosion if TRUE should be returned
+     * @return True if the BOT is in the same position as a bomb
+     */
+    public boolean ISitOnABomb(){
+        // current bot position
+        int x = this.posX / World.wallDim;
+        int y = this.posY / World.wallDim;
+        
+        // if you sit on a bomb, ruuuunn!!!
+        if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, x, y)){
+            Random r = new Random();
+            // random new position...
+            int rand = r.nextInt(100000);
+            if (rand % 4 == 0){
+                avoidBomb("left", x, y);
+            }
+            else if (rand % 3 == 3){
+                avoidBomb("down", x, y);
+            }
+            else if (rand % 2 == 3){
+                avoidBomb("right", x, y);
+            }
+            else {
+                avoidBomb("up", x, y);
+            }
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * This method checks if a bomb is capable of killing the BOT.<br />
+     * It also tries to avoid the bomb's explosion if TRUE should be returned
+     * @return True if the BOT can be killed by an existing bomb
+     */
+    public boolean IHaveBombsNearby(){
+        
+        // current bot position
+        int x = this.posX / World.wallDim;
+        int y = this.posY / World.wallDim;
+        
+        boolean expandUp=true,
+                expandDown=true,
+                expandLeft=true,
+                expandRight=true,
+                checkFurther = true;
+        
+        int xLeft = x,
+            xRight = x,
+            yUp = y,
+            yDown = y;
+        
+        while (true){
+            
+            if (!expandLeft && !expandRight && !expandUp && !expandDown){
+                break;
+            }
+            
+            // check for bombs in the left
+            if (expandLeft && xLeft > 0 ){
+                String checkLeft = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, xLeft, y);
+                if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, xLeft, y)){
+                    expandLeft = false;
+                    // if the bomb range raches the bot, must avoid explosion
+                    if (BombermanWSEndpoint.getInstance().bombReaches((BBomb) BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[xLeft][y], x - xLeft)) {
+                        this.avoidBomb("left", x, y);
+                        return true;
+                    }
+                }
+                else if (checkLeft.equals("wall")){
+                    expandLeft = false;
+                }
+                else{
+                    xLeft--;
+                }
+            }
+            else{
+                expandLeft = false;
+            }
+            
+            // check for bombs in the right
+            if (expandRight && xRight < map.get(this.roomIndex).getWidth() / World.wallDim ){
+                String checkRight = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, xRight, y);
+                if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, xRight, y)){
+                    expandRight = false;
+                    // if the bomb range raches the bot, must avoid explosion
+                    if (BombermanWSEndpoint.getInstance().bombReaches((BBomb)BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[xRight][y], xRight - x)){
+                        this.avoidBomb("right", x, y);
+                        return true;
+                    }
+                }
+                else if (checkRight.equals("wall")){
+                    expandRight = false;
+                }
+                else{
+                    xRight++;
+                }
+            }
+            else{
+                expandRight = false;
+            }
+            
+            // check for bombs up
+            if (expandUp && yUp > 0 ){
+                String checkUp = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, yUp);
+                if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, x, yUp)){
+                    expandUp = false;
+                    // if the bomb range raches the bot, must avoid explosion
+                    if (BombermanWSEndpoint.getInstance().bombReaches((BBomb)BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[x][yUp], y - yUp)){
+                        this.avoidBomb("up", x, y);
+                        return true;
+                    }
+                }
+                else if (checkUp.equals("wall")){
+                    expandUp = false;
+                }
+                else{
+                    yUp--;
+                }
+            }
+            else{
+                expandUp = false;
+            }
+            
+            // check for bombs down
+            if (expandDown && yDown < map.get(this.roomIndex).getHeight() / World.wallDim ){
+                String checkDown = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, yDown);
+                if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, x, yDown)){
+                    expandDown = false;
+                    // if the bomb range raches the bot, must avoid explosion
+                    if (BombermanWSEndpoint.getInstance().bombReaches((BBomb) BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[x][yDown], yDown - y)) {
+                        this.avoidBomb("down", x, y);
+                        return true;
+                    }
+                }
+                else if (checkDown.equals("wall")){
+                    expandDown = false;
+                }
+                else{
+                    yDown++;
+                }
+            }
+            else{
+                expandDown = false;
+            }
+        }
+        
+        return false;
+    }
+    
+    public void move(String direction){
+        switch (direction){
+            case "left":
+                moveLeft();
+                break;
+            case "down":
+                moveDown();
+                break;
+            case "right":
+                moveRight();
+                break;
+            case "up":
+                moveUp();
+                break;
+        }
+    }
+    
+    /**
+     * This method checks if the given neighbour is the best next move.
+     * It also goes to the given neighbour if TRUE should be returned
+     * @param x - the neighbour X coordinate
+     * @param y - the neighbour Y coordinate
+     * @param direction - the direction twoards the neighbour
+     * @return TRUE if the given neighbour is a character or a positive item 
+     */
+    public boolean checkNextBlock(int x, int y, String direction){
+        
+        if (BombermanWSEndpoint.characterExists(this.roomIndex, x, y)){
+            dropBomb();
+            return true;
+        }
+        
+        AbstractBlock block = BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[x][y];
+        String type = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, y);
+        boolean ret = false;
+        switch (type){
+            case "item": // try to grab the item, if it is positive
+                String itemType = ((AbstractItem) block).getName();
+                switch (itemType) {
+                    case "ebola":
+                    case "slow":
+                        break;
+                    default: // positive item, try to grab it
+                        ret = true;
+                        move(direction);
+                        break;
+                }
+                break;
+            case "wall": // try to blow it, if it is blowable
+                if (((AbstractWall)block).isBlowable()){
+                    ret = true;
+                    dropBomb();
+                }
+                break;
+        }
+        return ret;
+    }
+    
+    /**
+     * This method checks if any of the existing neighbours can be choosen as the next best move
+     * @return TRUE if such a neighbour is found
+     */
+    public boolean CheckNeighbours(){
+        
+        // current bot position
+        int x = this.posX / World.wallDim;
+        int y = this.posY / World.wallDim;
+        
+        boolean ret = false;
+        
+        if (x > 0){ // check left
+            ret = checkNextBlock(x-1, y, "left");
+        }
+
+        if (x < map.get(this.roomIndex).getWidth() / World.wallDim){ // check right
+            ret = checkNextBlock(x+1, y, "right");
+        }
+
+        if (y > 0){ // check up
+            ret = checkNextBlock(x, y-1, "up");
+        }
+
+        if (y < map.get(this.roomIndex).getHeight() / World.wallDim){ // check down
+            ret = checkNextBlock(x, y+1, "down");
+        }
+            
+        return ret;
     }
     
 }

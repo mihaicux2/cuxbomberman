@@ -451,9 +451,9 @@ BombermanClient.showLoginOptions = function() {
     BombermanClient.hideRegisterOptions();
     BombermanClient.hideGameOptions();
     jQuery('#loginBox').modal('show');
-    jQuery("#username").focus();
     jQuery("#username").val("");
     jQuery("#password").val("");
+    jQuery("#username").focus();
 }
 
 BombermanClient.hideLoginOptions = function() {
@@ -464,6 +464,11 @@ BombermanClient.showRegisterOptions = function() {
     BombermanClient.hideLoginOptions();
     BombermanClient.hideGameOptions();
     jQuery("#registerBox").modal('show');
+    jQuery("#email2").val("");
+    jQuery("#username2").val("");
+    jQuery("#password2").val("");
+    jQuery("#email2").focus(); 
+    
 }
 
 BombermanClient.hideRegisterOptions = function() {

@@ -42,10 +42,8 @@ public class ItemGenerator {
         return instance;
     }
     
-    public AbstractItem generateRandomItem(){
+    public AbstractItem generateRandomItem(int wW, int wH){
         int rand = (int) (Math.random()*1000000);
-        int wW = World.getWidth();
-        int wH = World.getHeight();
         Random r = new Random();
         int initialX = r.nextInt(wW);
         int initialY = r.nextInt(wH);

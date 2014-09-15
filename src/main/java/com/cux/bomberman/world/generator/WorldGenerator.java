@@ -42,7 +42,7 @@ public class WorldGenerator {
         world.setHeight(h);
         int x, y;
         for (int i = 0; i < bricks; i++){
-            AbstractWall wall = WallGenerator.getInstance().generateRandomWall();
+            AbstractWall wall = WallGenerator.getInstance().generateRandomWall(w, h);
             x = wall.getPosX() / World.wallDim;
             y = wall.getPosY() / World.wallDim; 
             if ((x ==0 && y ==0) || BombermanWSEndpoint.getInstance().wallExists(world.blockMatrix, x, y)){

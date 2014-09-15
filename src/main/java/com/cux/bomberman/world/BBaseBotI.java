@@ -19,4 +19,6 @@ public interface BBaseBotI {
      
     public void avoidBomb(String bombLocation, int x, int y);
     
+    public String getDescription();
+    
 }
