@@ -38,12 +38,14 @@ import com.cux.bomberman.world.BBomb;
 import com.cux.bomberman.world.BCharacter;
 import com.cux.bomberman.world.BDumbBot;
 import com.cux.bomberman.world.BMediumBot;
+import com.cux.bomberman.world.BlockDistanceComparator;
 import com.cux.bomberman.world.Explosion;
 import com.cux.bomberman.world.World;
 import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.generator.WorldGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
+import com.cux.bomberman.world.walls.BrickWall;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -66,14 +68,19 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.websocket.CloseReason;
+import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
 import javax.websocket.Extension;
 import javax.websocket.MessageHandler;
@@ -92,8 +99,8 @@ import javax.websocket.server.ServerEndpoint;
  * @author mihaicux Endpoint server
  */
 @ServerEndpoint(value = "/bombermanendpoint/", configurator = BombermanHttpSessionConfigurator.class)
-public class BombermanWSEndpoint {
-
+public class BombermanWSEndpoint{
+    
     /**
      * Static final variable. Used to track the current application version
      */
@@ -344,6 +351,7 @@ public class BombermanWSEndpoint {
         }
         command = command.toLowerCase();
         
+        // any other message must come from a logged in user
         if (crtChar == null && !(command.equals("ready") || command.equals("getenvironment") || command.equals("login") || command.equals("register"))){
             return null;
         }
@@ -418,6 +426,9 @@ public class BombermanWSEndpoint {
             case "quit":
                 quitProtocol(peer, crtChar, config);
                 break;
+            case "getip":
+                getIPProtocol(peer, toProcess);
+                break;
             default:
                 if (isAdmin(peer)) {
                     sendStatusMessage(peer, "command not found [ " + message + " ]\nTYPE `help` to see the available commands");
@@ -478,8 +489,8 @@ public class BombermanWSEndpoint {
      * session (if any)
      */
     @OnOpen
-    public synchronized void onOpen(Session peer, @PathParam("room") final String room, EndpointConfig config) {
-
+    public synchronized void onOpen(Session peer, EndpointConfig config) {
+        
         if (!BombermanWSEndpoint.initialized) {
             watchBombs();
             watchPeers();
@@ -537,6 +548,7 @@ public class BombermanWSEndpoint {
                 .get(HttpSession.class.getName()));
         peer.getUserProperties().put("sessionId", sessionId);
         peer.getUserProperties().put("loggedIn", false);
+        
         sendLoginFirstMessage(peer);
 
     }
@@ -2208,10 +2220,7 @@ public class BombermanWSEndpoint {
                 sendStatusMessage(peer, name + " is not connected dummy ;)");
             }
             else{
-                BCharacter crtPlayer = chars.get(peer.getId());
-                if (crtPlayer != null){
-                    setCharPosition(getRoom(peer), freedChar);
-                }
+                setCharPosition(getRoom(peer), freedChar);
             }
         }
     }
@@ -2377,6 +2386,28 @@ public class BombermanWSEndpoint {
                     if (peer2.getUserProperties().containsKey("sessionId") && peer2.getUserProperties().get("sessionId").equals(sessionId)) {
                         this.onMessage("QUIT", peer2, config);
                     }
+                }
+            }
+        }
+    }
+    
+    public void getIPProtocol(Session peer, String name){
+        if (!isAdmin(peer)) {
+            sendNotAdminMessage(peer);
+            return;
+        }
+        if (name.length() > 0){
+            BCharacter freedChar = findCharByName(name);
+            if (freedChar == null){
+                sendStatusMessage(peer, name + " is not connected dummy ;)");
+            }
+            else{
+                Session foundPeer = peers.get(freedChar.getId());
+                if (foundPeer == null){ // bot found
+                    sendStatusMessage(peer, name + " is a bot silly ;)");
+                }
+                else{
+                    //sendStatusMessage(peer, name + " : " + foundPeer.getBasicRemote().);
                 }
             }
         }

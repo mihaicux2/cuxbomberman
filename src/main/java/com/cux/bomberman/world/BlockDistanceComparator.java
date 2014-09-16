@@ -6,6 +6,8 @@
 
 package com.cux.bomberman.world;
 
+
+import com.cux.bomberman.world.walls.BrickWall;
 import java.util.Comparator;
 
 /**
@@ -15,7 +17,7 @@ import java.util.Comparator;
  */
 public class BlockDistanceComparator  implements Comparator<AbstractBlock>{
 
-    private int centerX, centerY;
+    private AbstractBlock center;
     
     /**
      * Public constructor
@@ -23,17 +25,15 @@ public class BlockDistanceComparator  implements Comparator<AbstractBlock>{
      * @param y - the Y coordinate of the root node
      */
     public BlockDistanceComparator(int x, int y){
-        this.centerX = x;
-        this.centerY = y;
+        center = new BrickWall(x, y);
     }
     
     @Override
-    public int compare(AbstractBlock o1, AbstractBlock o2) {
-        double dist1 = Math.sqrt(Math.pow(Math.abs(centerX - o1.posX), 2) + Math.pow(Math.abs(centerY - o1.posY), 2));
-        double dist2 = Math.sqrt(Math.pow(Math.abs(centerX - o2.posX), 2) + Math.pow(Math.abs(centerY - o2.posY), 2));
-        if (dist1 < dist2) return 1;
-        if (dist1 == dist2) return 0;
-        return -1;
+    public int compare(AbstractBlock o1, AbstractBlock o2) {        
+        double dist1 = center.distance(o1);
+        double dist2 = center.distance(o2);
+        double diff = dist1 - dist2;
+        return diff == 0 ? 0 : (diff > 0) ? 1 : -1;
     }
     
 }

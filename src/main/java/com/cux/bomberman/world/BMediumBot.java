@@ -27,19 +27,6 @@ import javax.websocket.EndpointConfig;
  * @author mihaicux
  */
 public class BMediumBot extends BBaseBot{
-
-    private static final String[] messages = {"Bear is love. Bear is life",
-                                              "Bad luck Brian",
-                                              "Scumbag Stacy",
-                                              "Goog guy Greg",
-                                              "Dr. Evil Air Quotes",
-                                              "Doge",
-                                              "Confession Kid",
-                                              "That's the Evilest Thing I Can Imagine",
-                                              "Bitches Be Like",
-                                              "Surprised Patrick",
-                                              "Fuck Logic",
-                                              "Me Gusta"};
     
     private Queue<String> path = new LinkedList<String>();
     
@@ -85,7 +72,7 @@ public class BMediumBot extends BBaseBot{
         
         // if the bot can detonate bombs, tigger them with a 100 ms delay
         if (this.plantedBombs > 0 && this.triggered){
-            this.triggerBomb(this, 100);
+            this.triggerBomb(this, 300);
         }
         
         // if a path is already computed, follow it ;))
@@ -302,12 +289,17 @@ public class BMediumBot extends BBaseBot{
 
         boolean pathFound = false;
 
-        if (!nearItems.isEmpty()) { // search for a route to the near items
-            for (AbstractBlock item : nearItems) {
+        ArrayList<AbstractBlock> nearBlocks = new ArrayList<>();
+        if (!nearItems.isEmpty()) nearBlocks.addAll(nearItems);
+        if (!nearChars.isEmpty()) nearBlocks.addAll(nearChars);
+        if (!nearWalls.isEmpty()) nearBlocks.addAll(nearWalls);
+        
+        if (!nearBlocks.isEmpty()){
+            for (AbstractBlock item : nearBlocks) {
                 boolean foundNeighbour = false;
                 AbstractBlock crtBlock = null;
                 int x2 = -1,
-                    y2 = -1;
+                        y2 = -1;
                 Queue<SimpleEntry<AbstractBlock, String>> neighbs = neighbours.get(item);
                 if (neighbs != null) {
                     while (!neighbs.isEmpty()) {
@@ -321,75 +313,7 @@ public class BMediumBot extends BBaseBot{
                         }
                     }
                 }
-                if (foundNeighbour) { // item found
-                    ArrayList<String> directions = META_Dijkstra(blocks2[x - xMin][y - yMin], blocks2[x2 - xMin][y2 - yMin], neighbours);
-                    if (directions != null && directions.size() > 0) { // path found
-                        this.path.clear();
-                        for (String direction : directions) {
-                            if (!direction.equals("self")) {
-                                pathFound = true;
-                                this.path.add(direction);
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (!pathFound && !nearChars.isEmpty()) { // search for a route to the near characters
-            for (AbstractBlock crtChar : nearChars) {
-                boolean foundNeighbour = false;
-                AbstractBlock crtBlock = null;
-                int x2 = -1,
-                    y2 = -1;
-                Queue<SimpleEntry<AbstractBlock, String>> neighbs = neighbours.get(crtChar);
-                if (neighbs != null) {
-                    while (!neighbs.isEmpty()) {
-                        crtBlock = neighbs.poll().getKey();
-                        x2 = crtBlock.getPosX() / World.wallDim;
-                        y2 = crtBlock.getPosY() / World.wallDim;
-                        if (blocks[x2 - xMin][y2 - yMin] == 5 || blocks[x2 - xMin][y2 - yMin] == 4 || blocks[x2 - xMin][y2 - yMin] == 0) {
-                            foundNeighbour = true;
-                            break;
-                        }
-                    }
-                }
-                if (foundNeighbour) { // character found
-                    ArrayList<String> directions = META_Dijkstra(blocks2[x - xMin][y - yMin], blocks2[x2 - xMin][y2 - yMin], neighbours);
-                    if (directions != null && directions.size() > 0) { // path found
-                        this.path.clear();
-                        for (String direction : directions) {
-                            if (!direction.equals("self")) {
-                                pathFound = true;
-                                this.path.add(direction);
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (!pathFound && !nearWalls.isEmpty()) { // search for a route to the near walls
-            for (AbstractBlock wall : nearWalls) {
-                boolean foundNeighbour = false;
-                AbstractBlock crtBlock = null;
-                int x2 = -1,
-                    y2 = -1;
-                Queue<SimpleEntry<AbstractBlock, String>> neighbs = neighbours.get(wall);
-                if (neighbs != null) {
-                    while (!neighbs.isEmpty()) {
-                        crtBlock = neighbs.poll().getKey();
-                        x2 = crtBlock.getPosX() / World.wallDim;
-                        y2 = crtBlock.getPosY() / World.wallDim;
-                        if (blocks[x2 - xMin][y2 - yMin] == 5 || blocks[x2 - xMin][y2 - yMin] == 4 || blocks[x2 - xMin][y2 - yMin] == 0) {
-                            foundNeighbour = true;
-                            break;
-                        }
-                    }
-                }
-                if (foundNeighbour) { // wall found
+                if (foundNeighbour) { // found a block
                     ArrayList<String> directions = META_Dijkstra(blocks2[x - xMin][y - yMin], blocks2[x2 - xMin][y2 - yMin], neighbours);
                     if (directions != null && directions.size() > 0) { // path found
                         this.path.clear();

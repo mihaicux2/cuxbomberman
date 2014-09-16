@@ -53,4 +53,8 @@ public abstract class AbstractBlock {
         this.height = height;
     }
     
+    public double distance(AbstractBlock o1){
+        return Math.sqrt(Math.pow(Math.abs(this.posX - o1.posX), 2) + Math.pow(Math.abs(this.posY - o1.posY), 2));
+    }
+    
 }
