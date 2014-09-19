@@ -1,33 +1,3 @@
-/**
- * Database queries.
- *
- * CREATE DATABASE `bomberman`;
- *
- * GRANT ALL PRIVILEGES ON `bomberman`.* TO 'bomberman'@'%' IDENTIFIED BY
- * 'bomberman';
- *
- * USE `bomberman`;
- *
- * CREATE TABLE `chat_message` ( `id` int(11) NOT NULL AUTO_INCREMENT, `user_id`
- * int(11) NOT NULL, `message_time` DATETIME NOT NULL, `message` TEXT NOT NULL,
- * PRIMARY KEY (`id`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
- *
- * CREATE TABLE `characters` ( `id` int(11) NOT NULL AUTO_INCREMENT, `user_id`
- * int(11) NOT NULL, `name` varchar(128) NOT NULL, `speed` tinyint(2) NOT NULL,
- * `bomb_range` tinyint(2) NOT NULL, `max_bombs` tinyint(3) NOT NULL,
- * `triggered` tinyint(1) NOT NULL DEFAULT 0, `kills` int(11) NOT NULL DEFAULT
- * 0, `deaths` int(11) NOT NULL DEFAULT 0, `creation_time` DATETIME NULL,
- * `modification_time` DATETIME NULL, PRIMARY KEY (`id`) ) ENGINE=InnoDB DEFAULT
- * CHARSET=utf8;
- * 
- * CREATE TABLE `user` ( `id` int(11) NOT NULL AUTO_INCREMENT, `email`
- * varchar(256) NOT NULL, `username` varchar(256) NOT NULL, `password`
- * varchar(256) NOT NULL, `registered_at` DATETIME NULL, `last_login` DATETIME
- * NULL, PRIMARY KEY (`id`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
- * 
- * alter table user add column `admin` tinyint(1) not null default '0' after `password`;
- * 
- */
 package com.cux.bomberman;
 
 import com.cux.bomberman.util.BBase64;
@@ -38,22 +8,16 @@ import com.cux.bomberman.world.BBomb;
 import com.cux.bomberman.world.BCharacter;
 import com.cux.bomberman.world.BDumbBot;
 import com.cux.bomberman.world.BMediumBot;
-import com.cux.bomberman.world.BlockDistanceComparator;
 import com.cux.bomberman.world.Explosion;
 import com.cux.bomberman.world.World;
 import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.generator.WorldGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
-import com.cux.bomberman.world.walls.BrickWall;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.Principal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -65,33 +29,20 @@ import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
-import javax.websocket.Extension;
-import javax.websocket.MessageHandler;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
-import javax.websocket.RemoteEndpoint;
 import javax.websocket.Session;
-import javax.websocket.WebSocketContainer;
-import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 
 /**
@@ -104,7 +55,7 @@ public class BombermanWSEndpoint{
     /**
      * Static final variable. Used to track the current application version
      */
-    public static final double VERSION = 0.75;
+    public static final double VERSION = 0.80;
     
     /**
      * Static variable. Collection used to keep track of all the opened
@@ -161,7 +112,7 @@ public class BombermanWSEndpoint{
      * Indexed by peer map number.<br />
      * It is constantly changed/updated
      */
-    private static final Map<Integer, Set<Explosion>> explosions = Collections.synchronizedMap(new HashMap<Integer, Set<Explosion>>());
+    public static final Map<Integer, Set<Explosion>> explosions = Collections.synchronizedMap(new HashMap<Integer, Set<Explosion>>());
 
     /**
      * Static variable. Collection used to keep track of all the current blown
@@ -292,12 +243,12 @@ public class BombermanWSEndpoint{
     /**
      * Static constant. Used to define the database user
      */
-    private static final String DBUser = "bomberman";
+    private static final String DBUser = "bomberman_admin";
 
     /**
      * Static constant. Used to define the database user password
      */
-    private static final String DBPass = "bomberman";
+    private static final String DBPass = "bomberman_password";
 
     /**
      * Public method, enhancing access to the application database wrapper
@@ -332,7 +283,7 @@ public class BombermanWSEndpoint{
 
         message = message.trim();
         
-        String command = "",
+        String command,
                toProcess = "";
         
         BCharacter crtChar = null;
@@ -342,7 +293,7 @@ public class BombermanWSEndpoint{
             roomNr = getRoom(peer);
         }
         
-        if (message.indexOf(" ") > -1){
+        if (message.contains(" ")){
             command = message.substring(0, message.indexOf(" ")).trim();
             toProcess = message.substring(message.indexOf(" ")).trim();
         }
@@ -352,7 +303,7 @@ public class BombermanWSEndpoint{
         command = command.toLowerCase();
         
         // any other message must come from a logged in user
-        if (crtChar == null && !(command.equals("ready") || command.equals("getenvironment") || command.equals("login") || command.equals("register"))){
+        if (crtChar == null && !(command.equals("ready") || command.equals("getenvironment") || command.equals("login") || command.equals("register") || command.equals("ip"))){
             return null;
         }
         
@@ -426,8 +377,17 @@ public class BombermanWSEndpoint{
             case "quit":
                 quitProtocol(peer, crtChar, config);
                 break;
+            case "ip":
+                checkBanned(peer, toProcess);
+                break;
             case "getip":
                 getIPProtocol(peer, toProcess);
+                break;
+            case "banip":
+                banIPProtocol(peer, toProcess, config);
+                break;
+            case "unbanip":
+                unbanIPProtocol(peer, toProcess);
                 break;
             default:
                 if (isAdmin(peer)) {
@@ -466,7 +426,7 @@ public class BombermanWSEndpoint{
         this.stopThread(peer.getId());
         chars2.get(roomNr).remove(myChar);
         chars.remove(peer.getId());
-        peers.remove(peer);
+        peers.remove(peer.getId());
 //        httpSessions.remove(peer.getUserProperties().get("sessionId"));
 
         charsChanged.put(roomNr, true);
@@ -484,7 +444,6 @@ public class BombermanWSEndpoint{
      * Public synchronized method handling a new connection
      *
      * @param peer - The connected peer
-     * @param room - The room of the connected peer
      * @param config - The endpoint config, containing information about the peer
      * session (if any)
      */
@@ -503,43 +462,46 @@ public class BombermanWSEndpoint{
                 if (!con.isClosed()) {
                     BLogger.getInstance().log(BLogger.LEVEL_FINE, "Connected to MySQL Database...");
                 }
-            } catch (Exception e) {
+            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | SQLException e) {
                 BLogger.getInstance().logException2(e);
             }
             
         }
 
+        // check user IP...
+        sendClearMessage("getip:[{}", peer);
+        
         HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
         String sessionId = httpSession.getId();
 
         // check to see if the user isn't already recognized by the server (has a known cookie)
         if (!httpSessions.isEmpty() && httpSessions.containsKey(sessionId)) {
 //            System.out.println("session id recognized");
-            if (!peers.isEmpty()) { // foreach stored httpSession
+            if (!peers.isEmpty()) {
+                // foreach stored httpSession
 //                System.out.println("we have active connections");
-                Iterator it = peers.entrySet().iterator();
-                while (it.hasNext()) { // foreach connected peer
-                    Map.Entry pairs = (Map.Entry) it.next();
-                    Session peer2 = (Session) pairs.getValue();
-                    // close the old connection
-                    if (peer2.getUserProperties().containsKey("sessionId") && peer2.getUserProperties().get("sessionId").equals(sessionId)) {
-                        //System.out.println("I know you");
-                        // if the current user is already loggedIn, restore it's properties and close the old connection
-                        if (peer2.getUserProperties().containsKey("loggedIn") && peer2.getUserProperties().get("loggedIn").equals(true)) {
-                            //System.out.println("You are already logged in");
-                            addPlayerToGame(peer, config, peer2.getUserProperties().get("username").toString(), Integer.valueOf(peer2.getUserProperties().get("user_id").toString()));
-                            sendReadyMessage(peer);
-                            if (peer2.getUserProperties().containsKey("isAdmin") && peer2.getUserProperties().get("isAdmin").equals(true)) {
-                                makePlayerAdmin(peer);
-                            }
-                            this.onMessage("QUIT", peer2, config);
-                            return;
-                        } else { // else, just close the old connection
-                            //System.out.println("Somehow, I feel like I know you...");
-                            this.onMessage("QUIT", peer2, config);
-                        }
-                    }
-                } // end loop for connected peers
+                // end loop for connected peers
+                 for (Map.Entry pairs : peers.entrySet()) {
+                     Session peer2 = (Session) pairs.getValue();
+                     // close the old connection
+                     if (peer2.getUserProperties().containsKey("sessionId") && peer2.getUserProperties().get("sessionId").equals(sessionId)) {
+                         //System.out.println("I know you");
+                         // if the current user is already loggedIn, restore it's properties and close the old connection
+                         if (peer2.getUserProperties().containsKey("loggedIn") && peer2.getUserProperties().get("loggedIn").equals(true)) {
+                             //System.out.println("You are already logged in");
+                             addPlayerToGame(peer, config, peer2.getUserProperties().get("username").toString(), Integer.valueOf(peer2.getUserProperties().get("user_id").toString()));
+                             sendReadyMessage(peer);
+                             if (peer2.getUserProperties().containsKey("isAdmin") && peer2.getUserProperties().get("isAdmin").equals(true)) {
+                                 makePlayerAdmin(peer);
+                             }
+                             this.onMessage("QUIT", peer2, config);
+                             return;
+                         } else { // else, just close the old connection
+                             //System.out.println("Somehow, I feel like I know you...");
+                             this.onMessage("QUIT", peer2, config);
+                         }
+                     }
+                }
             }
             //System.out.println("end httpSession loop");
         }
@@ -681,6 +643,9 @@ public class BombermanWSEndpoint{
                 "TYPE `addDumbBot` to add a new dumb bot to the game\n"+
                 "TYPE `kick [username]` to remove a player from the game (bots included)\n"+
                 "TYPE `teleport [username]` to change a player position (bots included)\n"+
+                "TYPE `getip [username]` to get the player connection IP (bots not included)\n"+
+                "TYPE `banip [ip]` to ban an given player by it's IP\n"+
+                "TYPE `unbanip [ip]` to unban an given player by it's IP\n"+
                 "TYPE `help` to view this message again\n";
     }
     
@@ -712,7 +677,7 @@ public class BombermanWSEndpoint{
      * @param peer - The connected peer
      * @param config - The endpoint config, containing information about the peer
      * session (if any)
-     * @param user - The name of the player trying to connect
+     * @param username - The name of the player trying to connect
      * @param user_id - The id of the player trying to connect
      */
     public void addPlayerToGame(Session peer, EndpointConfig config, String username, int user_id) {
@@ -993,11 +958,7 @@ public class BombermanWSEndpoint{
                             }
                         }
                         Thread.sleep(10);
-                    } catch (InterruptedException ex) {
-                        BLogger.getInstance().logException2(ex);
-                    } catch (IllegalStateException ex) {
-                        BLogger.getInstance().logException2(ex);
-                    } catch (ConcurrentModificationException ex) {
+                    } catch (InterruptedException | IllegalStateException | ConcurrentModificationException ex) {
                         BLogger.getInstance().logException2(ex);
                     }
                 }
@@ -1026,9 +987,7 @@ public class BombermanWSEndpoint{
                         boolean[] itemChanged = new boolean[max];
                         boolean[] wallChanged = new boolean[max];
 
-                        Iterator it = peers.entrySet().iterator();
-                        while (it.hasNext()) {
-                            Map.Entry pairs = (Map.Entry) it.next();
+                        for (Map.Entry pairs : peers.entrySet()) {
                             Session peer = (Session) pairs.getValue();
                             if (peer == null) continue;
 
@@ -1090,7 +1049,7 @@ public class BombermanWSEndpoint{
                                         itemChanged[roomNr] = true;
                                     }
                                     /*} catch (IOException ex) {
-                                     BLogger.getInstance().logException2(ex);*/
+                                    BLogger.getInstance().logException2(ex);*/
                                 } catch (ConcurrentModificationException | IllegalStateException ex) {
                                     BLogger.getInstance().logException2(ex);
                                 } catch (RuntimeException ex) {
@@ -1137,7 +1096,6 @@ public class BombermanWSEndpoint{
      * Protected synchronized method used to detonate bombs of a given player
      *
      * @param myChar - The current connected player
-     * @param peer - The connected peer
      */
     public synchronized void detonateBomb(BCharacter myChar) {
         //int roomNr = getRoom(peer);
@@ -1175,10 +1133,7 @@ public class BombermanWSEndpoint{
             if (data[i][j] == null) {
                 return false;
             }
-            if (!AbstractWall.class.isAssignableFrom(data[i][j].getClass())) {
-                return false;
-            }
-            return true;
+            return AbstractWall.class.isAssignableFrom(data[i][j].getClass());
         } catch (ArrayIndexOutOfBoundsException e) {
             BLogger.getInstance().logException2(e);
             return false;
@@ -1243,17 +1198,17 @@ public class BombermanWSEndpoint{
      * Public static synchronized method used to check if a player exists in a
      * given position
      *
-     * @param peer - The connected peer
+     * @param mapNr - The map number
      * @param i - The x coordinate of the checked position
      * @param j - The y coordinate of the checked position
      * @return True if there is a character at the given position
      */
-    public static synchronized boolean characterExists(int roomNr, int i, int j) {
+    public static synchronized boolean characterExists(int mapNr, int i, int j) {
         if (i < 0 || j < 0) {
             return false;
         }
 
-        World world = map.get(roomNr);
+        World world = map.get(mapNr);
         if (world == null) {
             return false;
         }
@@ -1264,7 +1219,7 @@ public class BombermanWSEndpoint{
      * Protected synchronized method used to explode a given player (if it has
      * in the way of an explosion)
      *
-     * @param peer - The connected peer
+     * @param winner - The blown character
      * @param x - The x coordinate of the checked position
      * @param y - The y coordinate of the checked position
      */
@@ -1281,9 +1236,7 @@ public class BombermanWSEndpoint{
                 }
                 //int roomNr = getRoom(peer);
                 int roomNr = winner.roomIndex;
-                Iterator it = map.get(roomNr).chars[x][y].entrySet().iterator();
-                while (it.hasNext()) {
-                    Map.Entry pairs = (Map.Entry) it.next();
+                for (Map.Entry pairs : map.get(roomNr).chars[x][y].entrySet()) {
                     BCharacter looser = (BCharacter) pairs.getValue();
                     if (looser.getReady()) { // change game stats only if the character within a bomb range is ready to play
                         looser.incDeaths();
@@ -1296,7 +1249,7 @@ public class BombermanWSEndpoint{
 //                        revertState(peer, looser);
                         revertState(looser);
                         // clear the block containing the character
-                        map.get(roomNr).chars[x][y].remove(looser);
+                        map.get(roomNr).chars[x][y].remove(looser.getId());
                         map.get(roomNr).blockMatrix[x][y] = null;
                     }
                     //it.remove(); // avoids a ConcurrentModificationException
@@ -1315,7 +1268,6 @@ public class BombermanWSEndpoint{
      * Protected synchronized method used to revert the state of a given player
      * to "Normal"
      *
-     * @param peer - The connected peer
      * @param myChar - The current connected player
      */
 //    protected synchronized void revertState(final Session peer, final BCharacter myChar) {
@@ -1358,7 +1310,6 @@ public class BombermanWSEndpoint{
     /**
      * Public synchronized method used to detonate the bomb of a given player
      *
-     * @param peer - The connected peer
      * @param bomb - The detonated bomb
      */
     public synchronized void markForRemove(final BBomb bomb) {
@@ -1400,7 +1351,7 @@ public class BombermanWSEndpoint{
 
                     new Thread(new Runnable() {
                         @Override
-                        public synchronized void run() {
+                        public void run() {
                             try {
                                 Thread.sleep(100); // wait .1 second before actual removing
                                 explosions.get(roomNr).remove(exp);
@@ -1468,7 +1419,7 @@ public class BombermanWSEndpoint{
                                 //System.out.println("hit wall right");
                                 AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xR][yR]);
                                 if (wall.isBlowable()) {
-                                    map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xR][yR]);
+                                    map.get(roomNr).walls.remove(wall);
                                     exp.ranges.put("right", exp.ranges.get("right") + 1);
                                     flipForItems(crtChar.roomIndex, xR, yR);
                                     //mapChanged.put(roomNr, true);
@@ -1522,7 +1473,7 @@ public class BombermanWSEndpoint{
                                 //System.out.println("hit wall left");
                                 AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xL][yL]);
                                 if (wall.isBlowable()) {
-                                    map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xL][yL]);
+                                    map.get(roomNr).walls.remove(wall);
                                     exp.ranges.put("left", exp.ranges.get("left") + 1);
                                     flipForItems(crtChar.roomIndex, xL, yL);
                                     //mapChanged.put(roomNr, true);
@@ -1576,7 +1527,7 @@ public class BombermanWSEndpoint{
                                 //System.out.println("hit wall down");
                                 AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xD][yD]);
                                 if (wall.isBlowable()) {
-                                    map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xD][yD]);
+                                    map.get(roomNr).walls.remove(wall);
                                     exp.ranges.put("down", exp.ranges.get("down") + 1);
                                     flipForItems(crtChar.roomIndex, xD, yD);
                                     //mapChanged.put(roomNr, true);
@@ -1630,7 +1581,7 @@ public class BombermanWSEndpoint{
                                 //System.out.println("hit wall up");
                                 AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xU][yU]);
                                 if (wall.isBlowable()) {
-                                    map.get(roomNr).walls.remove(map.get(roomNr).blockMatrix[xU][yU]);
+                                    map.get(roomNr).walls.remove(wall);
                                     exp.ranges.put("up", exp.ranges.get("up") + 1);
                                     flipForItems(crtChar.roomIndex, xU, yU);
                                     //mapChanged.put(roomNr, true);
@@ -1664,32 +1615,32 @@ public class BombermanWSEndpoint{
      * Protected synchronized method used to check if there is an item behind a
      * given blown wall
      *
-     * @param peer - The connected peer
+     * @param mapNr - The map number
      * @param x - The x coordinate of the checked position
      * @param y - The y coordinate of the checked position
      */
-    protected synchronized void flipForItems(int roomNr, int x, int y) {
+    protected synchronized void flipForItems(int mapNr, int x, int y) {
         Random r = new Random();
         int rand = r.nextInt(1000000);
         if (rand % 5 == 0) { // 20% chance to find a hidden item behind the wall ;))
-            if (wallExists(map.get(roomNr).blockMatrix, x, y)) {
-                AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[x][y]);
+            if (wallExists(map.get(mapNr).blockMatrix, x, y)) {
+                AbstractWall wall = ((AbstractWall) map.get(mapNr).blockMatrix[x][y]);
                 //blownWalls.get(roomNr).add(wall.wallId);
 
-                AbstractItem item = ItemGenerator.getInstance().generateRandomItem(map.get(roomNr).getWidth(), map.get(roomNr).getHeight());
-                item.setPosX(map.get(roomNr).blockMatrix[x][y].getPosX());
-                item.setPosY(map.get(roomNr).blockMatrix[x][y].getPosY());
-                map.get(roomNr).blockMatrix[x][y] = null;
-                map.get(roomNr).blockMatrix[x][y] = item;
-                items.get(roomNr).add(item);
+                AbstractItem item = ItemGenerator.getInstance().generateRandomItem(map.get(mapNr).getWidth(), map.get(mapNr).getHeight());
+                item.setPosX(map.get(mapNr).blockMatrix[x][y].getPosX());
+                item.setPosY(map.get(mapNr).blockMatrix[x][y].getPosY());
+                map.get(mapNr).blockMatrix[x][y] = null;
+                map.get(mapNr).blockMatrix[x][y] = item;
+                items.get(mapNr).add(item);
             } else {
-                map.get(roomNr).blockMatrix[x][y] = null;
+                map.get(mapNr).blockMatrix[x][y] = null;
             }
         } else {
-            map.get(roomNr).blockMatrix[x][y] = null; // remove the block
+            map.get(mapNr).blockMatrix[x][y] = null; // remove the block
         }
         //mapChanged.put(roomNr, true);
-        itemsChanged.put(roomNr, true);
+        itemsChanged.put(mapNr, true);
 //        wallsChanged.put(roomNr, true);
     }
 
@@ -1697,7 +1648,6 @@ public class BombermanWSEndpoint{
      * Protected synchronized method used to check if a given bomb isn't already
      * marker for removal
      *
-     * @param peer - The connected peer
      * @param bomb - The checked bomb
      * @return True if the given bomb is already marked
      */
@@ -1732,10 +1682,7 @@ public class BombermanWSEndpoint{
      * @param peer - The connected peer
      */
     protected synchronized void exportMap(final Session peer) {
-        String ret = "";
-        int roomNr = getRoom(peer);
-        ret = map.get(roomNr).toString();
-        sendClearMessage("map:[" + ret, peer);
+        sendClearMessage("map:[" + map.get(getRoom(peer)).toString(), peer);
     }
 
     /**
@@ -1812,7 +1759,6 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to check if a given player can plant a new bomb
      *
-     * @param peer - The connected peer
      * @param crtChar - The current connected player
      * @return True if the player can plant a new bomb
      */
@@ -1831,7 +1777,7 @@ public class BombermanWSEndpoint{
      * position
      */
     public static synchronized String checkWorldMatrix(int roomNr, int i, int j) {
-        HashMap<String, BCharacter>[][] chars = map.get(roomNr).chars;
+        HashMap<String, BCharacter>[][] worldChars = map.get(roomNr).chars;
         AbstractBlock[][] data = map.get(roomNr).blockMatrix;
         if (i < 0 || j < 0 || i >= data.length || j >= data[i].length) {
             return "empty";
@@ -1839,7 +1785,7 @@ public class BombermanWSEndpoint{
         String ret = "";
         try {
             Class<?> cls = (data[i][j] != null) ? data[i][j].getClass() : "".getClass();
-            if (chars[i][j] != null && !chars[i][j].isEmpty()) {
+            if (worldChars[i][j] != null && !worldChars[i][j].isEmpty()) {
                 return "char";
             } else if (AbstractWall.class.isAssignableFrom(cls)) {
                 return "wall";
@@ -2046,6 +1992,16 @@ public class BombermanWSEndpoint{
     }
 
     /**
+     * Public method used to tell the player that he/she is banned from
+     * this site
+     *
+     * @param peer - The connected peer
+     */
+    public void sendBannedMessage(Session peer){
+        sendClearMessage("banned:[{}", peer);
+    }
+    
+    /**
      * Public method used to send messages to the connected peer
      *
      * @param msg -The message to be sent
@@ -2160,7 +2116,7 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to send a message to all players from a given room (chat system)
-     * @param crtChar - the connected player
+     * @param peer - the connected player
      * @param msg - the message to be sent
      * @param roomNr - room of the connected player
      */
@@ -2368,7 +2324,7 @@ public class BombermanWSEndpoint{
         String sessionId = httpSession.getId();
         httpSession.invalidate();
         httpSessions.remove(sessionId);
-        httpSessions.remove(peer.getUserProperties().get("sessionId"));
+        httpSessions.remove(peer.getUserProperties().get("sessionId").toString());
         config.getUserProperties().remove(HttpSession.class.getName());
         peer.getUserProperties().remove("sessionId");
         peer.getUserProperties().remove("loggedIn");
@@ -2378,9 +2334,7 @@ public class BombermanWSEndpoint{
 
         if (!httpSessions.isEmpty() && httpSessions.containsKey(sessionId)) {
             if (!peers.isEmpty()) {
-                Iterator it = peers.entrySet().iterator();
-                while (it.hasNext()) {
-                    Map.Entry pairs = (Map.Entry) it.next();
+                for (Map.Entry pairs : peers.entrySet()) {
                     Session peer2 = (Session) pairs.getValue();
                     // daca exista deja conectat, inchide vechea conexiune
                     if (peer2.getUserProperties().containsKey("sessionId") && peer2.getUserProperties().get("sessionId").equals(sessionId)) {
@@ -2407,8 +2361,82 @@ public class BombermanWSEndpoint{
                     sendStatusMessage(peer, name + " is a bot silly ;)");
                 }
                 else{
-                    //sendStatusMessage(peer, name + " : " + foundPeer.getBasicRemote().);
+                    sendStatusMessage(peer, name + " : " + foundPeer.getUserProperties().get("ip"));
                 }
+            }
+        }
+    }
+    
+    public void banIPProtocol(Session peer, String ip, EndpointConfig config){
+        if (!isAdmin(peer)) {
+            sendNotAdminMessage(peer);
+            return;
+        }
+        if (ip.length() > 0){
+            BCharacter admin = chars.get(peer.getId());
+            banIP(admin, ip);
+            sendStatusMessage(peer, ip + " has been banned");
+            for (Map.Entry pairs : peers.entrySet()) {
+                Session crtP = (Session) pairs.getValue();
+                // close the connection to all players connected with the given IP
+                if (crtP.getUserProperties().get("ip").equals(ip)){
+                    this.onMessage("QUIT", crtP, config);
+                }
+            }
+        }
+    }
+    
+    public void banIP(BCharacter admin, String ip){
+        try {
+            String query = "INSERT INTO `banlist` VALUES("
+                    + " NULL, ?, ?, NOW()"
+                    + ")";
+            PreparedStatement st2 = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
+            System.out.println(st2.toString());
+            st2.setString(1, ip);
+            st2.setInt(2, admin.getDbId());
+            st2.execute();
+        } catch (SQLException ex) {
+            BLogger.getInstance().logException2(ex);
+        }
+    }
+    
+    public void unbanIPProtocol(Session peer, String ip){
+        if (!isAdmin(peer)) {
+            sendNotAdminMessage(peer);
+            return;
+        }
+        if (ip.length() > 0){
+            unbanIP(ip);
+            sendStatusMessage(peer, ip + " has been unbanned");
+        }
+    }
+    
+    public void unbanIP(String ip){
+        try {
+            String query = "DELETE FROM `banlist` WHERE `user_ip`=?";
+            PreparedStatement st2 = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
+            st2.setString(1, ip);
+            st2.execute();
+        } catch (SQLException ex) {
+            BLogger.getInstance().logException2(ex);
+        }
+    }
+    
+    public void checkBanned(Session peer, String ip){
+        peer.getUserProperties().put("ip", ip);
+        if (ip.length() > 0){
+            try {
+                String query = "SELECT 1 FROM `banlist` WHERE `user_ip`=?";
+                PreparedStatement st2 = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
+                st2.setString(1, ip);
+                //System.out.println(st2.toString());
+                ResultSet ret = st2.executeQuery();
+                if (ret.next()) {
+                    sendBannedMessage(peer);
+                }
+            } catch (SQLException ex) {
+                BLogger.getInstance().logException2(ex);
             }
         }
     }

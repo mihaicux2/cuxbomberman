@@ -32,9 +32,10 @@ var BombermanClient = {};
     BombermanClient.currentPlayer = {};
     BombermanClient.typeCommand = false;
     BombermanClient.isAdmin = false;
+    BombermanClient.isBanned = false;
 }
 
-BombermanClient.get_random_color = function() {
+BombermanClient.get_random_color = function () {
     var letters = '0123456789ABCDEF'.split('');
     var color = '#';
     for (var i = 0; i < 6; i++) {
@@ -43,16 +44,16 @@ BombermanClient.get_random_color = function() {
     return color;
 }
 
-BombermanClient.unbindKeyDown = function() {
+BombermanClient.unbindKeyDown = function () {
     jQuery(window).unbind("keydown");
 }
 
-BombermanClient.unbindKeyUp = function() {
+BombermanClient.unbindKeyUp = function () {
     jQuery(window).unbind("keyup");
 }
 
-BombermanClient.bindKeyDown = function() {
-    jQuery(window).keydown(function(e) {
+BombermanClient.bindKeyDown = function () {
+    jQuery(window).keydown(function (e) {
 //        console.log(e.keyCode);
         switch (e.keyCode) {
             case 38:  // KEY_UP
@@ -119,8 +120,8 @@ BombermanClient.bindKeyDown = function() {
     });
 }
 
-BombermanClient.bindKeyUp = function() {
-    jQuery(window).keyup(function(e) {
+BombermanClient.bindKeyUp = function () {
+    jQuery(window).keyup(function (e) {
         switch (e.keyCode) {
             case 38:  // KEY_UP
                 if (BombermanClient.chatBoxOpen)
@@ -190,19 +191,32 @@ BombermanClient.bindKeyUp = function() {
     });
 }
 
-BombermanClient.init = function() {
+BombermanClient.init = function () {
     try {
         BombermanClient.socket = new WebSocket(BombermanClient.host);
-        BombermanClient.socket.onopen = function(msg) {
+        BombermanClient.socket.onopen = function (msg) {
             BombermanClient.log("Welcome - status " + this.readyState); // connected to the server
         }
-        BombermanClient.socket.onmessage = function(msg) {
+        BombermanClient.socket.onmessage = function (msg) {
             var op = msg.data.substr(0, msg.data.indexOf(":["));
             var toProc = msg.data.substr(msg.data.indexOf(":[") + 2);
-            //console.log(msg);
+            //console.log(op);
             //socket.close();
             //var x = JSON.parse(toProc);
             switch (op) {
+                case "banned":
+                    BombermanClient.hideGameOptions();
+                    BombermanClient.isBanned = true;
+                    BombermanClient.socket.close();
+                    BombermanClient.socket = null;
+                    jQuery("#world").html("");
+                    BombermanClient.log("connection closed");
+                    clearInterval(BombermanClient.timer);
+                    BombermanClient.alert("You are banned from this site!");
+                    break;
+                case "getip":
+                    BombermanClient.sendIP();
+                    break;
                 case "ready":
                     BombermanClient.hideLoginOptions();
                     BombermanClient.initGame();
@@ -260,17 +274,21 @@ BombermanClient.init = function() {
                     break;
             }
         }
-        BombermanClient.socket.onclose = function(msg) {
+        BombermanClient.socket.onclose = function (msg) {
             BombermanClient.log("Disconnected - status " + this.readyState);
-            BombermanClient.alert("Connection closed");
+            if (!BombermanClient.isBanned){
+                BombermanClient.alert("Connection closed");
+            }
             jQuery("#chatUsers").html("");
             clearInterval(BombermanClient.timer);
             BombermanClient.unbindKeyDown();
             BombermanClient.unbindKeyUp();
-            BombermanClient.init();
+            if (!BombermanClient.isBanned){
+                BombermanClient.init();
+            }
         }
         //BombermanClient.showNameBox();
-        jQuery(window).onclose(function() {
+        jQuery(window).onclose(function () {
             clearInterval(BombermanClient.timer)
             BombermanClient.socket.send("QUIT");
         });
@@ -280,18 +298,18 @@ BombermanClient.init = function() {
     }
 }
 
-BombermanClient.initGame = function() {
+BombermanClient.initGame = function () {
     setTimeout("BombermanClient.getMap()", 100);
     BombermanClient.bindKeyDown();
     BombermanClient.bindKeyUp();
     BombermanClient.timer = setInterval("BombermanClient.updateStatus()", 10); // send requests every 10 miliseconds => limit to 100 FPS (at most)
 }
 
-BombermanClient.writeStatus = function(msg) {
-    $("#consoleStatus").html(msg.replace(/\n/g, "<br />"));
+BombermanClient.writeStatus = function (msg) {
+    jQuery("#consoleStatus").html(msg.replace(/\n/g, "<br />"));
 }
 
-BombermanClient.sendAdminCommand = function(command) {
+BombermanClient.sendAdminCommand = function (command) {
     var command = jQuery.trim(jQuery("#adminConsole").val());
     if (command == "") {
         BombermanClient.writeStatus("Enter a command before sending it to the server");
@@ -305,7 +323,7 @@ BombermanClient.sendAdminCommand = function(command) {
     jQuery("#adminConsole").val("");
 }
 
-BombermanClient.makeAdmin = function() {
+BombermanClient.makeAdmin = function () {
     BombermanClient.log("you are now admin");
     BombermanClient.isAdmin = true;
     var str = "";
@@ -319,7 +337,7 @@ BombermanClient.makeAdmin = function() {
     str += '</div>';
     jQuery("#nameBoxContent").append(str);
 
-    jQuery("#adminConsole").keydown(function(e) {
+    jQuery("#adminConsole").keydown(function (e) {
         if (e.keyCode == 13) { // ENTER
             BombermanClient.typeCommand = true;
             e.preventDefault();
@@ -327,7 +345,7 @@ BombermanClient.makeAdmin = function() {
         }
     });
 
-    jQuery("#adminConsole").keyup(function(e) {
+    jQuery("#adminConsole").keyup(function (e) {
         if (e.keyCode == 13) { // ENTER
             BombermanClient.sendAdminCommand();
             BombermanClient.typeCommand = false;
@@ -338,24 +356,24 @@ BombermanClient.makeAdmin = function() {
 
 }
 
-BombermanClient.notAdmin = function() {
+BombermanClient.notAdmin = function () {
     BombermanClient.alert("You are not admin!");
 }
 
 
-BombermanClient.showLogInFailed = function() {
+BombermanClient.showLogInFailed = function () {
     BombermanClient.alert("Login Failed");
 }
 
-BombermanClient.showRegisterFailed = function() {
+BombermanClient.showRegisterFailed = function () {
     BombermanClient.alert("Login Failed");
 }
 
-BombermanClient.alreadyTaken = function() {
+BombermanClient.alreadyTaken = function () {
     BombermanClient.alert("This email address is already in use");
 }
 
-BombermanClient.login = function() {
+BombermanClient.login = function () {
     var username = jQuery.trim(jQuery("#username").val());
     var password = jQuery.trim(jQuery("#password").val());
     if (username.length == 0 || password.length == 0) {
@@ -372,7 +390,7 @@ BombermanClient.login = function() {
     } // request info about the other users
 }
 
-BombermanClient.register = function() {
+BombermanClient.register = function () {
     var email = jQuery.trim(jQuery("#email2").val());
     var username = jQuery.trim(jQuery("#username2").val());
     var password = jQuery.trim(jQuery("#password2").val());
@@ -395,59 +413,59 @@ BombermanClient.register = function() {
     } // request info about the other users
 }
 
-BombermanClient.invalidEmailAddress = function() {
+BombermanClient.invalidEmailAddress = function () {
     BombermanClient.alert("Enter a valid email address!");
     jQuery("#email2").focus();
 }
 
-BombermanClient.registrationSuccess = function() {
+BombermanClient.registrationSuccess = function () {
     BombermanClient.alert("Registration success! You can now login with your username and password");
     BombermanClient.showLoginOptions();
 }
 
-BombermanClient.showChatBox = function() {
+BombermanClient.showChatBox = function () {
     jQuery("#chatBox").css("display", "inline");
     jQuery("#chatMessage").val("");
     jQuery("#chatMessage").focus();
     BombermanClient.chatBoxOpen = true;
 }
 
-BombermanClient.closeChatBox = function() {
+BombermanClient.closeChatBox = function () {
     jQuery("#chatBox").css("display", "none");
     BombermanClient.chatBoxOpen = false;
 }
 
-BombermanClient.showStats = function() {
+BombermanClient.showStats = function () {
     jQuery("#stats").css("display", "block");
 }
 
-BombermanClient.closeStats = function() {
+BombermanClient.closeStats = function () {
     jQuery("#stats").css("display", "none");
 }
 
-BombermanClient.showNameBox = function() {
+BombermanClient.showNameBox = function () {
     BombermanClient.hideRegisterOptions();
     BombermanClient.hideLoginOptions();
     BombermanClient.hideGameOptions();
     jQuery('#nameBox').modal('toggle');
 }
 
-BombermanClient.hideNameBox = function() {
+BombermanClient.hideNameBox = function () {
     jQuery("#nameBox").modal("hide");
 }
 
-BombermanClient.showGameOptions = function() {
+BombermanClient.showGameOptions = function () {
     BombermanClient.hideRegisterOptions();
     BombermanClient.hideLoginOptions();
     BombermanClient.hideNameBox();
     jQuery('#optionsBox').modal('show');
 }
 
-BombermanClient.hideGameOptions = function() {
+BombermanClient.hideGameOptions = function () {
     jQuery('#optionsBox').modal('hide');
 }
 
-BombermanClient.showLoginOptions = function() {
+BombermanClient.showLoginOptions = function () {
     BombermanClient.hideRegisterOptions();
     BombermanClient.hideGameOptions();
     jQuery('#loginBox').modal('show');
@@ -456,30 +474,30 @@ BombermanClient.showLoginOptions = function() {
     jQuery("#username").focus();
 }
 
-BombermanClient.hideLoginOptions = function() {
+BombermanClient.hideLoginOptions = function () {
     jQuery('#loginBox').modal('hide');
 }
 
-BombermanClient.showRegisterOptions = function() {
+BombermanClient.showRegisterOptions = function () {
     BombermanClient.hideLoginOptions();
     BombermanClient.hideGameOptions();
     jQuery("#registerBox").modal('show');
     jQuery("#email2").val("");
     jQuery("#username2").val("");
     jQuery("#password2").val("");
-    jQuery("#email2").focus(); 
-    
+    jQuery("#email2").focus();
+
 }
 
-BombermanClient.hideRegisterOptions = function() {
+BombermanClient.hideRegisterOptions = function () {
     jQuery("#registerBox").modal('hide');
 }
 
-BombermanClient.log = function(msg) {
+BombermanClient.log = function (msg) {
     console.log(msg);
 }
 
-BombermanClient.playSound = function(file) {
+BombermanClient.playSound = function (file) {
     var audio = document.getElementById("sound_" + file);
     if (audio == undefined) {
         jQuery('<audio id="sound_' + file + '" src="' + file + '" />').appendTo('body');
@@ -492,13 +510,13 @@ BombermanClient.playSound = function(file) {
     audio.play();
 }
 
-BombermanClient.stopSound = function(file) {
+BombermanClient.stopSound = function (file) {
     var audio = document.getElementById("sound_" + file);
     if (audio != undefined)
         audio.pause();
 }
 
-BombermanClient.removeWalls = function(toProc) {
+BombermanClient.removeWalls = function (toProc) {
     items = toProc.split("[#brickSep#]");
     var last = items.length;
     var idx = 0;
@@ -511,7 +529,7 @@ BombermanClient.removeWalls = function(toProc) {
     }
 }
 
-BombermanClient.renderItems = function(toProc) {
+BombermanClient.renderItems = function (toProc) {
     jQuery(".item").remove();
     //console.log(toProc);
     items = toProc.split("[#itemSep#]");
@@ -533,7 +551,7 @@ BombermanClient.renderItems = function(toProc) {
     }
 }
 
-BombermanClient.renderBombs = function(toProc) {
+BombermanClient.renderBombs = function (toProc) {
     jQuery(".bomb").remove();
     bombs = toProc.split("[#bombSep#]");
     var last = bombs.length;
@@ -553,7 +571,7 @@ BombermanClient.renderBombs = function(toProc) {
     }
 }
 
-BombermanClient.renderExplosions = function(toProc) {
+BombermanClient.renderExplosions = function (toProc) {
     //jQuery(".exp").remove();
     exps = toProc.split("[#explosionSep#]");
     var last = exps.length;
@@ -591,7 +609,7 @@ BombermanClient.renderExplosions = function(toProc) {
             }
             jQuery("#world").append(str);
             //console.log(exp);
-            jQuery(".extra").each(function(index) {
+            jQuery(".extra").each(function (index) {
                 var op = "";
                 var sign = ""; // retract
                 var sign2 = ""; // expand
@@ -665,9 +683,9 @@ BombermanClient.renderExplosions = function(toProc) {
     }
 }
 
-BombermanClient.renderMap = function(toProc) {
+BombermanClient.renderMap = function (toProc) {
     //console.log(toProc);
-    $.blockUI({message: "<p>Please wait for the map to load</p>"});
+    jQuery.blockUI({message: "<p>Please wait for the map to load</p>"});
     var dims = toProc.substr(0, toProc.indexOf("[#walls#]")).split("x");
     var worldWidth = parseInt(dims[0]);
     if (!worldWidth)
@@ -680,8 +698,11 @@ BombermanClient.renderMap = function(toProc) {
     //console.log(dims);
     toProc = toProc.substr(toProc.indexOf("[#walls#]") + 9 /*"[#walls#]".length*/);
     bricks = toProc.split("[#wallSep#]");
-    if (bricks.length && BombermanClient.brickLength == bricks.length)
-        return;
+    //if (bricks.length && BombermanClient.brickLength == bricks.length){
+    //    jQuery.unblockUI();
+    //    setTimeout('jQuery.unblockUI()', 200);
+    //    return;
+    //}
     BombermanClient.brickLength = bricks.length;
     jQuery(".brick").remove();
     var last = bricks.length;
@@ -699,13 +720,13 @@ BombermanClient.renderMap = function(toProc) {
             BombermanClient.log(ex);
         }
     }
-    BombermanClient.log("gata");
+    BombermanClient.log("ready");
     BombermanClient.sendReadyMessage();
-    $.unblockUI();
-    setTimeout('$.unblockUI()', 200);
+    jQuery.unblockUI();
+    setTimeout('jQuery.unblockUI()', 200);
 }
 
-BombermanClient.sendReadyMessage = function() {
+BombermanClient.sendReadyMessage = function () {
     try {
         BombermanClient.socket.send("ready");
     } catch (ex) {
@@ -713,7 +734,7 @@ BombermanClient.sendReadyMessage = function() {
     } // request info about the other users
 }
 
-BombermanClient.renderChars = function(toProc) {
+BombermanClient.renderChars = function (toProc) {
 
     BombermanClient.stats = {};
     BombermanClient.charID = toProc.substr(0, toProc.indexOf("[#chars#]"));
@@ -737,7 +758,7 @@ BombermanClient.renderChars = function(toProc) {
 
             if (x.id == BombermanClient.charID) {
                 BombermanClient.currentPlayer = x;
-                $("#adminConsoleSpan").html(BombermanClient.currentPlayer.name + "@cuxBomberman:~$ ");
+                jQuery("#adminConsoleSpan").html(BombermanClient.currentPlayer.name + "@cuxBomberman:~$ ");
             }
 
 //           log(x);
@@ -799,7 +820,7 @@ BombermanClient.renderChars = function(toProc) {
         }
     }
     //console.log(charNames);
-    jQuery(".character").each(function(idx) {
+    jQuery(".character").each(function (idx) {
         if (jQuery.inArray(jQuery(this).attr("id"), BombermanClient.charNames) == -1) {
             jQuery(this).remove();
         }
@@ -807,7 +828,7 @@ BombermanClient.renderChars = function(toProc) {
     BombermanClient.renderStats(BombermanClient.charID);
 }
 
-BombermanClient.blinkChar = function(charID, hide) {
+BombermanClient.blinkChar = function (charID, hide) {
     if (BombermanClient.blinking[charID]) {
         var elem = jQuery("#char_" + charID);
         if (hide) {
@@ -820,13 +841,13 @@ BombermanClient.blinkChar = function(charID, hide) {
     }
 }
 
-BombermanClient.unblinkChar = function(charID) {
+BombermanClient.unblinkChar = function (charID) {
     var elem = jQuery("#char_" + charID);
     BombermanClient.blinking[charID] = false;
     elem.fadeIn('fast');
 }
 
-BombermanClient.renderStats = function(charID) {
+BombermanClient.renderStats = function (charID) {
     jQuery(".stat").remove();
     var str = "";
     for (i in this.stats) {
@@ -835,7 +856,7 @@ BombermanClient.renderStats = function(charID) {
             cls = "alert alert-danger";
         }
         var x = BombermanClient.stats[i];
-        str += "<tr class='stat "+cls+"' style='padding:2px; margin:0px;'>";
+        str += "<tr class='stat " + cls + "' style='padding:2px; margin:0px;'>";
         str += "<td>" + x.name + "</td>";
         str += "<td>" + x.kills + "</td>";
         str += "<td>" + x.deaths + "</td>";
@@ -845,7 +866,7 @@ BombermanClient.renderStats = function(charID) {
     jQuery("#statsTable").append(str);
 }
 
-BombermanClient.boundNumber = function(nr, lo, hi) {
+BombermanClient.boundNumber = function (nr, lo, hi) {
     if (nr < lo)
         nr = lo;
     if (nr > hi)
@@ -853,7 +874,7 @@ BombermanClient.boundNumber = function(nr, lo, hi) {
     return nr;
 }
 
-BombermanClient.centerMap = function(id) {
+BombermanClient.centerMap = function (id) {
     var viewportWidth = jQuery(window).width();
     viewportHeight = jQuery(window).height();
     $foo = jQuery('#char_' + id);
@@ -867,13 +888,13 @@ BombermanClient.centerMap = function(id) {
             .scrollLeft(elOffset.left + (elWidth / 2) - (viewportWidth / 2));
 }
 
-BombermanClient.alert = function(msg){
-    $("#alertContent").html(msg);
-    $("#alertBox").modal('show');
+BombermanClient.alert = function (msg) {
+    jQuery("#alertContent").html(msg);
+    jQuery("#alertBox").modal('show');
 }
 
-BombermanClient.changeName = function() {
-    var name = $.trim(jQuery("#name").val());
+BombermanClient.changeName = function () {
+    var name = jQuery.trim(jQuery("#name").val());
     if (!name) {
         BombermanClient.alert("Enter a valid name!");
         return false;
@@ -886,7 +907,7 @@ BombermanClient.changeName = function() {
     return true;
 }
 
-BombermanClient.updateStatus = function() {
+BombermanClient.updateStatus = function () {
     BombermanClient.walking = false;
     if (BombermanClient.MOVE_UP) {
         try {
@@ -946,7 +967,7 @@ BombermanClient.updateStatus = function() {
 
 }
 
-BombermanClient.resetMap = function() {
+BombermanClient.resetMap = function () {
     try {
         BombermanClient.socket.send("reset");
     } catch (ex) {
@@ -954,11 +975,11 @@ BombermanClient.resetMap = function() {
     } // request info about the other users
 }
 
-BombermanClient.canFire = function() {
+BombermanClient.canFire = function () {
     BombermanClient.IS_FIRING = false;
 }
 
-BombermanClient.getMap = function() {
+BombermanClient.getMap = function () {
     try {
         BombermanClient.socket.send("getEnvironment");
     } catch (ex) {
@@ -966,7 +987,7 @@ BombermanClient.getMap = function() {
     } // request info about the other users
 }
 
-BombermanClient.sendMessage = function() {
+BombermanClient.sendMessage = function () {
     try {
         BombermanClient.socket.send("msg " + jQuery("#chatMessage").val());
     } catch (ex) {
@@ -976,37 +997,39 @@ BombermanClient.sendMessage = function() {
     jQuery("#chatMessage").focus();
 }
 
-BombermanClient.showMessage = function(message) {
+BombermanClient.showMessage = function (message) {
     //log(message);
     var msgID = Math.random().toString(36).slice(2);
     jQuery(".messages").append("<div class='alert alert-info message' id='msg_" + msgID + "'>" + message + "</div>");
     setTimeout("BombermanClient.hideMessage('" + msgID + "')", 3000);
 }
 
-BombermanClient.hideMessage = function(msgID) {
+BombermanClient.hideMessage = function (msgID) {
     jQuery("#msg_" + msgID).fadeOut('slow');
 }
 
-BombermanClient.confirm = function(confirmMessage,callback){
+BombermanClient.confirm = function (confirmMessage, callback) {
     confirmMessage = confirmMessage || '';
 
-    $('#confirmBox').modal('show');
+    jQuery('#confirmBox').modal('show');
 
-    $('#confirmMessage').html(confirmMessage);
-    $('#confirmFalse').click(function(){
-        $('#confirmBox').modal('hide');
-        if (callback) callback(false);
+    jQuery('#confirmMessage').html(confirmMessage);
+    jQuery('#confirmFalse').click(function () {
+        jQuery('#confirmBox').modal('hide');
+        if (callback)
+            callback(false);
 
     });
-    $('#confirmTrue').click(function(){
-        $('#confirmBox').modal('hide');
-        if (callback) callback(true);
+    jQuery('#confirmTrue').click(function () {
+        jQuery('#confirmBox').modal('hide');
+        if (callback)
+            callback(true);
     });
-}  
+}
 
-BombermanClient.quit = function() {
-    BombermanClient.confirm('Are you sure you want to exit?',function(result) {
-        if (result){
+BombermanClient.quit = function () {
+    BombermanClient.confirm('Are you sure you want to exit?', function (result) {
+        if (result) {
             BombermanClient.log("Goodbye!");
             try {
                 BombermanClient.socket.send("QUIT");
@@ -1023,43 +1046,70 @@ BombermanClient.quit = function() {
     });
 }
 
+BombermanClient.sendIP = function (){
+    try {
+        BombermanClient.socket.send("ip "+BombermanClient.getIP());
+    } catch (ex) {
+        BombermanClient.log(ex);
+    }
+}
+
+BombermanClient.getIP = function () {
+    var ip = "0.0.0.0";
+    $.ajax({
+        type: "GET",
+        url: "http://api.hostip.info/get_json.php",
+        datatype: "application/json",
+        contentType: "text/plain",
+        async: false,
+        success: function (msg) {
+//            BombermanClient.log(msg);
+            ip = msg.ip;
+        },
+        error: function (msg) {
+            BombermanClient.log(msg);
+        }
+    });
+    return ip;
+}
+
 var mouseX = 0;
 var mouseY = 0;
 var precMouseX = 0;
 var precMouseY = 0;
 
-jQuery(document).ready(function() {
+jQuery(document).ready(function () {
     BombermanClient.init();
     hideMouse = setInterval("checkIdleMouse()", 1000);
-    $('body').mousemove(function(event) {
+    jQuery('body').mousemove(function (event) {
         //console.log("move");
         mouseX = event.clientX || event.pageX;
         mouseY = event.clientY || event.pageY;
         if (precMouseX != mouseX || precMouseY != mouseY) {
-            $("body").css("cursor", "auto");
+            jQuery("body").css("cursor", "auto");
         }
         precMouseX = mouseX;
         precMouseY = mouseY;
     });
-    
-    jQuery("#username2, #password2, #email2").keydown(function(e){
+
+    jQuery("#username2, #password2, #email2").keydown(function (e) {
         if (e.keyCode == 13) {
-            $("#registerBtn").trigger("click");
-            e.preventDefault(); 
-        } 
+            jQuery("#registerBtn").trigger("click");
+            e.preventDefault();
+        }
     });
-    
-    jQuery("#username, #password").keydown(function(e){
+
+    jQuery("#username, #password").keydown(function (e) {
         if (e.keyCode == 13) {
-            $("#loginBtn").trigger("click");
-            e.preventDefault(); 
-        } 
+            jQuery("#loginBtn").trigger("click");
+            e.preventDefault();
+        }
     });
-    
+
 });
 
 function checkIdleMouse() {
     if (mouseX == precMouseX && mouseY == precMouseY) {
-        $("body").css("cursor", "none");
+        jQuery("body").css("cursor", "none");
     }
 }

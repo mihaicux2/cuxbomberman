@@ -84,21 +84,20 @@ public class World {
                 chars[i][j] = new HashMap<String, BCharacter>();
             }
         }
-        try {
-            BufferedReader input =  new BufferedReader(new FileReader(map));
-            String line = null; //not declared within while loop
+        try(BufferedReader input = new BufferedReader(new FileReader(map))) {
+            String line; //not declared within while loop
             Boolean firstLine = true;
             String first = line = input.readLine();
             String[] dims = line.split("x");
-            this.WIDTH = Integer.parseInt(dims[0]) * this.wallDim;
+            this.WIDTH = Integer.parseInt(dims[0]) * World.wallDim;
             if (this.WIDTH == 0) this.WIDTH = 660;
-            this.HEIGHT = Integer.parseInt(dims[1]) * this.wallDim;
+            this.HEIGHT = Integer.parseInt(dims[1]) * World.wallDim;
             if (this.HEIGHT == 0) this.WIDTH = 510;
-            AbstractWall wall = null;
-            int x1 = this.WIDTH / World.wallDim;
-            int y1 = this.HEIGHT / World.wallDim;
-            int x = 0;
-            int y = 0;
+            AbstractWall wall;
+            int x1 = this.WIDTH / World.wallDim,
+                y1 = this.HEIGHT / World.wallDim,
+                x,
+                y;
             //System.out.println(x1+", "+y1);
             for (int i = 0; i < y1; i++){
                 y = i * World.wallDim;
@@ -146,10 +145,10 @@ public class World {
     }
     
     public synchronized boolean HasMapCollision(BCharacter myChar){
-        if ((myChar.getPosX() == 0 && myChar.getDirection() == "Left") ||
-            (myChar.getPosY()== 0 && myChar.getDirection() == "Up") || 
-            (myChar.getPosX()+myChar.getWidth() == this.WIDTH && myChar.getDirection() == "Right") ||
-            (myChar.getPosY()+myChar.getHeight() == this.HEIGHT && myChar.getDirection() == "Down"))
+        if ((myChar.getPosX() == 0 && "Left".equals(myChar.getDirection())) ||
+            (myChar.getPosY()== 0 && "Up".equals(myChar.getDirection())) || 
+            (myChar.getPosX()+myChar.getWidth() == this.WIDTH && "Right".equals(myChar.getDirection())) ||
+            (myChar.getPosY()+myChar.getHeight() == this.HEIGHT && "Down".equals(myChar.getDirection())))
         {
             //myChar.stepBack(null);
             return true;
@@ -166,9 +165,7 @@ public class World {
         if (y1 < 99 && blockMatrix[x1][y1+1] != null && myChar.hits(blockMatrix[x1][y1+1]) && myChar.walksTo(blockMatrix[x1][y1+1])) return true;
         if (x1 < 99 && y1 < 99 && blockMatrix[x1+1][y1+1] != null && myChar.hits(blockMatrix[x1+1][y1+1]) && myChar.walksTo(blockMatrix[x1+1][y1+1])) return true;
         if (x1 > 0 && y1 < 99 && blockMatrix[x1-1][y1+1] != null && myChar.hits(blockMatrix[x1-1][y1+1]) && myChar.walksTo(blockMatrix[x1-1][y1+1])) return true;
-        if (x1 < 99 && y1 > 0 && blockMatrix[x1+1][y1-1] != null && myChar.hits(blockMatrix[x1+1][y1-1]) && myChar.walksTo(blockMatrix[x1+1][y1-1])) return true;
-        
-        return false;
+        return x1 < 99 && y1 > 0 && blockMatrix[x1+1][y1-1] != null && myChar.hits(blockMatrix[x1+1][y1-1]) && myChar.walksTo(blockMatrix[x1+1][y1-1]);
     }
     
     @Override
