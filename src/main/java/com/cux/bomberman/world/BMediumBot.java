@@ -362,6 +362,35 @@ public class BMediumBot extends BBaseBot{
         if (!this.path.isEmpty()) this.move(this.path.poll());
     }
     
+    public boolean dangerousRoad(ArrayList<String> road){
+        
+        if (road == null || road.isEmpty()) return false;
+        
+        // current bot position
+        int x = this.posX / World.wallDim;
+        int y = this.posY / World.wallDim;
+        
+        for (int i = 0; i < road.size(); i++){
+            String dir = road.get(i);
+            switch(dir){
+                case "up":
+                    if (!this.nearbyBombs(x, y-1).equals("")) return true;
+                    break;
+                case "down":
+                    if (!this.nearbyBombs(x, y+1).equals("")) return true;
+                    break;
+                case "left":
+                    if (!this.nearbyBombs(x-1, y).equals("")) return true;
+                    break;
+                case "right":
+                    if (!this.nearbyBombs(x+1, y).equals("")) return true;
+                    break;
+            }
+        }
+        
+        return false;
+    }
+    
     /**
      * This method uses the Dijkstra Algorithm to find the shortest path between any two given vertices,<br />
      * with a simple observation : <br />
@@ -389,7 +418,14 @@ public class BMediumBot extends BBaseBot{
                 if (vizited.contains(dest)){ // stop computing any other routes
                     //System.out.println("found");
                     String key = x+"_"+y+"_"+dest.getPosX()/World.wallDim+"_"+dest.getPosY()/World.wallDim;
-                    return road.get(key);
+                    //return road.get(key);
+                    if (!dangerousRoad(road.get(key))){
+                        return road.get(key);
+                    }
+                    else{ // the road is dangerous, we need to try to find another one...
+                        road.remove(key);
+                        vizited.remove(dest);
+                    }
                 }
                 
                 crtBlock = queue.poll();

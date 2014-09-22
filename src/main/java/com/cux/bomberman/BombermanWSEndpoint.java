@@ -1448,7 +1448,7 @@ public class BombermanWSEndpoint{
                                 exp.directions.add("right");
                                 //System.out.println("hit wall right");
                                 AbstractWall wall = ((AbstractWall) map.get(roomNr).blockMatrix[xR][yR]);
-                                if (wall.isBlowable()) {
+                                if (wall != null && wall.isBlowable()) {
                                     map.get(roomNr).walls.remove(wall);
                                     exp.ranges.put("right", exp.ranges.get("right") + 1);
                                     flipForItems(crtChar.roomIndex, xR, yR);

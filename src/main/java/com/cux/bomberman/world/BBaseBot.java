@@ -295,16 +295,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
         return false;
     }
     
-    /**
-     * This method checks if a bomb is capable of killing the BOT.<br />
-     * It also tries to avoid the bomb's explosion if TRUE should be returned
-     * @return True if the BOT can be killed by an existing bomb
-     */
-    public boolean IHaveBombsNearby(){
-        
-        // current bot position
-        int x = this.posX / World.wallDim;
-        int y = this.posY / World.wallDim;
+    public String nearbyBombs(int x, int y){
         
         boolean expandUp=true,
                 expandDown=true,
@@ -330,8 +321,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
                     expandLeft = false;
                     // if the bomb range raches the bot, must avoid explosion
                     if (BombermanWSEndpoint.getInstance().bombReaches((BBomb) BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[xLeft][y], x - xLeft)) {
-                        this.avoidBomb("left", x, y);
-                        return true;
+                        return "left";
                     }
                 }
                 else if (checkLeft.equals("wall")){
@@ -352,8 +342,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
                     expandRight = false;
                     // if the bomb range raches the bot, must avoid explosion
                     if (BombermanWSEndpoint.getInstance().bombReaches((BBomb)BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[xRight][y], xRight - x)){
-                        this.avoidBomb("right", x, y);
-                        return true;
+                        return "right";
                     }
                 }
                 else if (checkRight.equals("wall")){
@@ -374,8 +363,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
                     expandUp = false;
                     // if the bomb range raches the bot, must avoid explosion
                     if (BombermanWSEndpoint.getInstance().bombReaches((BBomb)BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[x][yUp], y - yUp)){
-                        this.avoidBomb("up", x, y);
-                        return true;
+                        return "up";
                     }
                 }
                 else if (checkUp.equals("wall")){
@@ -396,8 +384,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
                     expandDown = false;
                     // if the bomb range raches the bot, must avoid explosion
                     if (BombermanWSEndpoint.getInstance().bombReaches((BBomb) BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[x][yDown], yDown - y)) {
-                        this.avoidBomb("down", x, y);
-                        return true;
+                        return "down";
                     }
                 }
                 else if (checkDown.equals("wall")){
@@ -412,7 +399,28 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
             }
         }
         
+        return "";
+    }
+    
+    /**
+     * This method checks if a bomb is capable of killing the BOT.<br />
+     * It also tries to avoid the bomb's explosion if TRUE should be returned
+     * @return True if the BOT can be killed by an existing bomb
+     */
+    public boolean IHaveBombsNearby(){
+        
+        // current bot position
+        int x = this.posX / World.wallDim;
+        int y = this.posY / World.wallDim;
+        
+        String direction = this.nearbyBombs(x, y);
+        if (!direction.equals("")){
+            this.avoidBomb(direction, x, y);
+            return true;
+        }
+        
         return false;
+        
     }
     
     /**
