@@ -415,23 +415,6 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
         return false;
     }
     
-    public void move(String direction){
-        switch (direction){
-            case "left":
-                moveLeft();
-                break;
-            case "down":
-                moveDown();
-                break;
-            case "right":
-                moveRight();
-                break;
-            case "up":
-                moveUp();
-                break;
-        }
-    }
-    
     /**
      * This method checks if the given neighbour is the best next move.
      * It also goes to the given neighbour if TRUE should be returned

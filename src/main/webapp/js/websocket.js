@@ -33,6 +33,10 @@ var BombermanClient = {};
     BombermanClient.typeCommand = false;
     BombermanClient.isAdmin = false;
     BombermanClient.isBanned = false;
+    BombermanClient.commands = new Array();
+    BombermanClient.stackInit = false;
+    BombermanClient.stackHead = 0;
+    
 }
 
 BombermanClient.get_random_color = function () {
@@ -57,31 +61,31 @@ BombermanClient.bindKeyDown = function () {
 //        console.log(e.keyCode);
         switch (e.keyCode) {
             case 38:  // KEY_UP
-                if (BombermanClient.chatBoxOpen)
+                if (BombermanClient.chatBoxOpen || jQuery("#nameBox").css("display") != "none")
                     break;
                 BombermanClient.MOVE_UP = true;
                 BombermanClient.MOVE_DOWN = false;
                 break;
             case 40:  // KEY_DOWN
-                if (BombermanClient.chatBoxOpen)
+                if (BombermanClient.chatBoxOpen || jQuery("#nameBox").css("display") != "none")
                     break;
                 BombermanClient.MOVE_DOWN = true;
                 BombermanClient.MOVE_UP = false;
                 break;
             case 37:  // KEY_LEFT
-                if (BombermanClient.chatBoxOpen)
+                if (BombermanClient.chatBoxOpen || jQuery("#nameBox").css("display") != "none")
                     break;
                 BombermanClient.MOVE_LEFT = true;
                 BombermanClient.MOVE_RIGHT = false;
                 break;
             case 39:  // KEY_RIGHT
-                if (BombermanClient.chatBoxOpen)
+               if (BombermanClient.chatBoxOpen || jQuery("#nameBox").css("display") != "none")
                     break;
                 BombermanClient.MOVE_RIGHT = true;
                 BombermanClient.MOVE_LEFT = false;
                 break;
             case 16: // SHIFT
-                if (BombermanClient.chatBoxOpen)
+                if (BombermanClient.chatBoxOpen || jQuery("#nameBox").css("display") != "none")
                     break;
                 //INC_SPEED = true;
                 BombermanClient.DETONATE = true;
@@ -124,27 +128,27 @@ BombermanClient.bindKeyUp = function () {
     jQuery(window).keyup(function (e) {
         switch (e.keyCode) {
             case 38:  // KEY_UP
-                if (BombermanClient.chatBoxOpen)
+                if (BombermanClient.chatBoxOpen || jQuery("#nameBox").css("display") != "none")
                     break;
                 BombermanClient.MOVE_UP = false;
                 break;
             case 40:  // KEY_DOWN
-                if (BombermanClient.chatBoxOpen)
+                if (BombermanClient.chatBoxOpen || jQuery("#nameBox").css("display") != "none")
                     break;
                 BombermanClient.MOVE_DOWN = false;
                 break;
             case 37:  // KEY_LEFT
-                if (BombermanClient.chatBoxOpen)
+                if (BombermanClient.chatBoxOpen || jQuery("#nameBox").css("display") != "none")
                     break;
                 BombermanClient.MOVE_LEFT = false;
                 break;
             case 39:  // KEY_RIGHT
-                if (BombermanClient.chatBoxOpen)
+                if (BombermanClient.chatBoxOpen || jQuery("#nameBox").css("display") != "none")
                     break;
                 BombermanClient.MOVE_RIGHT = false;
                 break;
             case 16: // SHIFT
-                if (BombermanClient.chatBoxOpen)
+                if (BombermanClient.chatBoxOpen || jQuery("#nameBox").css("display") != "none")
                     break;
                 //INC_SPEED = false;
                 BombermanClient.DETONATE = false;
@@ -316,6 +320,9 @@ BombermanClient.sendAdminCommand = function (command) {
         return;
     }
     try {
+        if (command != BombermanClient.commands[BombermanClient.commands.length-1]){
+            BombermanClient.commands.push(command);
+        }
         BombermanClient.socket.send(command);
     } catch (ex) {
         BombermanClient.log(ex);
@@ -343,15 +350,54 @@ BombermanClient.makeAdmin = function () {
             e.preventDefault();
             return false;
         }
+        
     });
 
     jQuery("#adminConsole").keyup(function (e) {
         if (e.keyCode == 13) { // ENTER
             BombermanClient.sendAdminCommand();
             BombermanClient.typeCommand = false;
+            BombermanClient.stackInit = false;
+            BombermanClient.stackHead = 0;
             e.preventDefault();
             return false;
         }
+        
+        switch (e.keyCode){
+            case 13: // ENTER
+                BombermanClient.sendAdminCommand();
+                BombermanClient.typeCommand = false;
+                BombermanClient.stackInit = false;
+                BombermanClient.stackHead = 0;
+                e.preventDefault();
+                return false;
+                break; // >:) troll
+            case 38:  // KEY_UP
+                if (BombermanClient.commands.length > 0){
+                    if (!BombermanClient.stackInit){
+                        BombermanClient.stackInit = true;
+                        BombermanClient.stackHead = BombermanClient.commands.length-1;
+                    }
+                    jQuery("#adminConsole").val(BombermanClient.commands[BombermanClient.stackHead]);
+                    if (BombermanClient.stackHead > 0){
+                        BombermanClient.stackHead--;
+                    }
+                }
+                break;
+            case 40:  // KEY_DOWN
+                if (BombermanClient.commands.length > 0){
+                    if (!BombermanClient.stackInit){
+                        BombermanClient.stackInit = true;
+                        BombermanClient.stackHead = BombermanClient.commands.length-1;
+                    }
+                    jQuery("#adminConsole").val(BombermanClient.commands[BombermanClient.stackHead]);
+                    if (BombermanClient.stackHead < BombermanClient.commands.length - 1){
+                        BombermanClient.stackHead++;
+                    }
+                }
+                break;
+        }
+        
     });
 
 }
@@ -448,6 +494,8 @@ BombermanClient.showNameBox = function () {
     BombermanClient.hideLoginOptions();
     BombermanClient.hideGameOptions();
     jQuery('#nameBox').modal('toggle');
+    BombermanClient.stackInit = false;
+    BombermanClient.stackHead = 0;
 }
 
 BombermanClient.hideNameBox = function () {

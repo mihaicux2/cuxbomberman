@@ -333,7 +333,7 @@ public class BMediumBotIT {
             for (String dir : result){
                 System.out.println(dir);
             }
-            assertEquals(3, result.size());
+            assertEquals(expResult, result);
         }
     }
     

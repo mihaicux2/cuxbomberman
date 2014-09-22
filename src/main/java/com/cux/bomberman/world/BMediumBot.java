@@ -29,23 +29,9 @@ public class BMediumBot extends BBaseBot{
     
     private final Queue<String> path = new LinkedList<String>();
     
-    private String previousMove = null;
-    
     public BMediumBot(String id, String name, int roomIndex, EndpointConfig config) {
         super(id, name, roomIndex, config);
         this.searchRange = 6; // 13 x 13 (13 = 1 + 6*2) matrix for the search area
-    }
-    
-    public void moveRandom(){
-        //if (previousMove == null){
-            Random r = new Random();
-            int rand = r.nextInt(100000);
-            if      (rand % 4 == 0) previousMove = "left";
-            else if (rand % 3 == 0) previousMove = "down";
-            else if (rand % 2 == 0) previousMove = "up";
-            else                    previousMove = "right";
-        //}
-        move(previousMove);
     }
     
     /**

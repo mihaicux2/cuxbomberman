@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.websocket.EndpointConfig;
@@ -150,6 +151,8 @@ public class BCharacter extends AbstractBlock{
      * Set to 1 if the current player has admin privileges
      */
     protected boolean isAdmin = false;
+    
+    protected String previousMove = null;
     
     /**
      * Static initialization of the player textures
@@ -434,6 +437,36 @@ public class BCharacter extends AbstractBlock{
     public void decKills(){
         this.kills--;
         this.saveToDB();
+    }
+    
+    public void moveRandom(){
+        //if (previousMove == null){
+            Random r = new Random();
+            int rand = r.nextInt(100000);
+            if      (rand % 4 == 0) previousMove = "left";
+            else if (rand % 3 == 0) previousMove = "down";
+            else if (rand % 2 == 0) previousMove = "up";
+            else                    previousMove = "right";
+        //}
+        move(previousMove);
+    }
+    
+    public void move(String direction){
+        switch (direction){
+            case "left":
+                moveLeft();
+                break;
+            case "down":
+                moveDown();
+                break;
+            case "right":
+                moveRight();
+                break;
+            case "up":
+            default:
+                moveUp();
+                break;
+        }
     }
     
     public void moveUp(){

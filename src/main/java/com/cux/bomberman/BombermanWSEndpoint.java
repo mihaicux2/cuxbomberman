@@ -389,6 +389,30 @@ public class BombermanWSEndpoint{
             case "unbanip":
                 unbanIPProtocol(peer, toProcess);
                 break;
+            case "addtestbot":
+                addTestBotProtocol(peer, roomNr, toProcess);
+                break;
+            case "movechar":
+                moveCharProtocol(peer, toProcess);
+                break;
+            case "searchanddestroy":
+                searchAndDestroyProtocol(peer, toProcess);
+                break;
+            case "startbot":
+                startBotProtocol(peer, toProcess);
+                break;
+            case "stopbot":
+                stopBotProtocol(peer, toProcess);
+                break;
+            case "rename":
+                renameProtocol(peer, toProcess, roomNr);
+                break;
+            case "dropbomb":
+                dropBombProtocol(peer, toProcess, roomNr);
+                break;
+            case "detonatebomb":
+                detonateBombProtocol(peer, toProcess, roomNr);
+                break;
             default:
                 if (isAdmin(peer)) {
                     sendStatusMessage(peer, "command not found [ " + message + " ]\nTYPE `help` to see the available commands");
@@ -641,11 +665,17 @@ public class BombermanWSEndpoint{
         return "cuxBomberman v."+BombermanWSEndpoint.VERSION+"\n"+
                 "TYPE `addMediumBot` to add a new bot to the game\n"+
                 "TYPE `addDumbBot` to add a new dumb bot to the game\n"+
-                "TYPE `kick [username]` to remove a player from the game (bots included)\n"+
-                "TYPE `teleport [username]` to change a player position (bots included)\n"+
-                "TYPE `getip [username]` to get the player connection IP (bots not included)\n"+
-                "TYPE `banip [ip]` to ban an given player by it's IP\n"+
-                "TYPE `unbanip [ip]` to unban an given player by it's IP\n"+
+                "TYPE `kick <i>&lt;username&gt;</i>` to remove a player from the game (bots included)\n"+
+                "TYPE `teleport <i>&lt;username&gt;</i>` to change a player position (bots included)\n"+
+                "TYPE `getip <i>&lt;username&gt;</i>` to get the player connection IP (bots not included)\n"+
+                "TYPE `banip <i>&lt;ip&gt;</i>` to ban an given player by it's IP\n"+
+                "TYPE `unbanip <i>&lt;ip&gt;</i>` to unban an given player by it's IP\n"+
+                "TYPE `addTestBot <i>&lt;dumb|medium&gt;</i>` to add a given bot that you can test and control\n"+
+                "TYPE `moveChar <i>&lt;charName&gt;</i> [direction]` to move a player either random or towards a given direction\n"+
+                "TYPE `startBot <i>&lt;botName&gt;</i>` to run the Search&Destroy protocol of a given bot \n"+
+                "TYPE `stopBot <i>&lt;botName&gt;</i>` to stop the Search&Destroy protocol of a given bot \n"+
+                "TYPE `dropBomb <i>&lt;charName&gt;</i>` to force a given player to drop a bomb (if possible) \n"+
+                "TYPE `detonateBomb <i>&lt;charName&gt;</i>` to force a given player to detonate a bomb (if possible) \n"+
                 "TYPE `help` to view this message again\n";
     }
     
@@ -792,7 +822,8 @@ public class BombermanWSEndpoint{
         sendMessageAll(mapNumber, "<b>" + newChar.getName() + " has joined");
     }
 
-    public void addBot(Session peer, int type, int roomNr){
+    public BBaseBot addBot(Session peer, int type, int roomNr){
+        BBaseBot bot;
         if (mapBots.get(roomNr) == null) {
             mapBots.put(roomNr, 1); // one bot in current map
         } else {
@@ -800,52 +831,51 @@ public class BombermanWSEndpoint{
         }
         switch (type){
             case 1:
-                addMediumBot(peer, roomNr);
+                bot = addMediumBot(peer, roomNr);
                 break;
             default:
-                addDumbBot(peer, roomNr);
+                bot = addDumbBot(peer, roomNr);
                 break;
         }
+        return bot;
     }
     
-    private void addMediumBot(Session peer, int roomNr){    
-        String botName = "BOT_medium_"+mapBots.get(roomNr);
-        BBaseBot bot = new BMediumBot(botName, botName, mapNumber, null);
+    private void startBot(BBaseBot bot){
+        bot.setReady(true);
+        new Thread(bot).start();
+    }
+    
+    private void initBot(String botName, int roomNr, BBaseBot bot){
         bot.setPosX(0);
         bot.setPosY(0);
         bot.setWidth(World.wallDim);
         bot.setHeight(World.wallDim);
-        
         chars.put(botName, bot);
         chars2.get(roomNr).add(bot);
         setCharPosition(roomNr, bot);
-        new Thread(bot).start();
-
         bot.setReady(true);
-
+    }
+    
+    private BBaseBot addMediumBot(Session peer, int roomNr){    
+        String botName = "BOT_medium_"+mapBots.get(roomNr);
+        BBaseBot bot = new BMediumBot(botName, botName, mapNumber, null);
+        initBot(botName, roomNr, bot);
         System.out.println("medium_bot added...");
         sendStatusMessage(peer, "bot added - "+botName);
         charMapByName.put(botName, botName);
+        //startBot(bot);
+        return bot;
     }
     
-    private void addDumbBot(Session peer, int roomNr){
+    private BBaseBot addDumbBot(Session peer, int roomNr){
         String botName = "BOT_dumb_"+mapBots.get(roomNr);
         BBaseBot bot = new BDumbBot(botName, botName, mapNumber, null);
-        bot.setPosX(0);
-        bot.setPosY(0);
-        bot.setWidth(World.wallDim);
-        bot.setHeight(World.wallDim);
-        
-        chars.put(botName, bot);
-        chars2.get(roomNr).add(bot);
-        setCharPosition(roomNr, bot);
-        new Thread(bot).start();
-
-        bot.setReady(true);
-
+        initBot(botName, roomNr, bot);
         System.out.println("dumb_bot added...");
         sendStatusMessage(peer, "bot added - "+botName);
         charMapByName.put(botName, botName);
+        //startBot(bot);
+        return bot;
     }
     
     /**
@@ -2110,7 +2140,79 @@ public class BombermanWSEndpoint{
         if (name.length() > 0) {
             String initialName = crtChar.getName();
             crtChar.setName(name);
+            charMapByName.remove(initialName);
+            charMapByName.put(name, crtChar.getId());
             sendMessageAll(roomNr, "<b>" + initialName + " is now known as <u>" + name + "</u> </b>");
+        }
+    }
+    
+    public void detonateBombProtocol(Session peer, String charName, int roomNr){
+         if (!isAdmin(peer)){
+            sendNotAdminMessage(peer);
+            return;
+        }
+        
+        if (charName.length() == 0 ){
+            sendStatusMessage(peer, "Usage : `detonateBomb <i>&lt;charName&gt;</i>`");
+            return;
+        }
+        
+        BCharacter changedChar = findCharByName(charName);
+        if (changedChar == null){
+            sendStatusMessage(peer, charName + " is not connected dummy ;)");
+        }
+        else{
+            detonateProtocol(changedChar, roomNr);
+        } 
+    }
+    
+    public void dropBombProtocol(Session peer, String charName, int roomNr){
+        if (!isAdmin(peer)){
+            sendNotAdminMessage(peer);
+            return;
+        }
+        
+        if (charName.length() == 0 ){
+            sendStatusMessage(peer, "Usage : `dropBomb <i>&lt;charName&gt;</i>`");
+            return;
+        }
+        
+        BCharacter changedChar = findCharByName(charName);
+        if (changedChar == null){
+            sendStatusMessage(peer, charName + " is not connected dummy ;)");
+        }
+        else{
+            bombProtocol(changedChar, roomNr);
+        } 
+        
+    }
+    
+    public void renameProtocol(Session peer, String toProcess, int roomNr){
+        if (!isAdmin(peer)){
+            sendNotAdminMessage(peer);
+            return;
+        }
+        
+        if (toProcess.length() == 0 || !toProcess.contains(" ")){
+            sendStatusMessage(peer, "Usage : `rename <i>&lt;charName&gt;</i> <i>&lt;newName&gt;</i>`");
+            return;
+        }
+        
+        String charName,
+               newName;
+        
+        charName = toProcess.substring(0, toProcess.indexOf(" ")).trim();
+        newName = toProcess.substring(toProcess.indexOf(" ")).trim();
+        
+        if (charName.length() > 0){
+            BCharacter changedChar = findCharByName(charName);
+            if (changedChar == null){
+                sendStatusMessage(peer, charName + " is not connected dummy ;)");
+            }
+            else{
+                changeNameProtocol(changedChar, newName, roomNr);
+                sendStatusMessage(peer, "Renamed `"+charName+"` to `"+newName+"`");
+            } 
         }
     }
     
@@ -2138,24 +2240,27 @@ public class BombermanWSEndpoint{
             sendNotAdminMessage(peer);
             return;
         }
-        if (name.length() > 0){
-            BCharacter kickedChar = findCharByName(name);
-            if (kickedChar == null){
-                sendStatusMessage(peer, name + " is not connected dummy ;)");
+        if (name.length() == 0){
+            sendStatusMessage(peer, "Usage : `kick <i>&lt;charName&gt;</i>`");
+            return;
+        }
+        
+        BCharacter kickedChar = findCharByName(name);
+        if (kickedChar == null){
+            sendStatusMessage(peer, name + " is not connected dummy ;)");
+        }
+        else{
+            BCharacter crtPlayer = chars.get(peer.getId());
+            if (crtPlayer != null && name.equals(crtPlayer.getName())){
+                sendStatusMessage(peer, "You cannot kick yourself silly :>");
+            }
+            else if (peers.containsKey(kickedChar.getId())){
+                this.onMessage("QUIT", peers.get(kickedChar.getId()), config);
             }
             else{
-                BCharacter crtPlayer = chars.get(peer.getId());
-                if (crtPlayer != null && name.equals(crtPlayer.getName())){
-                    sendStatusMessage(peer, "You cannot kick yourself silly :>");
-                }
-                else if (peers.containsKey(kickedChar.getId())){
-                    this.onMessage("QUIT", peers.get(kickedChar.getId()), config);
-                }
-                else{
-                    kickBot((BBaseBot)kickedChar);
-                }
-                sendStatusMessage(peer, name + " is out. Are you happy?");
+                kickBot((BBaseBot)kickedChar);
             }
+            sendStatusMessage(peer, name + " is out. Are you happy?");
         }
     }
     
@@ -2170,14 +2275,16 @@ public class BombermanWSEndpoint{
             sendNotAdminMessage(peer);
             return;
         }
-        if (name.length() > 0){
-            BCharacter freedChar = findCharByName(name);
-            if (freedChar == null){
-                sendStatusMessage(peer, name + " is not connected dummy ;)");
-            }
-            else{
-                setCharPosition(getRoom(peer), freedChar);
-            }
+        if (name.length() == 0){
+            sendStatusMessage(peer, "Usage : `teleport <i>&lt;charName&gt;</i>`");
+            return;
+        }
+        BCharacter freedChar = findCharByName(name);
+        if (freedChar == null){
+            sendStatusMessage(peer, name + " is not connected dummy ;)");
+        }
+        else{
+            setCharPosition(getRoom(peer), freedChar);
         }
     }
     
@@ -2191,6 +2298,9 @@ public class BombermanWSEndpoint{
         if (!isAdmin(peer)){
             sendNotAdminMessage(peer);
             return;
+        }
+        if (mapName.length() == 0){
+            sendStatusMessage(peer, "Usage : `map <i>&lt;$mapName|<b>random</b>&gt;</i>`");
         }
         if (mapName.trim().toLowerCase().equals("random")){
             map.put(roomNr, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
@@ -2232,7 +2342,133 @@ public class BombermanWSEndpoint{
         if (!this.isAdmin(peer)) {
             sendNotAdminMessage(peer);
         } else {
-            addBot(peer, botType, roomNr);
+            startBot(addBot(peer, botType, roomNr));
+        }
+    }
+    
+    public void addTestBotProtocol(Session peer, int roomNr, String botType){
+        if (!this.isAdmin(peer)) {
+            sendNotAdminMessage(peer);
+        }
+        else{
+            if (botType.length() == 0){
+                sendStatusMessage(peer, "Usage : `addTestBot <i>&lt;dumb|medium&gt;</i>`");
+                return;
+            }
+            if (mapBots.get(roomNr) == null) {
+                mapBots.put(roomNr, 1); // one bot in current map
+            } else {
+                mapBots.put(roomNr, 1 + mapBots.get(roomNr)); // another bot in the current map
+            }
+            BBaseBot bot;
+            switch (botType) {
+                case "medium":
+                    bot = addMediumBot(peer, roomNr);
+                    break;
+                default:
+                    bot = addDumbBot(peer, roomNr);
+                    break;
+            }
+            sendStatusMessage(peer, "Test BOT " + bot.getName() +  " added ;)");
+        }
+    }
+    
+    public void startBotProtocol(Session peer, String botName){
+        if (!isAdmin(peer)){
+            sendNotAdminMessage(peer);
+            return;
+        }
+        
+        if (botName.length() > 0){
+            BBaseBot bot = (BBaseBot)findCharByName(botName);
+            if (bot == null){
+                sendStatusMessage(peer, botName + " is not connected dummy ;)");
+            }
+            else{
+                bot.setRunning(true);
+                new Thread(bot).start();
+            }
+        }
+        else{
+            sendStatusMessage(peer, "Usage : `startBot <i>&lt;botName&gt;</i>`");
+        }
+    }
+    
+    public void stopBotProtocol(Session peer, String botName){
+        if (!isAdmin(peer)){
+            sendNotAdminMessage(peer);
+            return;
+        }
+        
+        if (botName.length() > 0){
+            BBaseBot bot = (BBaseBot)findCharByName(botName);
+            if (bot == null){
+                sendStatusMessage(peer, botName + " is not connected dummy ;)");
+            }
+            else{
+                bot.setRunning(false);
+            }
+        }
+        else{
+            sendStatusMessage(peer, "Usage : `stopBot <i>&lt;botName&gt;</i>`");
+        }
+    }
+    
+    public void searchAndDestroyProtocol(Session peer, String botName){
+        if (!isAdmin(peer)){
+            sendNotAdminMessage(peer);
+            return;
+        }
+        
+        if (botName.length() > 0){
+            BBaseBot bot = (BBaseBot)findCharByName(botName);
+            if (bot == null){
+                sendStatusMessage(peer, botName + " is not connected dummy ;)");
+            }
+            else{
+                bot.searchAndDestroy();
+            }
+        }
+        else{
+            sendStatusMessage(peer, "Usage : `searchAndDestroy <i>&lt;botName&gt;</i>`");
+        }
+    }
+    
+    public void moveCharProtocol(Session peer, String toProcess){
+        
+        if (!isAdmin(peer)){
+            sendNotAdminMessage(peer);
+            return;
+        }
+        
+        String charName,
+               direction = "";
+        
+        if (toProcess.contains(" ")){
+            charName = toProcess.substring(0, toProcess.indexOf(" ")).trim();
+            direction = toProcess.substring(toProcess.indexOf(" ")).trim();
+        }
+        else{
+            charName =  toProcess;
+        }
+        
+        if (charName.length() > 0){
+            BCharacter movedChar = findCharByName(charName);
+            if (movedChar == null){
+                sendStatusMessage(peer, charName + " is not connected dummy ;)");
+            }
+            else{
+                if (direction.equals("")){
+                    movedChar.moveRandom();
+                }
+                else{
+                    movedChar.move(direction);
+                }
+                sendStatusMessage(peer, charName + " moved " + direction);
+            } 
+        }
+        else{
+            sendStatusMessage(peer, "Usage : `moveChar <i>&lt;charName&gt;</i>[ <i><b>up|down|left|right</b></i>]`");
         }
     }
     
@@ -2365,6 +2601,9 @@ public class BombermanWSEndpoint{
                 }
             }
         }
+        else{
+            sendStatusMessage(peer, "Usage : `getip <i>&lt;charName&gt;</i>`");
+        }
     }
     
     public void banIPProtocol(Session peer, String ip, EndpointConfig config){
@@ -2383,6 +2622,9 @@ public class BombermanWSEndpoint{
                     this.onMessage("QUIT", crtP, config);
                 }
             }
+        }
+        else{
+            sendStatusMessage(peer, "Usage : `banIP <i>&lt;charIP&gt;</i>`");
         }
     }
     
@@ -2409,6 +2651,9 @@ public class BombermanWSEndpoint{
         if (ip.length() > 0){
             unbanIP(ip);
             sendStatusMessage(peer, ip + " has been unbanned");
+        }
+        else{
+            sendStatusMessage(peer, "Usage : `unbanIP <i>&lt;charIP&gt;</i>`");
         }
     }
     
