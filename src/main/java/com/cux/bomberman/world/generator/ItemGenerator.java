@@ -35,7 +35,7 @@ public class ItemGenerator {
     
     /**
      * Overwritten method to disallow cloning of the instantiated object. [Singleton pattern]
-     * @return
+     * @return NULL
      * @throws CloneNotSupportedException 
      */
     @Override

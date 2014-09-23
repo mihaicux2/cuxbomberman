@@ -692,7 +692,7 @@ public class BombermanWSEndpoint{
     /**
      * Public method returning the player with a given name (if any)
      * @param name The name to be found
-     * @return 
+     * @return The searched character or NULL
      */
     public BCharacter findCharByName(String name){
         if (charMapByName.containsKey(name)){
