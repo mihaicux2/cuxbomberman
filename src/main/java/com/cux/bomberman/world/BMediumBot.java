@@ -77,7 +77,7 @@ public class BMediumBot extends BBaseBot{
         
         // if the bot can detonate bombs, tigger them with a 300 ms delay
         if (this.plantedBombs > 0 && this.triggered){
-            this.triggerBomb(this, 300);
+            this.triggerBomb(this, 500);
             return;
         }
         
@@ -356,11 +356,11 @@ public class BMediumBot extends BBaseBot{
             public void run() {
                 try{
                     Thread.sleep(delay);
+                    BombermanWSEndpoint.getInstance().detonateBomb(bot);
                 }
                 catch (InterruptedException ex){
                     BLogger.getInstance().logException2(ex);
                 }
-                BombermanWSEndpoint.getInstance().detonateBomb(bot);
             }
         }).start();
     }
@@ -388,16 +388,20 @@ public class BMediumBot extends BBaseBot{
         for (String dir : road) {
             switch(dir){
                 case "up":
-                    if (!this.nearbyBombs(x, y-1).equals("")) return true;
+                    y--;
+                    if (!this.nearbyBombs(x, y).equals("")) return true;
                     break;
                 case "down":
-                    if (!this.nearbyBombs(x, y+1).equals("")) return true;
+                    y++;
+                    if (!this.nearbyBombs(x, y).equals("")) return true;
                     break;
                 case "left":
-                    if (!this.nearbyBombs(x-1, y).equals("")) return true;
+                    x--;
+                    if (!this.nearbyBombs(x, y).equals("")) return true;
                     break;
                 case "right":
-                    if (!this.nearbyBombs(x+1, y).equals("")) return true;
+                    x++;
+                    if (!this.nearbyBombs(x, y).equals("")) return true;
                     break;
             }
         }
