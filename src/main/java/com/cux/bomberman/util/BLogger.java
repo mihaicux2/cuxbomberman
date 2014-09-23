@@ -1,6 +1,5 @@
 package com.cux.bomberman.util;
 
-//import java.io.File;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -10,12 +9,20 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-//import javax.swing.JDialog;
-//import javax.swing.JOptionPane;
-
+/**
+ *
+ * @author mihaicux
+ */
 public final class BLogger {
 
+    /**
+     * The only allowed instance of the BLogger class
+     */
     private static BLogger instance = null;
+    
+    /**
+     * Simple check to see if the messages to be stored should be echoed to the server's output
+     */
     private Boolean echoErrors = false;
 
     /**
@@ -28,7 +35,7 @@ public final class BLogger {
     public static Integer LEVEL_ERROR = 4;
 
     /**
-     * Private constructor to disallow direct instanciation
+     * Private constructor to disallow direct instantiation
      */
     private BLogger(){}
 
@@ -44,7 +51,7 @@ public final class BLogger {
     }
 
     /**
-     * Overwritten method to disallow cloning of the instanciated object. [Singleton pattern]
+     * Overwritten method to disallow cloning of the instantiated object. [Singleton pattern]
      * @return
      * @throws CloneNotSupportedException 
      */
@@ -55,7 +62,7 @@ public final class BLogger {
 
     /**
      * Public method used to tell the logger if it should also raise a popup during the logged messages
-     * @param echo - boolean to set the echoErrors property
+     * @param echo boolean to set the echoErrors property
      */
     public void setEcho(Boolean echo){
         echoErrors = echo;
@@ -73,8 +80,8 @@ public final class BLogger {
 
     /**
      * Public method used to store the messages
-     * @param level - the security level of the stored messages
-     * @param message - the message to be stored
+     * @param level the security level of the stored messages
+     * @param message the message to be stored
      */
     public void log(Integer level, String message){
        if (level.equals(LEVEL_FINE)) logFine(message+"\r\n");
@@ -87,8 +94,8 @@ public final class BLogger {
     /**
      * Private method used to show the logged messages on the screen. Also, if the echoErrors property<br />
      * is set to true, a pop-up will appear foreach logged message
-     * @param message - the message to be shown
-     * @param level - the security level of the given message
+     * @param message the message to be shown
+     * @param level the security level of the given message
      */
     private void echo(String message, Integer level){
         System.out.println(message);
@@ -99,7 +106,7 @@ public final class BLogger {
 
     /**
      * Public method used to log raised exceptions
-     * @param e - The exception to be logged
+     * @param e The exception to be logged
      */
     public void logException2(Exception e){
         StackTraceElement[] tracker = e.getStackTrace();
@@ -117,7 +124,7 @@ public final class BLogger {
 
     /**
      * Public method used to log throwables
-     * @param e - The throwable to be logged
+     * @param e The throwable to be logged
      */
     public void logThrowable(Throwable e){
         StackTraceElement[] tracker = e.getStackTrace();
@@ -136,7 +143,7 @@ public final class BLogger {
 
     /**
      * Private method used to log a normal message
-     * @param fineMessage - the message to be logged
+     * @param fineMessage the message to be logged
      */
     private void logFine(String fineMessage){
         String str = "FINE [ "+getDateTime()+" ] : "+fineMessage;
@@ -155,7 +162,7 @@ public final class BLogger {
 
     /**
      * Private method used to log an information message
-     * @param infoMessage - the message to be logged
+     * @param infoMessage the message to be logged
      */
     private void logInfo(String infoMessage){
         String str = "INFO [ "+getDateTime()+" ] : "+infoMessage;
@@ -174,7 +181,7 @@ public final class BLogger {
 
     /**
      * Private method used to log a warning message
-     * @param warningMessage - the message to be logged
+     * @param warningMessage the message to be logged
      */
     private void logWarning(String warningMessage){
         String str = "WARNING [ "+getDateTime()+" ] : "+warningMessage;
@@ -193,7 +200,7 @@ public final class BLogger {
 
     /**
      * Private method used to log an exception message
-     * @param exceptionMessage - the message to be logged
+     * @param exceptionMessage the message to be logged
      */
     private void logException(String exceptionMessage){
         String str = "EXCEPTION [ "+getDateTime()+" ] : "+exceptionMessage;
@@ -212,7 +219,7 @@ public final class BLogger {
 
     /**
      * Private method used to log an error message
-     * @param errorMessage - the message to be logged
+     * @param errorMessage the message to be logged
      */
     private void logError(String errorMessage){
         String str = "ERROR [ "+getDateTime()+" ] : "+errorMessage;

@@ -1,18 +1,10 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.cux.bomberman.world;
 
 import com.cux.bomberman.BombermanWSEndpoint;
-import static com.cux.bomberman.BombermanWSEndpoint.map;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
 import java.util.Random;
 import javax.websocket.EndpointConfig;
-//import javax.websocket.Session;
 
 /**
  *
@@ -20,24 +12,53 @@ import javax.websocket.EndpointConfig;
  */
 public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI{
     
+    /**
+     * Matrix to store the blocks already followed
+     */
     protected boolean markedBlock[][];    
+    
+    /**
+     * Boolean telling if the bot is in Search&Destroy directoive
+     */
     protected boolean running = false;
+    
+    /**
+     * The default range for best move search
+     */
     protected int searchRange = 3;
     
+    /**
+     * Public constructor used for every bot
+     * @param id The BOT's id
+     * @param name The BOT's name
+     * @param roomIndex The room in which it will be added
+     * @param config The server endpoint configuration object
+     */
     public BBaseBot(String id, String name, int roomIndex, EndpointConfig config) {
         super(id, name, roomIndex, config);
-        this.markedBlock = new boolean[map.get(this.roomIndex).getWidth()/World.wallDim][map.get(this.roomIndex).getHeight()/World.wallDim];
+        this.markedBlock = new boolean[BombermanWSEndpoint.map.get(this.roomIndex).getWidth()/World.wallDim][BombermanWSEndpoint.map.get(this.roomIndex).getHeight()/World.wallDim];
         this.running = true;
     }
     
+    /**
+     * Public setter for the running property
+     * @param running The new value
+     */
     public void setRunning(boolean running){
         this.running = running;
     }
     
+    /**
+     * Public getter for the running property
+     * @return The value of the running property
+     */
     public boolean getRunning(){
         return this.running;
     }
     
+    /**
+     * Public method used by the bot to move up
+     */
     @Override
     public void moveUp(){
         this.setDirection("Up");
@@ -47,6 +68,9 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
         BombermanWSEndpoint.charsChanged.put(this.roomIndex, true);
     }
     
+    /**
+     * Public method used by the bot to move left
+     */
     @Override
     public void moveLeft(){
         this.setDirection("Left");
@@ -56,6 +80,9 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
         BombermanWSEndpoint.charsChanged.put(this.roomIndex, true);
     }
     
+    /**
+     * Public method used by the bot to move down
+     */
     @Override
     public void moveDown(){
         this.setDirection("Down");
@@ -65,6 +92,9 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
         BombermanWSEndpoint.charsChanged.put(this.roomIndex, true);
     }
     
+    /**
+     * Public method used by the bot to move right
+     */
     @Override
     public void moveRight(){
         this.setDirection("Right");
@@ -74,17 +104,17 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
         BombermanWSEndpoint.charsChanged.put(this.roomIndex, true);
     }
     
+    /**
+     * Public method used by the bot to drop a bomb
+     */
     public void dropBomb(){
         this.addOrDropBomb(); // change character state
         boolean isAllowed = this.getPlantedBombs() < this.getMaxBombs();
-        //boolean isAllowed = true;
-//        System.out.println("BBaseBot.drop : trying to plant bomb..." + (isAllowed ? "can do" : "can't do"));
-//        System.out.println("BBaseBot.drop : pot pune "+this.getMaxBombs()+" bombe, am pus "+this.getPlantedBombs());
         if (isAllowed && this.getState().equals("Normal")) { // if he dropped the bomb, add the bomb to the screen
             final BBomb b = new BBomb(this);
-//            if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, b.getPosX() / World.wallDim, b.getPosY() / World.wallDim)) {
-//                return;
-//            }
+            if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, b.getPosX() / World.wallDim, b.getPosY() / World.wallDim)) {
+                return;
+            }
             BombermanWSEndpoint.bombs.get(this.roomIndex).add(b);
             BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[b.getPosX() / World.wallDim][b.getPosY() / World.wallDim] = b;
             this.incPlantedBombs();
@@ -96,24 +126,38 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
         BombermanWSEndpoint.bombsChanged.put(this.roomIndex, true);
     }
     
+    /**
+     * Public method overridden to avoid storing bot information in the database
+     * @return 1
+     */
     @Override
     public int saveToDB(){
          return 1;
     }
     
+    /**
+     * Public method overridden to avoid getting bot information from the database
+     * @return 1
+     */
     @Override
     public int logIn(){
         return 1;
     }
     
+    /**
+     * Public method overridden to avoid getting bot information from the database.
+     */
     @Override
-    public void restoreFromDB(){
-        
-    }
+    public void restoreFromDB(){}
     
+    /**
+     * Public method used by the bots to try to avoid an explosion
+     * @param bombLocation String telling the bot where is the bomb placed
+     * @param x The X coordinate of bot
+     * @param y The Y coordinate of the bot
+     */
     @Override
     public void avoidBomb(String bombLocation, int x, int y){
-//        System.out.println("bomb detected "+bombLocation);
         boolean move = true;
         switch(bombLocation){
             case "up":
@@ -129,7 +173,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
                     this.markedBlock[x-1][y] = false;
                 }
                 
-                if (move && x+1 < map.get(this.roomIndex).getWidth() / World.wallDim && !this.markedBlock[x+1][y]){ // try to go right
+                if (move && x+1 < BombermanWSEndpoint.map.get(this.roomIndex).getWidth() / World.wallDim && !this.markedBlock[x+1][y]){ // try to go right
                     String checkRight = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x+1, y);
                     if (checkRight.equals("char") || checkRight.equals("empty")){
                         this.moveRight();
@@ -137,18 +181,18 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
                         this.markedBlock[x+1][y] = true;
                     }
                 }
-                else if (x+1 < map.get(this.roomIndex).getWidth() / World.wallDim){
+                else if (x+1 < BombermanWSEndpoint.map.get(this.roomIndex).getWidth() / World.wallDim){
                     this.markedBlock[x+1][y] = false;
                 }
                 
-                if (move && y+1 < map.get(this.roomIndex).getHeight() / World.wallDim && !this.markedBlock[x][y+1]){ // try to go down
+                if (move && y+1 < BombermanWSEndpoint.map.get(this.roomIndex).getHeight() / World.wallDim && !this.markedBlock[x][y+1]){ // try to go down
                     String checkDown = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, y+1);
                     if (checkDown.equals("char") || checkDown.equals("empty")){
                         this.moveDown();
                         this.markedBlock[x][y+1] = true;
                     }
                 }
-                else if (y+1 < map.get(this.roomIndex).getHeight() / World.wallDim){
+                else if (y+1 < BombermanWSEndpoint.map.get(this.roomIndex).getHeight() / World.wallDim){
                     this.markedBlock[x][y+1] = false;
                 }
                 break;
@@ -165,7 +209,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
                     this.markedBlock[x-1][y] = false;
                 }
                 
-                if (move && x+1 < map.get(this.roomIndex).getWidth() / World.wallDim && !this.markedBlock[x+1][y]){ // try to go right
+                if (move && x+1 < BombermanWSEndpoint.map.get(this.roomIndex).getWidth() / World.wallDim && !this.markedBlock[x+1][y]){ // try to go right
                     String checkRight = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x+1, y);
                     if (checkRight.equals("char") || checkRight.equals("empty")){
                         this.moveRight();
@@ -173,7 +217,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
                         this.markedBlock[x+1][y] = true;
                     }
                 }
-                else if (x+1 < map.get(this.roomIndex).getWidth() / World.wallDim){
+                else if (x+1 < BombermanWSEndpoint.map.get(this.roomIndex).getWidth() / World.wallDim){
                     this.markedBlock[x+1][y] = false;
                 }
                 
@@ -201,7 +245,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
                     this.markedBlock[x][y-1] = true;
                 }
                 
-                if (move && y+1 < map.get(this.roomIndex).getHeight() / World.wallDim && !this.markedBlock[x][y+1]){ // try to go down
+                if (move && y+1 < BombermanWSEndpoint.map.get(this.roomIndex).getHeight() / World.wallDim && !this.markedBlock[x][y+1]){ // try to go down
                     String checkDown = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, y+1);
                     if (checkDown.equals("char") || checkDown.equals("empty")){
                         this.moveDown();
@@ -209,18 +253,18 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
                         this.markedBlock[x][y+1] = true;
                     }
                 }
-                else if (y+1 < map.get(this.roomIndex).getHeight() / World.wallDim){
+                else if (y+1 < BombermanWSEndpoint.map.get(this.roomIndex).getHeight() / World.wallDim){
                     this.markedBlock[x][y+1] = false;
                 }
                 
-                if (move && x+1 < map.get(this.roomIndex).getWidth() / World.wallDim && !this.markedBlock[x+1][y]){ // try to go right
+                if (move && x+1 < BombermanWSEndpoint.map.get(this.roomIndex).getWidth() / World.wallDim && !this.markedBlock[x+1][y]){ // try to go right
                     String checkRight = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x+1, y);
                     if (checkRight.equals("char") || checkRight.equals("empty")){
                         this.moveRight();
                         this.markedBlock[x+1][y] = true;
                     }
                 }
-                else if (x+1 < map.get(this.roomIndex).getWidth() / World.wallDim){
+                else if (x+1 < BombermanWSEndpoint.map.get(this.roomIndex).getWidth() / World.wallDim){
                     this.markedBlock[x+1][y] = false;
                 }
                 break;
@@ -237,14 +281,14 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
                     this.markedBlock[x][y-1] = true;
                 }
                 
-                if (move && y+1 < map.get(this.roomIndex).getHeight() / World.wallDim && !this.markedBlock[x][y+1]){ // try to go down
+                if (move && y+1 < BombermanWSEndpoint.map.get(this.roomIndex).getHeight() / World.wallDim && !this.markedBlock[x][y+1]){ // try to go down
                     String checkDown = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, y+1);
                     if (checkDown.equals("char") || checkDown.equals("empty")){
                         this.moveDown();
                         this.markedBlock[x][y+1] = true;
                     }
                 }
-                else if (y+1 < map.get(this.roomIndex).getHeight() / World.wallDim){
+                else if (y+1 < BombermanWSEndpoint.map.get(this.roomIndex).getHeight() / World.wallDim){
                     this.markedBlock[x][y+1] = false;
                 }
                 
@@ -295,6 +339,13 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
         return false;
     }
     
+    /**
+     * This method checks if there are bombs that could reach a given position
+     * @param x The X coordinate of the given position
+     * @param y The Y coordinate of the given position
+     * @return A string representing the direction from the bomb reaches.<br />
+     * An empty string if no such bomb is found.
+     */
     public String nearbyBombs(int x, int y){
         
         boolean expandUp=true,
@@ -336,7 +387,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
             }
             
             // check for bombs in the right
-            if (expandRight && xRight < map.get(this.roomIndex).getWidth() / World.wallDim ){
+            if (expandRight && xRight < BombermanWSEndpoint.map.get(this.roomIndex).getWidth() / World.wallDim ){
                 String checkRight = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, xRight, y);
                 if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, xRight, y)){
                     expandRight = false;
@@ -378,7 +429,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
             }
             
             // check for bombs down
-            if (expandDown && yDown < map.get(this.roomIndex).getHeight() / World.wallDim ){
+            if (expandDown && yDown < BombermanWSEndpoint.map.get(this.roomIndex).getHeight() / World.wallDim ){
                 String checkDown = BombermanWSEndpoint.checkWorldMatrix(this.roomIndex, x, yDown);
                 if (BombermanWSEndpoint.bombExists(BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix, x, yDown)){
                     expandDown = false;
@@ -413,9 +464,9 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
         int x = this.posX / World.wallDim;
         int y = this.posY / World.wallDim;
         
-        String direction = this.nearbyBombs(x, y);
-        if (!direction.equals("")){
-            this.avoidBomb(direction, x, y);
+        String _direction = this.nearbyBombs(x, y);
+        if (!_direction.equals("")){
+            this.avoidBomb(_direction, x, y);
             return true;
         }
         
@@ -426,9 +477,9 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
     /**
      * This method checks if the given neighbour is the best next move.
      * It also goes to the given neighbour if TRUE should be returned
-     * @param x - the neighbour X coordinate
-     * @param y - the neighbour Y coordinate
-     * @param direction - the direction twoards the neighbour
+     * @param x the neighbour X coordinate
+     * @param y the neighbour Y coordinate
+     * @param direction the direction towards the neighbour
      * @return TRUE if the given neighbour is a character or a positive item 
      */
     public boolean checkNextBlock(int x, int y, String direction){
@@ -465,7 +516,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
     }
     
     /**
-     * This method checks if any of the existing neighbours can be choosen as the next best move
+     * This method checks if any of the existing neighbours can be chosen as the next best move
      * @return TRUE if such a neighbour is found
      */
     public boolean CheckNeighbours(){
@@ -480,7 +531,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
             ret = checkNextBlock(x-1, y, "left");
         }
 
-        if (x < map.get(this.roomIndex).getWidth() / World.wallDim){ // check right
+        if (x < BombermanWSEndpoint.map.get(this.roomIndex).getWidth() / World.wallDim){ // check right
             ret = checkNextBlock(x+1, y, "right");
         }
 
@@ -488,7 +539,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
             ret = checkNextBlock(x, y-1, "up");
         }
 
-        if (y < map.get(this.roomIndex).getHeight() / World.wallDim){ // check down
+        if (y < BombermanWSEndpoint.map.get(this.roomIndex).getHeight() / World.wallDim){ // check down
             ret = checkNextBlock(x, y+1, "down");
         }
             

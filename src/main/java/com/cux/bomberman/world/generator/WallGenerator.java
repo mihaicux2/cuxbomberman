@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.cux.bomberman.world.generator;
 
 import com.cux.bomberman.world.World;
@@ -12,22 +6,36 @@ import java.util.Random;
 
 /**
  *
- * @author root
+ * @author mihaicux
+ * SINGLETON Pattern
+ * 
  */
 public class WallGenerator {
     
+    /**
+     * The only allowed instance of the WallGenerator class
+     */
     private static WallGenerator instance = null;
     
-    // constructor ce duce la evitarea instantierii directe
+    /**
+     * Private constructor to disallow direct instantiation
+     */
     private WallGenerator(){}
     
-   @Override
-    // nu permite clonarea obiectului
+    /**
+     * Overwritten method to disallow cloning of the instantiated object. [Singleton pattern]
+     * @return
+     * @throws CloneNotSupportedException 
+     */
+    @Override
     public Object clone() throws CloneNotSupportedException {
         throw new CloneNotSupportedException();
     }
     
-    // evita instantierea mai multor obiecte de acest tip si in cazul thread-urilor
+    /**
+     * Public static method used to implement the Singleton pattern. Only one instance of this class is allowed
+     * @return The only allowed instance of this class
+     */
     public static synchronized WallGenerator getInstance(){
         if (instance == null){
             instance = new WallGenerator();
@@ -35,13 +43,19 @@ public class WallGenerator {
         return instance;
     }
     
+    /**
+     * Public method used to generate a wall (random, any of the defined walls)
+     * @param wW The World width
+     * @param wH The World height
+     * @return The generated wall
+     */
     public AbstractWall generateRandomWall(int wW, int wH){
         int rand = (int) (Math.random()*1000000);
         Random r = new Random();
         int initialX = (r.nextInt(wW) / World.wallDim ) * World.wallDim;
         int initialY = (r.nextInt(wH) / World.wallDim ) * World.wallDim;
         
-        AbstractWall ret = null;
+        AbstractWall ret;
         
         if      (rand % 5 == 0) ret = new WaterWall(initialX, initialY);
         else if (rand % 4 == 0) ret = new StoneWall(initialX, initialY);

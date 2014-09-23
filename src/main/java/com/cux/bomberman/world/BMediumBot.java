@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.cux.bomberman.world;
 
 import com.cux.bomberman.BombermanWSEndpoint;
@@ -19,7 +13,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.Random;
 import javax.websocket.EndpointConfig;
 
 /**
@@ -27,15 +20,29 @@ import javax.websocket.EndpointConfig;
  */
 public class BMediumBot extends BBaseBot{
     
+    /**
+     * List used for the bot to follow a given path
+     */
     private final Queue<String> path = new LinkedList<String>();
     
+    /**
+     * Public constructor used only to call the BBaseBot constructor
+     * @param id The bot id
+     * @param name The bot name
+     * @param roomIndex The room of the game
+     * @param config The server endpoint configuration object
+     */
     public BMediumBot(String id, String name, int roomIndex, EndpointConfig config) {
         super(id, name, roomIndex, config);
         this.searchRange = 6; // 13 x 13 (13 = 1 + 6*2) matrix for the search area
     }
     
     /**
-     * 
+     * Public method used for the Search&Destroy directive.<br />
+     * The bot scans it's search range and searches for possible threats (i.e. bombs that could kill it).<br />
+     * If a threat is found, it will try to avoid it.<br />
+     * If no such threat is found, it will try to find a path to it's closest neighbours (items, characters and blowable walls,<br />
+     * in this exact order). Only if no such neighbour is found, the bot will make a random move.
      */
     @Override
     public void searchAndDestroy(){
@@ -68,9 +75,9 @@ public class BMediumBot extends BBaseBot{
             return;
         }
         
-        // if the bot can detonate bombs, tigger them with a 100 ms delay
+        // if the bot can detonate bombs, tigger them with a 300 ms delay
         if (this.plantedBombs > 0 && this.triggered){
-            this.triggerBomb(this, 100);
+            this.triggerBomb(this, 300);
             return;
         }
         
@@ -339,8 +346,8 @@ public class BMediumBot extends BBaseBot{
 
     /**
      * Method used to detonate bombs with a given delay
-     * @param bot - the bot that is detonating bombs (inside of a new thread, "this" has different scope)
-     * @param delay - time to wait until actual detonation
+     * @param bot the bot that is detonating bombs (inside of a new thread, "this" has different scope)
+     * @param delay time to wait until actual detonation
      */
     public void triggerBomb(final BBaseBot bot, final int delay){
         new Thread(new Runnable() {
@@ -358,10 +365,18 @@ public class BMediumBot extends BBaseBot{
         }).start();
     }
     
+    /**
+     * Method used to force the bot to follow a given preprocessed path
+     */
     public void followPath(){
         if (!this.path.isEmpty()) this.move(this.path.poll());
     }
     
+    /**
+     * Method used to tell if a given road is dangerous (if it conains threats).
+     * @param road The given path to follow
+     * @return TRUE if the road is dangerous
+     */
     public boolean dangerousRoad(ArrayList<String> road){
         
         if (road == null || road.isEmpty()) return false;
@@ -370,8 +385,7 @@ public class BMediumBot extends BBaseBot{
         int x = this.posX / World.wallDim;
         int y = this.posY / World.wallDim;
         
-        for (int i = 0; i < road.size(); i++){
-            String dir = road.get(i);
+        for (String dir : road) {
             switch(dir){
                 case "up":
                     if (!this.nearbyBombs(x, y-1).equals("")) return true;
@@ -396,9 +410,9 @@ public class BMediumBot extends BBaseBot{
      * with a simple observation : <br />
      * all distances have the same length (i.e. all edges have the same weight), meaning that any existing<br />
      * edge is guaranteed to assure the shortest path between the two neighbour vertices it connects :>
-     * @param source - the source node for the required path
-     * @param dest   - the destination node for the required path
-     * @param neighbours - the list of neighbours
+     * @param source the source node for the required path
+     * @param dest   the destination node for the required path
+     * @param neighbours the list of neighbours
      * @return The required path (if any), or NULL if such a path does not exist
      */
     public ArrayList<String> META_Dijkstra(AbstractBlock source, AbstractBlock dest, HashMap<AbstractBlock, Queue<SimpleEntry<AbstractBlock, String>>> neighbours){
@@ -484,13 +498,24 @@ public class BMediumBot extends BBaseBot{
         else{ // unreachable destination
             return null;
         }
+        
         if (vizited.contains(dest)){
             String key = x+"_"+y+"_"+dest.getPosX()/World.wallDim+"_"+dest.getPosY()/World.wallDim;
-            return road.get(key);
+            if (!dangerousRoad(road.get(key))){
+                return road.get(key);
+            }
+            else{ // the road is dangerous, we need to try to find another one...
+                road.remove(key);
+                vizited.remove(dest);
+                return null;
+            }
         }
         return null; // no route found
     }
     
+    /**
+     * Public method used to loop the Search&Destroy directive
+     */
     @Override
     public void run() {
         while (this.running) {
@@ -505,6 +530,10 @@ public class BMediumBot extends BBaseBot{
         }
     }
     
+    /**
+     * Public method used to get the description of the BOT
+     * @return The description of the BOT
+     */
     @Override
     public String getDescription() {
         return "BMediumBot ";

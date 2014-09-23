@@ -47,7 +47,8 @@ import javax.websocket.server.ServerEndpoint;
 
 /**
  *
- * @author mihaicux Endpoint server
+ * Endpoint server
+ * @author mihaicux
  */
 @ServerEndpoint(value = "/bombermanendpoint/", configurator = BombermanHttpSessionConfigurator.class)
 public class BombermanWSEndpoint{
@@ -139,8 +140,7 @@ public class BombermanWSEndpoint{
     private static final Map<String, HttpSession> httpSessions = Collections.synchronizedMap(new HashMap<String, HttpSession>());
 
     /**
-     * Static variable. Collection used to keep track of all the current maps<br
-     * />
+     * Static variable. Collection used to keep track of all the current maps<br />
      * Indexed by peer map number
      */
     public static Map<Integer, World> map = Collections.synchronizedMap(new HashMap<Integer, World>());
@@ -272,9 +272,9 @@ public class BombermanWSEndpoint{
      * Public synchronized method handling messages received from connected
      * peer.
      *
-     * @param message - String containting the message sent by the connected peer
-     * @param peer - The connected peer
-     * @param config - The endpoint config, containing information about the peer
+     * @param message String containting the message sent by the connected peer
+     * @param peer The connected peer
+     * @param config The endpoint config, containing information about the peer
      * session (if any)
      * @return null - any returned message will be sent back to the peer
      */
@@ -426,7 +426,7 @@ public class BombermanWSEndpoint{
     /**
      * Public synchronized method handling the closing connection of the peer
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     @OnClose
     public synchronized void onClose(Session peer) {
@@ -467,8 +467,8 @@ public class BombermanWSEndpoint{
     /**
      * Public synchronized method handling a new connection
      *
-     * @param peer - The connected peer
-     * @param config - The endpoint config, containing information about the peer
+     * @param peer The connected peer
+     * @param config The endpoint config, containing information about the peer
      * session (if any)
      */
     @OnOpen
@@ -500,19 +500,14 @@ public class BombermanWSEndpoint{
 
         // check to see if the user isn't already recognized by the server (has a known cookie)
         if (!httpSessions.isEmpty() && httpSessions.containsKey(sessionId)) {
-//            System.out.println("session id recognized");
             if (!peers.isEmpty()) {
                 // foreach stored httpSession
-//                System.out.println("we have active connections");
-                // end loop for connected peers
                  for (Map.Entry pairs : peers.entrySet()) {
                      Session peer2 = (Session) pairs.getValue();
                      // close the old connection
                      if (peer2.getUserProperties().containsKey("sessionId") && peer2.getUserProperties().get("sessionId").equals(sessionId)) {
-                         //System.out.println("I know you");
                          // if the current user is already loggedIn, restore it's properties and close the old connection
                          if (peer2.getUserProperties().containsKey("loggedIn") && peer2.getUserProperties().get("loggedIn").equals(true)) {
-                             //System.out.println("You are already logged in");
                              addPlayerToGame(peer, config, peer2.getUserProperties().get("username").toString(), Integer.valueOf(peer2.getUserProperties().get("user_id").toString()));
                              sendReadyMessage(peer);
                              if (peer2.getUserProperties().containsKey("isAdmin") && peer2.getUserProperties().get("isAdmin").equals(true)) {
@@ -521,13 +516,11 @@ public class BombermanWSEndpoint{
                              this.onMessage("QUIT", peer2, config);
                              return;
                          } else { // else, just close the old connection
-                             //System.out.println("Somehow, I feel like I know you...");
                              this.onMessage("QUIT", peer2, config);
                          }
                      }
                 }
             }
-            //System.out.println("end httpSession loop");
         }
 
         httpSessions.put(sessionId, (HttpSession) config.getUserProperties()
@@ -542,11 +535,11 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to store a new player in the database
      *
-     * @param peer - The connected peer
-     * @param user - The name of the player trying to register
-     * @param pass - The password of the player trying to register
-     * @param email - The email address of the player trying to register
-     * @param config - The endpoint config, containing information about the peer
+     * @param peer The connected peer
+     * @param user The name of the player trying to register
+     * @param pass The password of the player trying to register
+     * @param email The email address of the player trying to register
+     * @param config The endpoint config, containing information about the peer
      * session (if any)
      */
     public void register(Session peer, String user, String pass, String email, EndpointConfig config) {
@@ -586,10 +579,10 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to login an existing player
      *
-     * @param peer - The connected peer
-     * @param user - The name of the player trying to register
-     * @param pass - The password of the player trying to register
-     * @param config - The endpoint config, containing information about the peer
+     * @param peer The connected peer
+     * @param user The name of the player trying to register
+     * @param pass The password of the player trying to register
+     * @param config The endpoint config, containing information about the peer
      * session (if any)
      */
     public void logIn(Session peer, String user, String pass, EndpointConfig config) {
@@ -620,29 +613,27 @@ public class BombermanWSEndpoint{
      * Public static method that decodes an encoded string using the
      * base64_decode algorithm
      *
-     * @param s - the string to be decoded
+     * @param s the string to be decoded
      * @return the decoded string
      */
     public static String decodeBase64(String s) {
-        //return new String(Base64.decode(s));
         return BBase64.decode(s);
     }
 
     /**
      * Public static method that encodes a string using the base64 algorithm
      *
-     * @param s - the string to be encoded
+     * @param s the string to be encoded
      * @return the encoded string
      */
     public static String encodeBase64(String s) {
-//        return Base64.encode(s.getBytes());
         return BBase64.encode(s);
     }
 
     /**
      * Public static method that hashes a string using the MD5 algorithm
      *
-     * @param message - the string to be hashed
+     * @param message the string to be hashed
      * @return the hashed string
      */
     public static String md5Java(String message) {
@@ -661,6 +652,10 @@ public class BombermanWSEndpoint{
         return digest;
     }
 
+    /**
+     * Private method used to get the help menu for a requesting admin
+     * @return String containing the help menu for the admin
+     */
     private String getHelpMenu(){
         return "cuxBomberman v."+BombermanWSEndpoint.VERSION+"\n"+
                 "TYPE `addMediumBot` to add a new bot to the game\n"+
@@ -681,7 +676,7 @@ public class BombermanWSEndpoint{
     
     /**
      * Removes a bot from the game
-     * @param kickedChar - the bot to be kicked
+     * @param kickedChar the bot to be kicked
      */
     public void kickBot(BBaseBot kickedChar){
         try{
@@ -694,6 +689,11 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method returning the player with a given name (if any)
+     * @param name The name to be found
+     * @return 
+     */
     public BCharacter findCharByName(String name){
         if (charMapByName.containsKey(name)){
             return chars.get(charMapByName.get(name));
@@ -704,11 +704,11 @@ public class BombermanWSEndpoint{
     /**
      * Public method used add a player to the game
      *
-     * @param peer - The connected peer
-     * @param config - The endpoint config, containing information about the peer
+     * @param peer The connected peer
+     * @param config The endpoint config, containing information about the peer
      * session (if any)
-     * @param username - The name of the player trying to connect
-     * @param user_id - The id of the player trying to connect
+     * @param username The name of the player trying to connect
+     * @param user_id The id of the player trying to connect
      */
     public void addPlayerToGame(Session peer, EndpointConfig config, String username, int user_id) {
         HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
@@ -719,10 +719,9 @@ public class BombermanWSEndpoint{
         peer.getUserProperties().put("user_id", user_id);
         peers.put(peer.getId(), peer);
 
-        //sendMessage(httpSession.getId(), peer);
         workingThreads.add(peer.getId());
 
-        if (peers.size() == 1) { // this is the first player?
+        if (peers.size() == 1) { // is this the first player?
             mapNumber = 1;
 
             if (mapPlayers.get(mapNumber) == null) {
@@ -746,7 +745,6 @@ public class BombermanWSEndpoint{
         }
         peer.getUserProperties().put("room", mapNumber);
 
-        //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
         if (map.isEmpty() || map.get(mapNumber) == null) {
             /**
              * The maps folder must be placed in the glassfish current domain
@@ -758,15 +756,10 @@ public class BombermanWSEndpoint{
              * maps file
              */
 //            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/firstmap.txt"));
-//            map.put(mapNumber, new World("/home/mihaicux/NetBeansProjects/bomberman_sf/maps/firstmap.txt"));
-            map.put(mapNumber, new World("maps/firstmap.txt"));
-//            map.put(mapNumber, new World("/home/mihaicux/projects/bomberman/maps/map2.txt"));
-//            map.put(mapNumber, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
-            //BLogger.getInstance().log(BLogger.LEVEL_INFO, "created");
+          map.put(mapNumber, new World("maps/firstmap.txt"));
             
         }
 
-        //BLogger.getInstance().log(BLogger.LEVEL_INFO, "peer connected2 ["+peer.getId()+"], room "+peer.getUserProperties().get("room"));
         BCharacter newChar = new BCharacter(peer.getId(), username, mapNumber, config);
         newChar.setPosX(0);
         newChar.setPosY(0);
@@ -775,7 +768,6 @@ public class BombermanWSEndpoint{
         newChar.setUserId(user_id);
         newChar.restoreFromDB();
         newChar.logIn();
-//        newChar.setPeer(peer);
         
         charMapByName.put(username, peer.getId());
         
@@ -822,6 +814,13 @@ public class BombermanWSEndpoint{
         sendMessageAll(mapNumber, "<b>" + newChar.getName() + " has joined");
     }
 
+    /**
+     * Public method user to add a bot to a given map
+     * @param peer The peer associated with the requesting admin
+     * @param type The type of bot to be added (0 - dumb, 1 - medium)
+     * @param roomNr The room where the bot will be added
+     * @return The created bot
+     */
     public BBaseBot addBot(Session peer, int type, int roomNr){
         BBaseBot bot;
         if (mapBots.get(roomNr) == null) {
@@ -840,26 +839,41 @@ public class BombermanWSEndpoint{
         return bot;
     }
     
+    /**
+     * Private method used to manually run a given bot's Search&Destroy directive
+     * @param bot The bot to run
+     */
     private void startBot(BBaseBot bot){
         bot.setReady(true);
         new Thread(bot).start();
     }
     
-    private void initBot(String botName, int roomNr, BBaseBot bot){
+    /**
+     * Private method used to update the world for a given bot
+     * @param roomNr The room to be updates
+     * @param bot The added bot
+     */
+    private void initBot(int roomNr, BBaseBot bot){
         bot.setPosX(0);
         bot.setPosY(0);
         bot.setWidth(World.wallDim);
         bot.setHeight(World.wallDim);
-        chars.put(botName, bot);
+        chars.put(bot.getName(), bot);
         chars2.get(roomNr).add(bot);
         setCharPosition(roomNr, bot);
         bot.setReady(true);
     }
     
+    /**
+     * Private method used to add a medium bot to a given map
+     * @param peer The peer associated to the admin that requested the addition
+     * @param roomNr The selected world
+     * @return The created bot
+     */
     private BBaseBot addMediumBot(Session peer, int roomNr){    
         String botName = "BOT_medium_"+mapBots.get(roomNr);
         BBaseBot bot = new BMediumBot(botName, botName, mapNumber, null);
-        initBot(botName, roomNr, bot);
+        initBot(roomNr, bot);
         System.out.println("medium_bot added...");
         sendStatusMessage(peer, "bot added - "+botName);
         charMapByName.put(botName, botName);
@@ -867,10 +881,16 @@ public class BombermanWSEndpoint{
         return bot;
     }
     
+    /**
+     * Private method used to add a dumb bot to a given map
+     * @param peer The peer associated to the admin that requested the addition
+     * @param roomNr The selected world
+     * @return The created bot
+     */
     private BBaseBot addDumbBot(Session peer, int roomNr){
         String botName = "BOT_dumb_"+mapBots.get(roomNr);
         BBaseBot bot = new BDumbBot(botName, botName, mapNumber, null);
-        initBot(botName, roomNr, bot);
+        initBot(roomNr, bot);
         System.out.println("dumb_bot added...");
         sendStatusMessage(peer, "bot added - "+botName);
         charMapByName.put(botName, botName);
@@ -881,7 +901,7 @@ public class BombermanWSEndpoint{
     /**
      * Public method giving admin privileges to the player
      * 
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public void makePlayerAdmin(Session peer){
         BCharacter crtPlayer = chars.get(peer.getId());
@@ -890,6 +910,11 @@ public class BombermanWSEndpoint{
         sendAdminModMessage(peer);
     }
     
+    /**
+     * Public method used to test if a given peer has an admin accound associated
+     * @param peer The checked peer
+     * @return TRUE if the peer is an admin
+     */
     public boolean isAdmin(Session peer){
         BCharacter crtPlayer = chars.get(peer.getId());
         if (crtPlayer == null) return false;
@@ -900,7 +925,7 @@ public class BombermanWSEndpoint{
      * Public synchronized method used to manage the server errors. Only
      * mentioned here...
      *
-     * @param t - the Throwable exception
+     * @param t the exception
      */
     @OnError
     public synchronized void onError(Throwable t) {
@@ -910,7 +935,7 @@ public class BombermanWSEndpoint{
      * Public synchronized method used add send the whole environment to the
      * current player
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public synchronized void exportEnvironment(Session peer) {
         int roomNr = getRoom(peer);
@@ -929,7 +954,7 @@ public class BombermanWSEndpoint{
      * Public synchronized method used stop a working thread - used for
      * monitoring informations to be sent to a player
      *
-     * @param threadId - The connected peer id
+     * @param threadId The connected peer id
      */
     public synchronized void stopThread(String threadId) {
         workingThreads.remove(threadId);
@@ -939,9 +964,9 @@ public class BombermanWSEndpoint{
      * Public synchronized method used stop a working thread - used for
      * monitoring informations to be sent to a player
      *
-     * @param crtChar - The current connected player
-     * @param peer - The connected peer
-     * @return Returns true if the current player if blocked (ie. it cannot move
+     * @param crtChar The current connected player
+     * @param peer The connected peer
+     * @return TRUE if the current player if blocked (ie. it cannot move
      * anymore)
      */
     public synchronized boolean isTrapped(BCharacter crtChar, Session peer) {
@@ -1125,7 +1150,7 @@ public class BombermanWSEndpoint{
     /**
      * Protected synchronized method used to detonate bombs of a given player
      *
-     * @param myChar - The current connected player
+     * @param myChar The current connected player
      */
     public synchronized void detonateBomb(BCharacter myChar) {
         //int roomNr = getRoom(peer);
@@ -1149,9 +1174,9 @@ public class BombermanWSEndpoint{
      * Public static synchronized method used to check if a wall exists in a
      * given position
      *
-     * @param data - The block matrix
-     * @param i - The x coordinate of the checked position
-     * @param j - The y coordinate of the checked position
+     * @param data The block matrix
+     * @param i The x coordinate of the checked position
+     * @param j The y coordinate of the checked position
      * @return True if there is a wall at the given position
      */
     public static synchronized boolean wallExists(AbstractBlock[][] data, int i, int j) {
@@ -1174,9 +1199,9 @@ public class BombermanWSEndpoint{
      * Public static synchronized method used to check if a bomb exists in a
      * given position
      *
-     * @param data - The block matrix
-     * @param i - The x coordinate of the checked position
-     * @param j - The y coordinate of the checked position
+     * @param data The block matrix
+     * @param i The x coordinate of the checked position
+     * @param j The y coordinate of the checked position
      * @return True if there is a bomb at the given position
      */
     public static synchronized boolean bombExists(AbstractBlock[][] data, int i, int j) {
@@ -1203,9 +1228,9 @@ public class BombermanWSEndpoint{
      * Public static synchronized method used to check if an item exists in a
      * given position
      *
-     * @param data - The block matrix
-     * @param i - The x coordinate of the checked position
-     * @param j - The y coordinate of the checked position
+     * @param data The block matrix
+     * @param i The x coordinate of the checked position
+     * @param j The y coordinate of the checked position
      * @return True if there is an item at the given position
      */
     public static synchronized boolean itemExists(AbstractBlock[][] data, int i, int j) {
@@ -1228,9 +1253,9 @@ public class BombermanWSEndpoint{
      * Public static synchronized method used to check if a player exists in a
      * given position
      *
-     * @param mapNr - The map number
-     * @param i - The x coordinate of the checked position
-     * @param j - The y coordinate of the checked position
+     * @param mapNr The map number
+     * @param i The x coordinate of the checked position
+     * @param j The y coordinate of the checked position
      * @return True if there is a character at the given position
      */
     public static synchronized boolean characterExists(int mapNr, int i, int j) {
@@ -1249,9 +1274,9 @@ public class BombermanWSEndpoint{
      * Protected synchronized method used to explode a given player (if it has
      * in the way of an explosion)
      *
-     * @param winner - The blown character
-     * @param x - The x coordinate of the checked position
-     * @param y - The y coordinate of the checked position
+     * @param winner The blown character
+     * @param x The x coordinate of the checked position
+     * @param y The y coordinate of the checked position
      */
 //    protected synchronized void triggerBlewCharacter(final Session peer, final int x, final int y) {
     protected synchronized void triggerBlewCharacter(final BCharacter winner, final int x, final int y) {
@@ -1298,7 +1323,7 @@ public class BombermanWSEndpoint{
      * Protected synchronized method used to revert the state of a given player
      * to "Normal"
      *
-     * @param myChar - The current connected player
+     * @param myChar The current connected player
      */
 //    protected synchronized void revertState(final Session peer, final BCharacter myChar) {
     protected synchronized void revertState(final BCharacter myChar) {
@@ -1340,7 +1365,7 @@ public class BombermanWSEndpoint{
     /**
      * Public synchronized method used to detonate the bomb of a given player
      *
-     * @param bomb - The detonated bomb
+     * @param bomb The detonated bomb
      */
     public synchronized void markForRemove(final BBomb bomb) {
 
@@ -1645,9 +1670,9 @@ public class BombermanWSEndpoint{
      * Protected synchronized method used to check if there is an item behind a
      * given blown wall
      *
-     * @param mapNr - The map number
-     * @param x - The x coordinate of the checked position
-     * @param y - The y coordinate of the checked position
+     * @param mapNr The map number
+     * @param x The x coordinate of the checked position
+     * @param y The y coordinate of the checked position
      */
     protected synchronized void flipForItems(int mapNr, int x, int y) {
         Random r = new Random();
@@ -1678,7 +1703,7 @@ public class BombermanWSEndpoint{
      * Protected synchronized method used to check if a given bomb isn't already
      * marker for removal
      *
-     * @param bomb - The checked bomb
+     * @param bomb The checked bomb
      * @return True if the given bomb is already marked
      */
     public synchronized boolean alreadyMarked(BBomb bomb) {
@@ -1689,7 +1714,7 @@ public class BombermanWSEndpoint{
      * Protected synchronized method used to send the characters to a given
      * player
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     protected synchronized void exportChars(final Session peer) {
         String ret = "";
@@ -1709,7 +1734,7 @@ public class BombermanWSEndpoint{
     /**
      * Protected synchronized method used to send the map to a given player
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     protected synchronized void exportMap(final Session peer) {
         sendClearMessage("map:[" + map.get(getRoom(peer)).toString(), peer);
@@ -1718,7 +1743,7 @@ public class BombermanWSEndpoint{
     /**
      * Protected synchronized method used to send the walls to a given player
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     protected synchronized void exportWalls(final Session peer) {
         String ret = "";
@@ -1736,7 +1761,7 @@ public class BombermanWSEndpoint{
     /**
      * Protected synchronized method used to send the bombs to a given player
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     protected synchronized void exportBombs(final Session peer) {
         String ret = "";
@@ -1755,7 +1780,7 @@ public class BombermanWSEndpoint{
      * Protected synchronized method used to send the explosions to a given
      * player
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     protected synchronized void exportExplosions(final Session peer) {
         String ret = "";
@@ -1772,7 +1797,7 @@ public class BombermanWSEndpoint{
     /**
      * Protected synchronized method used to send the items to a given player
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     protected synchronized void exportItems(final Session peer) {
         String ret = "";
@@ -1789,7 +1814,7 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to check if a given player can plant a new bomb
      *
-     * @param crtChar - The current connected player
+     * @param crtChar The current connected player
      * @return True if the player can plant a new bomb
      */
     public boolean canPlantNewBomb(BCharacter crtChar) {
@@ -1800,9 +1825,9 @@ public class BombermanWSEndpoint{
      * Public static synhronized method used to check the type of a given block
      * from the world
      *
-     * @param roomNr - The room to be checked
-     * @param i - The x coordinate of the checked position
-     * @param j - The y coordinate of the checked position
+     * @param roomNr The room to be checked
+     * @param i The x coordinate of the checked position
+     * @param j The y coordinate of the checked position
      * @return Strings expressing the type of the block existing at the given
      * position
      */
@@ -1834,8 +1859,8 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to send make a given peer play a given sound
      *
-     * @param sound - The sound to be played
-     * @param peer - The connected peer
+     * @param sound The sound to be played
+     * @param peer The connected peer
      */
     public void playSound(String sound, Session peer) {
         if (peer == null) return;
@@ -1846,8 +1871,8 @@ public class BombermanWSEndpoint{
      * Public method used to make all players from a given map play a given
      * sound
      *
-     * @param roomNr - The room number
-     * @param sound - The sound to be played
+     * @param roomNr The room number
+     * @param sound The sound to be played
      */
     public void playSoundAll(int roomNr, String sound) {
         Set<BCharacter> myChars = Collections.synchronizedSet(new HashSet<BCharacter>(chars2.get(roomNr)));
@@ -1860,8 +1885,8 @@ public class BombermanWSEndpoint{
     /**
      * Private static method returning the map number of a given player
      *
-     * @param peer - The connected peer
-     * @return - The room of the connected player
+     * @param peer The connected peer
+     * @return The room of the connected player
      */
     private static int getRoom(Session peer) {
         if (peer == null) return -1;
@@ -1884,7 +1909,7 @@ public class BombermanWSEndpoint{
      * Public synchronized method updating a player state, so that it can
      * actually actually
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public synchronized void makePlayerReady(Session peer) {
         BCharacter crtChar = chars.get(peer.getId());
@@ -1894,8 +1919,8 @@ public class BombermanWSEndpoint{
     /**
      * Public synchronized method used to place a player randomly on the map
      *
-     * @param mapNumber - The connected peer room
-     * @param newChar - The player associated to the connected peer
+     * @param mapNumber The connected peer room
+     * @param newChar The player associated to the connected peer
      */
     public synchronized void setCharPosition(final int mapNumber, final BCharacter newChar) {
         new Thread(new Runnable() {
@@ -1936,7 +1961,7 @@ public class BombermanWSEndpoint{
      * Public method used to tell the player that he/she entered an invalid
      * email address
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public void sendInvalidEmailMessage(Session peer) {
         sendClearMessage("invalidAddress:[{}", peer);
@@ -1946,7 +1971,7 @@ public class BombermanWSEndpoint{
      * Public method used to tell the player that the email/username selected is
      * already registered
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public void sendAlreadyRegisteredMessage(Session peer) {
         sendClearMessage("alreadyTaken:[{}", peer);
@@ -1955,7 +1980,7 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to tell the player that he/she is ready to play
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public void sendReadyMessage(Session peer) {
         sendClearMessage("ready:[{}", peer);
@@ -1964,7 +1989,7 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to tell the player that he/she is registered as admin in the app
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public void sendAdminModMessage(Session peer){
         sendClearMessage("admin:[{}", peer);
@@ -1973,7 +1998,7 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to tell the player that he/she doesn't have admin privileges
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public void sendNotAdminMessage(Session peer){
         sendClearMessage("notadmin:[{}", peer);
@@ -1987,7 +2012,7 @@ public class BombermanWSEndpoint{
      * Public method used to tell the player that he's/she's successfully
      * registered
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public void sendRegistrationSuccessMessage(Session peer) {
         sendClearMessage("registerSuccess:[{}", peer);
@@ -1996,7 +2021,7 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to tell the player that he/she could not be registered
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public void sendRegisterFailedMessage(Session peer) {
         sendClearMessage("registerFailed:[{}", peer);
@@ -2005,7 +2030,7 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to tell the player that he/she could not log in
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public void sendLoginFailedMessage(Session peer) {
         sendClearMessage("loginFailed:[{}", peer);
@@ -2015,7 +2040,7 @@ public class BombermanWSEndpoint{
      * Public method used to tell the player that he/she must be logged in in
      * order to play
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public void sendLoginFirstMessage(Session peer) {
         sendClearMessage("loginFirst:[{}", peer);
@@ -2025,7 +2050,7 @@ public class BombermanWSEndpoint{
      * Public method used to tell the player that he/she is banned from
      * this site
      *
-     * @param peer - The connected peer
+     * @param peer The connected peer
      */
     public void sendBannedMessage(Session peer){
         sendClearMessage("banned:[{}", peer);
@@ -2034,8 +2059,8 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to send messages to the connected peer
      *
-     * @param msg -The message to be sent
-     * @param peer - The connected peer
+     * @param msg The message to be sent
+     * @param peer The connected peer
      */
     public void sendClearMessage(String msg, Session peer) {
         if (peer == null) return;
@@ -2051,8 +2076,8 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to send chat messages to the connected peer
      *
-     * @param msg -The message to be sent
-     * @param peer - The connected peer
+     * @param msg The message to be sent
+     * @param peer The connected peer
      */
     public void sendMessage(String msg, Session peer) {
         sendClearMessage("msg:[" + msg, peer);
@@ -2061,8 +2086,8 @@ public class BombermanWSEndpoint{
     /**
      * Public method used to send messages to all players connected to a room
      *
-     * @param roomNr - the room number
-     * @param msg -The message to be sent
+     * @param roomNr the room number
+     * @param msg The message to be sent
      */
     public void sendMessageAll(int roomNr, String msg) {
         Set<BCharacter> myChars = Collections.synchronizedSet(new HashSet<BCharacter>(chars2.get(roomNr)));
@@ -2074,8 +2099,8 @@ public class BombermanWSEndpoint{
     /**
      * Private method used to store all messages sent from the players
      *
-     * @param myChar - the player that sent the message
-     * @param msg -The message sent by the player
+     * @param myChar the player that sent the message
+     * @param msg The message sent by the player
      */
     private void logChatMessage(BCharacter myChar, String msg) {
         try {
@@ -2095,8 +2120,8 @@ public class BombermanWSEndpoint{
 
     /**
      * Public method used to check the range of a bomb
-     * @param bomb -  the bomb to be tested
-     * @param minReach - the minimum explosion range
+     * @param bomb  the bomb to be tested
+     * @param minReach the minimum explosion range
      * @return TRUE if the bomb has at least minReach range
      */
     public boolean bombReaches(BBomb bomb, int minReach){
@@ -2105,9 +2130,9 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to initiate the login protocol
-     * @param peer - the connected peer
-     * @param credentials - the credentials for login
-     * @param config - The endpoint config, containing information about the peer
+     * @param peer the connected peer
+     * @param credentials the credentials for login
+     * @param config The endpoint config, containing information about the peer
      */
     public void loginProtocol(Session peer, String credentials, EndpointConfig config){
         String username = decodeBase64(credentials.substring(0, credentials.indexOf("#")));
@@ -2118,9 +2143,9 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to initiate the register protocol
-     * @param peer - the connected peer
-     * @param credentials - the credentials for login
-     * @param config - The endpoint config, containing information about the peer
+     * @param peer the connected peer
+     * @param credentials the credentials for login
+     * @param config The endpoint config, containing information about the peer
      */
     public void registerProtocol(Session peer, String credentials, EndpointConfig config){
         String username = decodeBase64(credentials.substring(0, credentials.indexOf("#")));
@@ -2132,9 +2157,9 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to change a character name
-     * @param crtChar - the connected player
-     * @param name - the new name
-     * @param roomNr - room of the connected player
+     * @param crtChar the connected player
+     * @param name the new name
+     * @param roomNr room of the connected player
      */
     public void changeNameProtocol(BCharacter crtChar, String name, int roomNr){
         if (name.length() > 0) {
@@ -2146,6 +2171,12 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method used by admins to force a given player to detonate a bomb
+     * @param peer The connected admin
+     * @param charName The name of the player to detonate a bomb
+     * @param roomNr The room of the players
+     */
     public void detonateBombProtocol(Session peer, String charName, int roomNr){
          if (!isAdmin(peer)){
             sendNotAdminMessage(peer);
@@ -2166,6 +2197,12 @@ public class BombermanWSEndpoint{
         } 
     }
     
+    /**
+     * Public method used by admins to force a given player to drop a bomb
+     * @param peer The connected admin
+     * @param charName The name of the player to drop a bomb
+     * @param roomNr The room of the players
+     */
     public void dropBombProtocol(Session peer, String charName, int roomNr){
         if (!isAdmin(peer)){
             sendNotAdminMessage(peer);
@@ -2187,6 +2224,12 @@ public class BombermanWSEndpoint{
         
     }
     
+    /**
+     * Public method used by admins to change a given player's name
+     * @param peer The connected admin
+     * @param toProcess The name of the player and the new name
+     * @param roomNr The room of the players
+     */
     public void renameProtocol(Session peer, String toProcess, int roomNr){
         if (!isAdmin(peer)){
             sendNotAdminMessage(peer);
@@ -2218,9 +2261,9 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to send a message to all players from a given room (chat system)
-     * @param peer - the connected player
-     * @param msg - the message to be sent
-     * @param roomNr - room of the connected player
+     * @param peer the connected player
+     * @param msg the message to be sent
+     * @param roomNr room of the connected player
      */
     public void messageProtocol(Session peer, String msg, int roomNr){
         if (msg.length() > 0) {
@@ -2231,9 +2274,9 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to kick a given player
-     * @param peer - the connected peer
-     * @param name - the name of the player to be kicked
-     * @param config - The endpoint config, containing information about the peer
+     * @param peer the connected peer
+     * @param name the name of the player to be kicked
+     * @param config The endpoint config, containing information about the peer
      */
     public void kickProtocol(Session peer, String name, EndpointConfig config){
         if (!isAdmin(peer)){
@@ -2266,9 +2309,9 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to change the position of a given player
-     * @param peer - the connected peer
-     * @param name - the name of the player to be kicked
-     * @param config - The endpoint config, containing information about the peer
+     * @param peer the connected peer
+     * @param name the name of the player to be kicked
+     * @param config The endpoint config, containing information about the peer
      */
     public void teleportProtocol(Session peer, String name, EndpointConfig config){
         if (!isAdmin(peer)){
@@ -2290,9 +2333,9 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to change the current map
-     * @param peer - the connected peer
-     * @param mapName - the name of the player to be kicked (can be either an existing file or "random")
-     * @param roomNr - room of the connected player
+     * @param peer the connected peer
+     * @param mapName the name of the player to be kicked (can be either an existing file or "random")
+     * @param roomNr room of the connected player
      */
     public void changeMapProtocol(Session peer, String mapName, int roomNr){
         if (!isAdmin(peer)){
@@ -2322,7 +2365,7 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used show the help menu to a given connected admin
-     * @param peer - the connected peer
+     * @param peer the connected peer
      */
     public void showHelpProtocol(Session peer){
         if (!isAdmin(peer)) {
@@ -2334,9 +2377,9 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to add a bot to the game
-     * @param peer - the connected peer
-     * @param botType - the bot to be added type (1 - medium, 0 - dumb)
-     * @param roomNr - room of the connected player
+     * @param peer the connected peer
+     * @param botType the bot to be added type (1 - medium, 0 - dumb)
+     * @param roomNr room of the connected player
      */
     public void addBotProtocol(Session peer, int botType, int roomNr){
         if (!this.isAdmin(peer)) {
@@ -2346,9 +2389,20 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method used by the admins to add a static bot of a given type
+     * @param peer The requesting admin
+     * @param roomNr The room of the game
+     * @param botType The type of the bot to be added
+     */
     public void addTestBotProtocol(Session peer, int roomNr, String botType){
         if (!this.isAdmin(peer)) {
             sendNotAdminMessage(peer);
+        }
+        botType = botType.toLowerCase();
+        if (!botType.equals("medium") && !botType.equals("dumb")){
+            sendStatusMessage(peer, "Usage : `addTestBot <i>&lt;dumb|medium&gt;</i>`");
+            return;
         }
         else{
             if (botType.length() == 0){
@@ -2365,6 +2419,7 @@ public class BombermanWSEndpoint{
                 case "medium":
                     bot = addMediumBot(peer, roomNr);
                     break;
+                case "dumb":
                 default:
                     bot = addDumbBot(peer, roomNr);
                     break;
@@ -2373,6 +2428,11 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method used by admins to run a given bot's Search&Destroy directive
+     * @param peer The connected admin
+     * @param botName The bot to start
+     */
     public void startBotProtocol(Session peer, String botName){
         if (!isAdmin(peer)){
             sendNotAdminMessage(peer);
@@ -2394,6 +2454,11 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method used by admins to stop a given bot's Search&Destroy directive
+     * @param peer The connected admin
+     * @param botName The bot to start
+     */
     public void stopBotProtocol(Session peer, String botName){
         if (!isAdmin(peer)){
             sendNotAdminMessage(peer);
@@ -2414,6 +2479,11 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method used by admins to run a given bot's Search&Destroy directive (only one step)
+     * @param peer
+     * @param botName 
+     */
     public void searchAndDestroyProtocol(Session peer, String botName){
         if (!isAdmin(peer)){
             sendNotAdminMessage(peer);
@@ -2434,6 +2504,11 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method used by the admins to make a given player walk to a given(or random) direction
+     * @param peer The connected admin
+     * @param toProcess The name of the player (and a direction if random is not a gool alternative)
+     */
     public void moveCharProtocol(Session peer, String toProcess){
         
         if (!isAdmin(peer)){
@@ -2474,9 +2549,9 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to move a given character
-     * @param crtChar - the connected player
-     * @param direction - the direction to move to
-     * @param roomNr - room of the connected player
+     * @param crtChar the connected player
+     * @param direction the direction to move to
+     * @param roomNr room of the connected player
      */
     public void moveProtocol(BCharacter crtChar, String direction, int roomNr){
         crtChar.setDirection(direction);
@@ -2502,8 +2577,8 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to drop a bomb for a given player
-     * @param crtChar - the connected player
-     * @param roomNr - room of the connected player
+     * @param crtChar the connected player
+     * @param roomNr room of the connected player
      */
     public void bombProtocol(BCharacter crtChar, int roomNr){
         crtChar.addOrDropBomb(); // change character state
@@ -2525,8 +2600,8 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to detonate the bomb of a given player
-     * @param crtChar - the connected player
-     * @param roomNr - room of the connected player
+     * @param crtChar the connected player
+     * @param roomNr room of the connected player
      */
     public void detonateProtocol(BCharacter crtChar, int roomNr){
         if (crtChar.isTriggered()) {
@@ -2537,9 +2612,9 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to change the state of a given player
-     * @param crtChar - the connected player
-     * @param roomNr - room of the connected player
-     * @param state - the new state
+     * @param crtChar the connected player
+     * @param roomNr room of the connected player
+     * @param state the new state
      */
     public void changeStateProtocol(BCharacter crtChar, int roomNr, String state){
         crtChar.setState(state);
@@ -2548,9 +2623,9 @@ public class BombermanWSEndpoint{
     
     /**
      * Public method used to close the connection of a given player
-     * @param peer - the connected peer
-     * @param crtChar - the connected player
-     * @param config - The endpoint config, containing information about the peer
+     * @param peer the connected peer
+     * @param crtChar the connected player
+     * @param config The endpoint config, containing information about the peer
      */
     public void quitProtocol(Session peer, BCharacter crtChar, EndpointConfig config){
         String initialName = crtChar.getName();
@@ -2581,6 +2656,11 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method used by the admin to find a given player's IP address
+     * @param peer The connected admin
+     * @param name The name of the tested player
+     */
     public void getIPProtocol(Session peer, String name){
         if (!isAdmin(peer)) {
             sendNotAdminMessage(peer);
@@ -2606,6 +2686,12 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method used by the admin to ban a given IP address
+     * @param peer The connected admin
+     * @param ip The IP to be banned
+     * @param config The server configuration
+     */
     public void banIPProtocol(Session peer, String ip, EndpointConfig config){
         if (!isAdmin(peer)) {
             sendNotAdminMessage(peer);
@@ -2628,6 +2714,11 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method used by the server to store a given IP in the banlist
+     * @param admin The requesting admin
+     * @param ip The IP to be stored
+     */
     public void banIP(BCharacter admin, String ip){
         try {
             String query = "INSERT INTO `banlist` VALUES("
@@ -2643,6 +2734,11 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method used by the admin to unban a given IP address
+     * @param peer The connected admin
+     * @param ip The IP to be unbanned
+     */
     public void unbanIPProtocol(Session peer, String ip){
         if (!isAdmin(peer)) {
             sendNotAdminMessage(peer);
@@ -2657,6 +2753,10 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method used by the server to delete a given IP from the banlist
+     * @param ip The IP to be stored
+     */
     public void unbanIP(String ip){
         try {
             String query = "DELETE FROM `banlist` WHERE `user_ip`=?";
@@ -2668,6 +2768,12 @@ public class BombermanWSEndpoint{
         }
     }
     
+    /**
+     * Public method used by the server to check if a given peer is banned based
+     * on it's current IP address
+     * @param peer The connected peer
+     * @param ip The peer's IP address
+     */
     public void checkBanned(Session peer, String ip){
         peer.getUserProperties().put("ip", ip);
         if (ip.length() > 0){

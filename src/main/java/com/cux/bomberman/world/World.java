@@ -1,31 +1,15 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.cux.bomberman.world;
 
 import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.walls.*;
 import java.io.BufferedReader;
-//import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-//import java.util.Arrays;
-//import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-//import java.util.HashSet;
-//import java.util.Set;
-//import java.util.Vector;
-//import java.util.logging.Level;
-//import java.util.logging.Logger;
-//import org.codehaus.jackson.map.ObjectMapper;
-//import org.codehaus.jackson.map.ObjectWriter;
 
 /**
  *
@@ -33,37 +17,78 @@ import java.util.Set;
  */
 public class World {
     
+    /**
+     * The default world width
+     */
     private int WIDTH = 660;
-    private int HEIGHT = 510;
-    public final static int wallDim = 30; // width = height
-    private String mapContent = "";
     
+    /**
+     * The default world height
+     */
+    private int HEIGHT = 510;
+    
+    /**
+     * The block width
+     */
+    public final static int wallDim = 30; // width = height
+    
+    /**
+     * The file containing the map
+     */
     private String mapFile;
     
-    // used for iterating
+    /**
+     * List of the walls,<br />
+     * Used for iteration
+     */
     public ArrayList<AbstractWall> walls = new ArrayList<>();
     
-    // used for mapping and collisions
+    /**
+     * Matrix with all the blocks on the map<br />
+     * Used for mapping and collisions
+     */
     public AbstractBlock[][] blockMatrix = new AbstractBlock[100][100];
     
+    /**
+     * Matrix with all the characters in the map
+     */
     public HashMap<String, BCharacter>[][] chars = new HashMap[100][100];
     
+    /**
+     * Public getter for the WIDTH property
+     * @return The requester property
+     */
     public int getWidth(){
         return WIDTH;
     }
     
+    /**
+     * Public getter for the HEIGHT property
+     * @return The requester property
+     */
     public int getHeight(){
         return HEIGHT;
     }
     
+    /**
+     * Public setter for the WIDTH property
+     * @param width The new value
+     */
     public void setWidth(int width){
         WIDTH = width;
     }
     
+    /**
+     * Public setter for the HEIGHT property
+     * @param height The new value
+     */
     public void setHeight(int height){
         HEIGHT = height;
     }
     
+    /**
+     * Public constructor (simple)
+     */
     public World(){
         for (int i = 0; i < 100; i++){
             for (int j = 0; j < 100; j++){
@@ -77,6 +102,10 @@ public class World {
 //        this.blockMatrix[wall.getPosX()/World.wallDim][wall.getPosX()/World.wallDim] = wall;
 //    }
     
+    /**
+     * Public constructor used to load a map from a file
+     * @param map The file to be loaded
+     */
     public World(String map){
         this.mapFile = map;
         for (int i = 0; i < 100; i++){
@@ -144,6 +173,11 @@ public class World {
         
     }
     
+    /**
+     * Public method used to test if a given character has collisions with any of the existing blocks in the map
+     * @param myChar The character to be tested
+     * @return TRUE if such a collision is found
+     */
     public synchronized boolean HasMapCollision(BCharacter myChar){
         if ((myChar.getPosX() == 0 && "Left".equals(myChar.getDirection())) ||
             (myChar.getPosY()== 0 && "Up".equals(myChar.getDirection())) || 
@@ -168,6 +202,10 @@ public class World {
         return x1 < 99 && y1 > 0 && blockMatrix[x1+1][y1-1] != null && myChar.hits(blockMatrix[x1+1][y1-1]) && myChar.walksTo(blockMatrix[x1+1][y1-1]);
     }
     
+    /**
+     * Public method used to convert the character to JSON, to be sent to a client
+     * @return The JSON representation of the character
+     */
     @Override
     public String toString(){
         

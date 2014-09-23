@@ -1,17 +1,16 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.cux.bomberman.world.walls;
 
 /**
  *
- * @author root
+ * @author mihaicux
  */
 public class GrassWall extends AbstractWall{
 
+    /**
+     * Public constructor
+     * @param posX The X coordinate of the item
+     * @param posY The Y coordinate of the item
+     */
     public GrassWall(int posX, int posY) {
         super("grass");
         this.texture = "grass.gif";

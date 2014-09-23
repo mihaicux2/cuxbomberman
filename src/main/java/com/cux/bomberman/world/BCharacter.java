@@ -1,14 +1,6 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.cux.bomberman.world;
 
 import com.cux.bomberman.BombermanWSEndpoint;
-import static com.cux.bomberman.BombermanWSEndpoint.map;
-//import static com.cux.bomberman.BombermanWSEndpoint.peers;
 import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
@@ -16,15 +8,11 @@ import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.websocket.EndpointConfig;
 import javax.websocket.Session;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -164,7 +152,7 @@ public class BCharacter extends AbstractBlock{
         textures.put("walkDownNormal", 3);
         textures.put("walkLeftNormal", 4);
         
-        // walk with bomb
+        // walk with a bomb
         textures.put("walkUpBomb", 14);
         textures.put("walkRightBomb", 16);
         textures.put("walkDownBomb", 17);
@@ -256,19 +244,35 @@ public class BCharacter extends AbstractBlock{
         this.plantedBombs = plantedBombs;
     }
     
+    /**
+     * Public getter for the id property
+     * @return The requested property
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Public setter for the id property
+     * @param id The new value
+     */
     public void setId(String id) {
         this.id = id;
         this.saveToDB();
     }
     
+    /**
+     * Public getter for the userId property
+     * @return The requested property
+     */
     public int getUserId() {
         return this.userId;
     }
 
+    /**
+     * Public setter for the usedId property
+     * @param userId The new value
+     */
     public void setUserId(int userId) {
         this.userId = userId;
         if (this.dbId == 0){
@@ -290,155 +294,287 @@ public class BCharacter extends AbstractBlock{
         }
     }
     
+    /**
+     * Public getter for the dbId property
+     * @return The requested property
+     */
     public int getDbId() {
         return dbId;
     }
 
+    /**
+     * Public setter for the dbId property
+     * @param dbId he new value
+     */
     public void setDbId(int dbId) {
         this.dbId = dbId;
         this.saveToDB();
     }
     
+    /**
+     * Public getter for the ready property
+     * @return The requested property
+     */
     public boolean getReady(){
         return this.ready;
     }
     
+    /**
+     * Public setter for the ready property
+     * @param ready The new value
+     */
     public void setReady(boolean ready){
         this.ready = ready;
     }
     
+    /**
+     * Public getter for the maxBombs property
+     * @return The requested property
+     */
     public int getMaxBombs() {
         return maxBombs;
     }
 
+    /**
+     * Public setter for the maxBombs property
+     * @param maxBombs The new value
+     */
     public void setMaxBombs(int maxBombs) {
         this.maxBombs = maxBombs;
         this.saveToDB();
     }
     
+    /**
+     * Public method used to tell if a bomb is detonated by a trigger or explodes after<br />
+     * a given amount of time (it's lifetime)
+     * @return The requester property
+     */
     public boolean isTriggered() {
         return triggered;
     }
 
+    /**
+     * Public setter for the triggered property
+     * @param triggered The new value
+     */
     public void setTriggered(boolean triggered) {
         this.triggered = triggered;
         this.saveToDB();
     }
     
+    /**
+     * Public getter for the walking property
+     * @return The requester property
+     */
     public boolean isWalking() {
         return walking;
     }
 
+    /**
+     * Public setter for the walking property
+     * @param walking The new value
+     */
     public void setWalking(boolean walking) {
         this.walking = walking;
     }
 
+    /**
+     * Public getter for the bombRange property
+     * @return The requested property
+     */
     public int getBombRange() {
         return bombRange;
     }
 
+    /**
+     * Public setter for the bombRange property
+     * @param bombRange The new value
+     */
     public void setBombRange(int bombRange) {
         this.bombRange = bombRange;
         this.saveToDB();
     }
 
+    /**
+     * Public getter for the speed property
+     * @return The requested property
+     */
     public int getSpeed() {
         return speed;
     }
 
+    /**
+     * Public setter for the speed property
+     * @param speed The new value
+     */
     public void setSpeed(int speed) {
         if (speed > 9) speed = 9;
         this.speed = speed;
     }
 
+    /**
+     * Public getter for the name property
+     * @return The requested property
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Public setter for the name property
+     * @param name The new value
+     */
     public void setName(String name) {
         this.name = name;
         this.saveToDB();
     }
     
-    // uncomment to make the original drop bomb movement (2 buttons ;)))
+    /**
+     * Public method used to change the state of the character
+     * <br />(uncomment to make the original drop bomb movement (2 buttons ;))))
+     * @return 0 
+     */
     public int addOrDropBomb(){
         //if (state == "Normal") state = "Bomb";
         //else if (state == "Bomb") state = "Normal";
         return 0;
     }
     
+    /**
+     * Public method used to change the state of the character
+     * @return 0
+     */
     public int makeTrapped(){
         state = "Trapped";
         return 0;
     }
     
+    /**
+     * Public method used to change the state of the character
+     * @return 0
+     */
     public int makeFree(){
         state = "Normal";
         return 0;
     }
 
+    /**
+     * Public getter for the crtTexture property
+     * @return The requested property
+     */
     public int getCrtTexture() {
         return crtTexture;
     }
 
+    /**
+     * Public setter for the crtTexture property
+     * @param crtTexture The new value
+     */
     public void setCrtTexture(int crtTexture) {
         this.crtTexture = crtTexture;
     }
 
+    /**
+     * Public getter for the state property
+     * @return The requested property
+     */
     public String getState() {
         return state;
     }
 
+    /**
+     * Public setter for the state property
+     * @param state The new value
+     */
     public void setState(String state) {
         this.state = state;
     }
 
+    /**
+     * Public getter for the direction property
+     * @return The requested property
+     */
     public String getDirection() {
         return direction;
     }
 
+    /**
+     * Public setter for the direction property
+     * @param direction The new value
+     */
     public void setDirection(String direction) {
         this.direction = direction;
     }
     
+    /**
+     * Public getter for the kills property
+     * @return The requested property
+     */
     public int getKills(){
         return this.kills;
     }
     
+    /**
+     * Public setter for the kills property
+     * @param kills The new value
+     */
     public void setKills(int kills){
         this.kills = kills;
         this.saveToDB();
     }
     
+    /**
+     * Public getter for the deaths property
+     * @return The requested property
+     */
     public int getDeaths(){
         return this.deaths;
     }
     
+    /**
+     * Public setter for the deaths property
+     * @param deaths The new value
+     */
     public void setDeaths(int deaths){
         this.deaths = deaths;
         this.saveToDB();
     }
     
+    /**
+     * Public method used to reset the character's score
+     */
     public void resetScore(){
         this.kills = 0;
         this.deaths = 0;
     }
     
+    /**
+     * Public method used to increase the number of deaths for the character
+     */
     public void incDeaths(){
         this.deaths++;
         this.saveToDB();
     }
     
+    /**
+     * Public method used to increase the number of kills for the character
+     */
     public void incKills(){
         this.kills++;
         this.saveToDB();
     }
     
+    /**
+     * Public method used to decrease the number of kills for the character
+     */
     public void decKills(){
         this.kills--;
         this.saveToDB();
     }
     
+    /**
+     * Public method used to for the character to take a random move
+     */
     public void moveRandom(){
         //if (previousMove == null){
             Random r = new Random();
@@ -451,6 +587,10 @@ public class BCharacter extends AbstractBlock{
         move(previousMove);
     }
     
+    /**
+     * Public method used to make the character walk to a given direction
+     * @param direction The movement direction
+     */
     public void move(String direction){
         switch (direction){
             case "left":
@@ -469,27 +609,43 @@ public class BCharacter extends AbstractBlock{
         }
     }
     
+    /**
+     * Public method used to make the character to walk up
+     */
     public void moveUp(){
         walking = true;
         this.IAmWalking(this, "up");
     }
     
+    /**
+     * Public method used to make the character to walk down
+     */
     public void moveDown(){
         walking = true;
         this.IAmWalking(this, "down");
     }
     
+    /**
+     * Public method used to make the character to walk left
+     */
     public void moveLeft(){
         walking = true;
         this.IAmWalking(this, "left");
     }
     
+    /**
+     * Public method used to make the character to walk right
+     */
     public void moveRight(){
         walking = true;
         this.IAmWalking(this, "right");
     }
     
-    // change occupied block in the world matrix mapping
+    /**
+     * This method is used to make a character walk towards a given direction for exactly a block distance
+     * @param myChar The current character
+     * @param direction The walking direction
+     */
     protected synchronized void IAmWalking(final BCharacter myChar, final String direction){
         new Thread(new Runnable(){
             @Override
@@ -515,9 +671,9 @@ public class BCharacter extends AbstractBlock{
                         break;
                 }
                 
-                BombermanWSEndpoint.getInstance().charsChanged.put(myChar.roomIndex, true);
-                BombermanWSEndpoint.getInstance().map.get(myChar.roomIndex).chars[x][y].remove(myChar.id);
-                BombermanWSEndpoint.getInstance().map.get(myChar.roomIndex).chars[x2][y2].put(myChar.id, myChar);
+                BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
+                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.id);
+                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.id, myChar);
                 
                 for (int i = 0; i < World.wallDim; i++){
                     if (!myChar.isWalking()){
@@ -545,22 +701,35 @@ public class BCharacter extends AbstractBlock{
                     } catch (InterruptedException ex) {
                         BLogger.getInstance().logException2(ex);
                     }
-                    BombermanWSEndpoint.getInstance().charsChanged.put(myChar.roomIndex, true);
+                    BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
                 }
                 
                 myChar.posX = (myChar.posX / World.wallDim) * World.wallDim;
                 myChar.posY = (myChar.posY / World.wallDim) * World.wallDim;
                 
                 myChar.walking = false;
-                BombermanWSEndpoint.getInstance().charsChanged.put(myChar.roomIndex, true);
+                BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
             }
         }).start();
     }
     
+    /**
+     * Public method used to calculate the linear distance between 2 given points
+     * @param x1 The X coordinate of the first point
+     * @param y1 The Y coordinate of the first point
+     * @param x2 The X coordinate of the second point
+     * @param y2 The Y coordinate of the second point
+     * @return The calculated distance
+     */
     public double getDistance(int x1, int y1, int x2, int y2){
         return Math.sqrt((x2-x1) * (x2-x1) + (y2-y1)*(y2-y1) );
     }
     
+    /**
+     * Public method used to tell if the character hits a given block
+     * @param block The block to be checked
+     * @return TRUE if the character hits the given block
+     */
     public boolean hits(AbstractBlock block){ 
         
        boolean ret = false; 
@@ -581,20 +750,24 @@ public class BCharacter extends AbstractBlock{
        
        if (ret == true && AbstractItem.class.isAssignableFrom(block.getClass())){
            this.attachEvent((AbstractItem)block);
-           BombermanWSEndpoint.getInstance().items.get(this.roomIndex).remove((AbstractItem)block);
-           BombermanWSEndpoint.getInstance().map.get(this.roomIndex).blockMatrix[(block.getPosX() / World.wallDim)][block.getPosY() / World.wallDim] = null;
+           BombermanWSEndpoint.items.get(this.roomIndex).remove((AbstractItem)block);
+           BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[(block.getPosX() / World.wallDim)][block.getPosY() / World.wallDim] = null;
            try{
-               BombermanWSEndpoint.getInstance().items.remove((AbstractItem)block); // eliminate the item
+               BombermanWSEndpoint.items.get(this.roomIndex).remove((AbstractItem)block); // eliminate the item
            } catch (ConcurrentModificationException ex) {
                BLogger.getInstance().logException2(ex);
            }
-           BombermanWSEndpoint.getInstance().itemsChanged.put(this.roomIndex, true);
+           BombermanWSEndpoint.itemsChanged.put(this.roomIndex, true);
            ret = false; // return false ;)
        }
        
        return ret;
     }
     
+    /**
+     * Public method used to attach an event to the character (in item is picked up)
+     * @param item The picked up item
+     */
     public void attachEvent(AbstractItem item){
         item.setCreationTime(new Date());
         switch (item.getName()) {
@@ -620,7 +793,7 @@ public class BCharacter extends AbstractBlock{
                 this.cycleEbola(this);
                 break;
             case "random":
-                this.attachEvent(ItemGenerator.getInstance().generateRandomItem(map.get(this.roomIndex).getWidth(), map.get(this.roomIndex).getHeight()));
+                this.attachEvent(ItemGenerator.getInstance().generateRandomItem(BombermanWSEndpoint.map.get(this.roomIndex).getWidth(), BombermanWSEndpoint.map.get(this.roomIndex).getHeight()));
                 break;
         }
         if (item.isTimed()){
@@ -628,10 +801,19 @@ public class BCharacter extends AbstractBlock{
         }
     }
     
+    /**
+     * Public getter for the dropBombs property
+     * @return The requested property
+     */
     public boolean dropsBombs(){
         return this.dropBombs;
     }
     
+    /**
+     * This method is used to revert the character properties back to their original state
+     * @param myChar The current character
+     * @param item The picked up item
+     */
     protected void cycleEvent(final BCharacter myChar, final AbstractItem item){
         new Thread(new Runnable(){
             @Override
@@ -667,15 +849,17 @@ public class BCharacter extends AbstractBlock{
         }).start();
     }
     
+    /**
+     * This method is used to force the character to drop bombs and walk very slow
+     * @param myChar The infected character
+     */
     public void cycleEbola(final BCharacter myChar){
         new Thread(new Runnable(){
             @Override
             public synchronized void run() {
                 while (myChar.dropsBombs()){
                     try {
-                        Iterator it = BombermanWSEndpoint.getInstance().peers.entrySet().iterator();
-                        while (it.hasNext()) {
-                            Map.Entry pairs = (Map.Entry) it.next();
+                        for (Map.Entry pairs : BombermanWSEndpoint.peers.entrySet()) {
                             Session peer = (Session) pairs.getValue();
                             if (peer.getId() == null ? myChar.getId() == null : peer.getId().equals(myChar.getId())){
                                 BombermanWSEndpoint.getInstance().onMessage("bomb", peer, myChar.config);
@@ -691,6 +875,10 @@ public class BCharacter extends AbstractBlock{
         }).start();
     }
     
+    /**
+     * This method is used to make the character to enlarge the distance to a given block
+     * @param block The block to avoid
+     */
     public void stepBack(AbstractBlock block){
         
         if ("Right".equals(this.direction)) this.posX--;
@@ -705,6 +893,11 @@ public class BCharacter extends AbstractBlock{
 //        else this.posY--;
     }
     
+    /**
+     * Check if the character walks towards a given block
+     * @param block The block to be tested
+     * @return TRUE if the character is getting closer to the given block
+     */
     public boolean walksTo(AbstractBlock block){
         if ("Right".equals(this.direction) && this.posX + this.width <= block.getPosX()) return true;
         if ("Left".equals(this.direction) && this.posX >= block.getPosX() + block.getWidth()) return true;
@@ -712,6 +905,10 @@ public class BCharacter extends AbstractBlock{
         return "Up".equals(this.direction) && this.posY >= block.getPosY() + block.getHeight();
     }
     
+    /**
+     * Public method used to convert the character to JSON, to be sent to a client
+     * @return The JSON representation of the character
+     */
     @Override
     public String toString(){
         this.crtTexture = textures.get("walk"+this.direction+this.state);
@@ -727,6 +924,10 @@ public class BCharacter extends AbstractBlock{
         }
     }
     
+    /**
+     * Overwritten method used to create a copy of the current character
+     * @return a clone of the current object
+     */
     @Override
     public BCharacter clone(){
         BCharacter ret = new BCharacter(this.id, this.name, this.roomIndex, this.config);
@@ -749,6 +950,9 @@ public class BCharacter extends AbstractBlock{
         return ret;
     }
     
+    /**
+     * Public method used to restore the character properties from the database
+     */
     public void restoreFromDB(){
         try {
             if (this.dbId == 0){
@@ -773,6 +977,10 @@ public class BCharacter extends AbstractBlock{
         }
     }
     
+    /**
+     * Public method used to update the login date for the character
+     * @return 1 if the query run without errors
+     */
     public int logIn(){
         try {
             String query = "UPDATE `user` SET last_login=NOW() WHERE `id`=?";
@@ -789,6 +997,10 @@ public class BCharacter extends AbstractBlock{
         }
     }
     
+    /**
+     * Public method used to store the character properties in the database
+     * @return 1 if the query run without errors
+     */
     public int saveToDB(){
         try {
             String query;

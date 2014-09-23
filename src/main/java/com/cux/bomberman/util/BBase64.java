@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.cux.bomberman.util;
 
 /**
@@ -13,6 +7,11 @@ package com.cux.bomberman.util;
 public class BBase64 {
     private final static String base64chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     
+    /**
+     * Public static method used to encode a given string using the BASE64 algorithm
+     * @param s The string to be encoded
+     * @return The endoded string
+     */
     public static String encode(String s) {
  
 	// the result/encoded string, the padding string, and the pad count
@@ -51,6 +50,11 @@ public class BBase64 {
 	return r.substring(0, r.length() - p.length()) + p;
     }
     
+    /**
+     * Public method used to decode a given string, previously encoded with the BASE64 algorithm
+     * @param s The encoded string
+     * @return The decoded string
+     */
     public static String decode(String s) {
  
 	// remove/ignore any characters not in the base64 characters list

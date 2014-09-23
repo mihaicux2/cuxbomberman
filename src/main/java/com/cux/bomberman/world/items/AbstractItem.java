@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.cux.bomberman.world.items;
 
 import com.cux.bomberman.util.BLogger;
@@ -19,63 +13,136 @@ import org.codehaus.jackson.map.ObjectWriter;
  */
 public abstract class AbstractItem extends AbstractBlock{
     
+    /**
+     * The texture of the item
+     */
     public String texture;
+    
+    /**
+     * The name of the item
+     */
     public String name;
+    
+    /**
+     * Tells if the item will disappear after a given amount of time
+     */
     public boolean timed = true;
+    
+    /**
+     * The creation time of the item
+     */
     protected Date creationTime = null;
+    
+    /**
+     * Default lifetime for a timed item
+     */
     protected int lifeTime = 3;
+    
+    /**
+     * The scale(impact) of the item after it's attachment to a given character
+     */
     protected int scale = 1; // used for speed, bomb range, etc.
     
+    /**
+     * Public constructor
+     * @param name The name of the item
+     */
     protected AbstractItem(String name){
         this.name = name;
     }
 
+    /**
+     * Public getter for the scale property
+     * @return The requested property
+     */
     public int getScale() {
         return scale;
     }
 
+    /**
+     * Public setter for the scale property
+     * @param scale The new value
+     */
     public void setScale(int scale) {
         this.scale = scale;
-    }
-
+    }    
     
-    
+    /**
+     * Public getter for the creationTime property
+     * @return The requested property
+     */
     public Date getCreationTime() {
         return creationTime;
     }
 
+    /**
+     * Public setter for the creationTime property
+     * @param creationTime The new value
+     */
     public void setCreationTime(Date creationTime) {
         this.creationTime = creationTime;
     }
 
+    /**
+     * Public getter for the lifeTime property
+     * @return The requested property
+     */
     public int getLifeTime() {
         return lifeTime;
     }
 
+    /**
+     * Public setter for the lifeTime property
+     * @param lifeTime The new value
+     */
     public void setLifeTime(int lifeTime) {
         this.lifeTime = lifeTime;
     }
             
+    /**
+     * Public getter for the timed property
+     * @return The requested property
+     */
     public boolean isTimed() {
         return timed;
     }
 
+    /**
+     * Public setter for the timed property
+     * @param timed The new value
+     */
     public void setTimed(boolean timed) {
         this.timed = timed;
     }    
     
+    /**
+     * Public setter for the texture property
+     * @param texture The new value
+     */
     public void setTexture(String texture) {
         this.texture = texture;
     }
 
+    /**
+     * Public getter for the name property
+     * @return The requested property
+     */
     public String getName() {
         return name;
     }
     
+    /**
+     * Public getter for the texture property
+     * @return The requested property
+     */
     public String getTexture() {
         return texture;
     }
     
+    /**
+     * Public method used to convert the character to JSON, to be sent to a client
+     * @return The JSON representation of the character
+     */
     @Override
     public String toString(){
         ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();

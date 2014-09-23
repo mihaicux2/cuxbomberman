@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.cux.bomberman.world;
 
 import com.cux.bomberman.BombermanWSEndpoint;
@@ -17,10 +11,21 @@ import javax.websocket.EndpointConfig;
  */
 public class BDumbBot extends BBaseBot{
 
+    /**
+     * Public constructor used only to call the BBaseBot constructor
+     * @param id The bot id
+     * @param name The bot name
+     * @param roomIndex The room of the game
+     * @param config The server endpoint configuration object
+     */
     public BDumbBot(String id, String name, int roomIndex, EndpointConfig config) {
         super(id, name, roomIndex, config);
     }
     
+    /**
+     * Public method used for the Search&Destroy directive.<br />
+     * All random :P
+     */
     @Override
     public void searchAndDestroy(){
         Random r = new Random();
@@ -43,6 +48,9 @@ public class BDumbBot extends BBaseBot{
         }
     }
     
+    /**
+     * Public method used to loop the Search&Destroy directive
+     */
     @Override
     public void run() {
         while (this.running) {
@@ -57,6 +65,10 @@ public class BDumbBot extends BBaseBot{
         }
     }
 
+    /**
+     * Public method used to get the description of the BOT
+     * @return The description of the BOT
+     */
     @Override
     public String getDescription() {
         return "BDumbBot ";
