@@ -3,6 +3,8 @@ package com.cux.bomberman.world;
 import com.cux.bomberman.BombermanWSEndpoint;
 import com.cux.bomberman.util.BLogger;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.websocket.EndpointConfig;
 
 /**
@@ -45,23 +47,6 @@ public class BDumbBot extends BBaseBot{
         rand = r.nextInt(100);
         if (rand % 5 == 0){
             this.dropBomb();
-        }
-    }
-    
-    /**
-     * Public method used to loop the Search&Destroy directive
-     */
-    @Override
-    public void run() {
-        while (this.running) {
-            try {
-                if (!this.walking){
-                    this.searchAndDestroy();
-                }
-                Thread.sleep(200); // limit dumb bot action to 5 FPS
-            } catch (InterruptedException ex) {
-                BLogger.getInstance().logException2(ex);
-            }
         }
     }
 

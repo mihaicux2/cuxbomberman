@@ -6,6 +6,7 @@ import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
 import com.cux.bomberman.world.walls.EmptyWall;
+import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,6 +14,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.websocket.EndpointConfig;
 
 /**
@@ -35,6 +38,7 @@ public class BMediumBot extends BBaseBot{
     public BMediumBot(String id, String name, int roomIndex, EndpointConfig config) {
         super(id, name, roomIndex, config);
         this.searchRange = 6; // 13 x 13 (13 = 1 + 6*2) matrix for the search area
+        this.FPS = 10;
     }
     
     /**
@@ -60,6 +64,7 @@ public class BMediumBot extends BBaseBot{
          */
         if (neighbourFound || bombFound || onABomb){
             this.path.clear();
+            this.sleep(50);
             return;
         }
         
@@ -67,17 +72,20 @@ public class BMediumBot extends BBaseBot{
          * If there are explosions triggered, wait for them to dissapear before calculating the best move
          */
         if (BombermanWSEndpoint.explosions.get(this.roomIndex) != null && !BombermanWSEndpoint.explosions.get(this.roomIndex).isEmpty()) {
+            this.sleep(50);
             return;
         }
         
         // if the bot cannot drop new bombs and cannot detonate them, further searching is not required anymore
         if (this.plantedBombs >= this.maxBombs && !this.triggered){
+            this.sleep(50);
             return;
         }
         
         // if the bot can detonate bombs, tigger them with a 300 ms delay
         if (this.plantedBombs > 0 && this.triggered){
-            this.triggerBomb(this, 500);
+            this.sleep(50);
+            this.triggerBomb(this, 100);
             return;
         }
         
@@ -338,7 +346,7 @@ public class BMediumBot extends BBaseBot{
             //System.out.println("------------------");
             this.followPath();
         } else { // if no suitable path is found, simply make a random move
-            this.moveRandom();
+            //this.moveRandom();
             this.path.clear();
         }
         
@@ -354,11 +362,11 @@ public class BMediumBot extends BBaseBot{
 
             @Override
             public void run() {
-                try{
+                try {
                     Thread.sleep(delay);
                     BombermanWSEndpoint.getInstance().detonateBomb(bot);
-                }
-                catch (InterruptedException ex){
+                    bot.sleep(50);
+                } catch (InterruptedException ex) {
                     BLogger.getInstance().logException2(ex);
                 }
             }
@@ -377,7 +385,7 @@ public class BMediumBot extends BBaseBot{
      * @param road The given path to follow
      * @return TRUE if the road is dangerous
      */
-    public boolean dangerousRoad(ArrayList<String> road){
+    public boolean isRoadDangerous(ArrayList<String> road){
         
         if (road == null || road.isEmpty()) return false;
         
@@ -386,23 +394,26 @@ public class BMediumBot extends BBaseBot{
         int y = this.posY / World.wallDim;
         
         for (String dir : road) {
+            if (dir.equals("self")) continue;
             switch(dir){
                 case "up":
                     y--;
-                    if (!this.nearbyBombs(x, y).equals("")) return true;
                     break;
                 case "down":
                     y++;
-                    if (!this.nearbyBombs(x, y).equals("")) return true;
                     break;
                 case "left":
                     x--;
-                    if (!this.nearbyBombs(x, y).equals("")) return true;
                     break;
                 case "right":
                     x++;
-                    if (!this.nearbyBombs(x, y).equals("")) return true;
                     break;
+            }
+            AbstractMap.SimpleEntry<BBomb, String> nearby = this.nearbyBombs(x, y);
+            if (nearby != null){
+                String _direction = nearby.getValue();
+                BBomb bomb = nearby.getKey();
+                if (!(bomb.getOwner().equals(this) && this.isTriggered()) && !direction.equals("")) return true;
             }
         }
         
@@ -437,7 +448,7 @@ public class BMediumBot extends BBaseBot{
                     //System.out.println("found");
                     String key = x+"_"+y+"_"+dest.getPosX()/World.wallDim+"_"+dest.getPosY()/World.wallDim;
                     //return road.get(key);
-                    if (!dangerousRoad(road.get(key))){
+                    if (!isRoadDangerous(road.get(key))){
                         return road.get(key);
                     }
                     else{ // the road is dangerous, we need to try to find another one...
@@ -505,7 +516,7 @@ public class BMediumBot extends BBaseBot{
         
         if (vizited.contains(dest)){
             String key = x+"_"+y+"_"+dest.getPosX()/World.wallDim+"_"+dest.getPosY()/World.wallDim;
-            if (!dangerousRoad(road.get(key))){
+            if (!isRoadDangerous(road.get(key))){
                 return road.get(key);
             }
             else{ // the road is dangerous, we need to try to find another one...
@@ -515,23 +526,6 @@ public class BMediumBot extends BBaseBot{
             }
         }
         return null; // no route found
-    }
-    
-    /**
-     * Public method used to loop the Search&Destroy directive
-     */
-    @Override
-    public void run() {
-        while (this.running) {
-            try {
-                if (!this.walking){
-                    this.searchAndDestroy();
-                }
-                Thread.sleep(100); // limit medium bot action to 10 FPS
-            } catch (InterruptedException ex) {
-                BLogger.getInstance().logException2(ex);
-            }
-        }
     }
     
     /**

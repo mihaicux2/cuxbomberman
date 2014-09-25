@@ -613,7 +613,6 @@ public class BCharacter extends AbstractBlock{
      * Public method used to make the character to walk up
      */
     public void moveUp(){
-        walking = true;
         this.IAmWalking(this, "up");
     }
     
@@ -621,7 +620,6 @@ public class BCharacter extends AbstractBlock{
      * Public method used to make the character to walk down
      */
     public void moveDown(){
-        walking = true;
         this.IAmWalking(this, "down");
     }
     
@@ -629,7 +627,6 @@ public class BCharacter extends AbstractBlock{
      * Public method used to make the character to walk left
      */
     public void moveLeft(){
-        walking = true;
         this.IAmWalking(this, "left");
     }
     
@@ -637,7 +634,6 @@ public class BCharacter extends AbstractBlock{
      * Public method used to make the character to walk right
      */
     public void moveRight(){
-        walking = true;
         this.IAmWalking(this, "right");
     }
     
@@ -647,9 +643,12 @@ public class BCharacter extends AbstractBlock{
      * @param direction The walking direction
      */
     protected synchronized void IAmWalking(final BCharacter myChar, final String direction){
+        myChar.setWalking(true);
         new Thread(new Runnable(){
             @Override
             public synchronized void run() {
+                
+                myChar.setWalking(true);
                 
                 int x = myChar.posX / World.wallDim;
                 int y = myChar.posY / World.wallDim;
@@ -707,7 +706,7 @@ public class BCharacter extends AbstractBlock{
                 myChar.posX = (myChar.posX / World.wallDim) * World.wallDim;
                 myChar.posY = (myChar.posY / World.wallDim) * World.wallDim;
                 
-                myChar.walking = false;
+                myChar.setWalking(false);
                 BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
             }
         }).start();

@@ -852,7 +852,7 @@ public class BombermanWSEndpoint {
      */
     private void startBot(BBaseBot bot) {
         bot.setReady(true);
-        new Thread(bot).start();
+        bot.setRunning(true);
     }
 
     /**
@@ -870,6 +870,7 @@ public class BombermanWSEndpoint {
         chars2.get(roomNr).add(bot);
         setCharPosition(roomNr, bot);
         bot.setReady(true);
+        new Thread(bot).start();
     }
 
     /**
@@ -2467,6 +2468,7 @@ public class BombermanWSEndpoint {
                     bot = addDumbBot(peer, roomNr);
                     break;
             }
+            bot.setRunning(false);
             sendStatusMessage(peer, "Test BOT " + bot.getName() + " added ;)");
         }
     }
@@ -2490,7 +2492,6 @@ public class BombermanWSEndpoint {
                 sendStatusMessage(peer, botName + " is not connected dummy ;)");
             } else {
                 bot.setRunning(true);
-                new Thread(bot).start();
             }
         } else {
             sendStatusMessage(peer, "Usage : `startBot <i>&lt;botName&gt;</i>`");
