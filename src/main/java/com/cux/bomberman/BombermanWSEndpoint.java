@@ -2,6 +2,7 @@ package com.cux.bomberman;
 
 import com.cux.bomberman.util.BBase64;
 import com.cux.bomberman.util.BLogger;
+import com.cux.bomberman.util.BStringEncrypter;
 import com.cux.bomberman.world.AbstractBlock;
 import com.cux.bomberman.world.BBaseBot;
 import com.cux.bomberman.world.BBomb;
@@ -45,13 +46,15 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
+import javax.websocket.server.PathParam;
+
 /**
  *
  * Endpoint server
  *
  * @author mihaicux
  */
-@ServerEndpoint(value = "/bombermanendpoint/", configurator = BombermanHttpSessionConfigurator.class)
+@ServerEndpoint(value = "/bombermanendpoint/{token}", configurator = BombermanHttpSessionConfigurator.class)
 public class BombermanWSEndpoint {
 
     /**
@@ -253,6 +256,8 @@ public class BombermanWSEndpoint {
      */
     private static final String DBPass = "bomberman_password";
 
+    public static final String passKey = "b0mb3rm4nCuxWSap"; // 128 bit key
+    
     /**
      * Public method, enhancing access to the application database wrapper
      *
@@ -474,7 +479,7 @@ public class BombermanWSEndpoint {
      * session (if any)
      */
     @OnOpen
-    public synchronized void onOpen(Session peer, EndpointConfig config) {
+    public synchronized void onOpen(Session peer, EndpointConfig config, @PathParam("token") String token) {
 
         if (!BombermanWSEndpoint.initialized) {
             watchBombs();
@@ -494,9 +499,16 @@ public class BombermanWSEndpoint {
 
         }
 
+        BStringEncrypter desEncrypter = new BStringEncrypter(BombermanWSEndpoint.passKey);
+        String userIP = desEncrypter.decrypt(token.replace("__slash__", "/"));
+        
+        this.checkBanned(peer, userIP);
+        
+        /*
         // check user IP...
         sendClearMessage("getip:[{}", peer);
-
+        */
+        
         HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
         String sessionId = httpSession.getId();
 
