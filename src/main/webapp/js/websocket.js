@@ -36,6 +36,7 @@ var BombermanClient = {};
     BombermanClient.commands = new Array();
     BombermanClient.stackInit = false;
     BombermanClient.stackHead = 0;
+    BombermanClient.firstMessage =false;
     
 }
 
@@ -111,6 +112,7 @@ BombermanClient.bindKeyDown = function () {
                     break;
                 }
                 BombermanClient.closeChatBox();
+                BombermanClient.hideLogChatBox();
                 break;
             case 9: // TAB
                 BombermanClient.showStats();
@@ -273,8 +275,14 @@ BombermanClient.init = function () {
                 case "notadmin":
                     BombermanClient.notAdmin();
                     break;
+                case "invalidmap":
+                    BombermanClient.invalidMap();
+                    break;
                 case "status":
                     BombermanClient.writeStatus(toProc);
+                    break;
+                case "chatLog":
+                    BombermanClient.writeChatLog(toProc);
                     break;
             }
         }
@@ -307,10 +315,47 @@ BombermanClient.initGame = function () {
     BombermanClient.bindKeyDown();
     BombermanClient.bindKeyUp();
     BombermanClient.timer = setInterval("BombermanClient.updateStatus()", 10); // send requests every 10 miliseconds => limit to 100 FPS (at most)
+    jQuery("#options, #chatBtn").css("display", "");
 }
 
 BombermanClient.writeStatus = function (msg) {
     jQuery("#consoleStatus").html(msg.replace(/\n/g, "<br />"));
+}
+
+BombermanClient.writeChatLog = function (toProc){
+//    BombermanClient.log(toProc);
+    BombermanClient.firstMessage = false;
+    jQuery("#loadingImg").remove();
+    try{
+        var chatMsgs = JSON.parse(toProc);
+//        BombermanClient.log(chatMsgs);
+        var str = "";
+        for (i in chatMsgs){
+            var chatMsg = chatMsgs[i];
+            if (!BombermanClient.firstMessage) BombermanClient.firstMessage = chatMsg["id"];
+            str += "<div class='chat_message'>";
+            str += "<b>"+chatMsg["timestamp"].substr(0, 19)+", "+chatMsg["author"]+"</b> : "+chatMsg["message"];
+            str += "</div>";
+        }
+        precStr = jQuery.trim(jQuery("#chatLogBoxContent").text());
+        if (jQuery("#chatLogBoxContent").css("display") != "none"){
+            jQuery("#chatLogBoxContent").prepend(str);
+        }
+        else{
+            jQuery("#chatLogBoxContent").html(str);
+        }
+        if (precStr == ""){
+            setTimeout("BombermanClient.scrollChatLog()", 200);
+        }
+//        BombermanClient.log(precStr);
+    } catch (ex) {
+        BombermanClient.log(ex);
+    }
+}
+
+BombermanClient.scrollChatLog = function () {
+//    BombermanClient.log("scrolling...");
+    document.getElementById("chatLogBoxContent").scrollTop = document.getElementById("chatLogBoxContent").scrollHeight;
 }
 
 BombermanClient.sendAdminCommand = function (command) {
@@ -406,6 +451,9 @@ BombermanClient.notAdmin = function () {
     BombermanClient.alert("You are not admin!");
 }
 
+BombermanClient.invalidMap = function () {
+    BombermanClient.alert("The selected map does not exist");
+}
 
 BombermanClient.showLogInFailed = function () {
     BombermanClient.alert("Login Failed");
@@ -416,7 +464,7 @@ BombermanClient.showRegisterFailed = function () {
 }
 
 BombermanClient.alreadyTaken = function () {
-    BombermanClient.alert("This email address is already in use");
+    BombermanClient.alert("This email address/username is already in use");
 }
 
 BombermanClient.login = function () {
@@ -498,6 +546,37 @@ BombermanClient.showNameBox = function () {
     BombermanClient.stackHead = 0;
 }
 
+/**
+ * You first need to create a formatting function to pad numbers to two digits…
+ **/
+BombermanClient.twoDigits = function(d) {
+    if(0 <= d && d < 10) return "0" + d.toString();
+    if(-10 < d && d < 0) return "-0" + (-1*d).toString();
+    return d.toString();
+}
+
+/**
+ * …and then create the method to output the date string as desired.
+ * Some people hate using prototypes this way, but if you are going
+ * to apply this to more than one Date object, having it as a prototype
+ * makes sense.
+ **/
+Date.prototype.toMysqlFormat = function() {
+    return this.getUTCFullYear() + "-" + BombermanClient.twoDigits(1 + this.getUTCMonth()) + "-" + BombermanClient.twoDigits(this.getUTCDate()) + " " + BombermanClient.twoDigits(this.getUTCHours()) + ":" + BombermanClient.twoDigits(this.getUTCMinutes()) + ":" + BombermanClient.twoDigits(this.getUTCSeconds());
+};
+
+BombermanClient.showChatLogBox = function () {
+    jQuery("#chatLogBoxContent").html("");
+    if(jQuery('#chatLogBox').css("display") == "none"){
+        try {
+            BombermanClient.socket.send("getChat 0");
+        } catch (ex) {
+            BombermanClient.log(ex);
+        }
+    }
+    jQuery('#chatLogBox').modal('toggle');
+}
+
 BombermanClient.hideNameBox = function () {
     jQuery("#nameBox").modal("hide");
 }
@@ -506,11 +585,18 @@ BombermanClient.showGameOptions = function () {
     BombermanClient.hideRegisterOptions();
     BombermanClient.hideLoginOptions();
     BombermanClient.hideNameBox();
+    BombermanClient.closeChatBox();
+    BombermanClient.hideLogChatBox();
+    jQuery("#options, #chatBtn").css("display", "none");
     jQuery('#optionsBox').modal('show');
 }
 
 BombermanClient.hideGameOptions = function () {
     jQuery('#optionsBox').modal('hide');
+}
+
+BombermanClient.hideLogChatBox = function () {
+    jQuery('#chatLogBox').modal('hide');
 }
 
 BombermanClient.showLoginOptions = function () {
@@ -1049,6 +1135,14 @@ BombermanClient.showMessage = function (message) {
     //log(message);
     var msgID = Math.random().toString(36).slice(2);
     jQuery(".messages").append("<div class='alert alert-info message' id='msg_" + msgID + "'>" + message + "</div>");
+    if (jQuery("#chatLogBox").css("display") != "none"){
+        jQuery("#chatLogBoxContent").append("<div id=''></div>");
+        var str = "";
+        str += "<div class='chat_message'>";
+        str += "<b>"+new Date().toMysqlFormat()+", </b>"+message;
+        str += "</div>";
+        jQuery("#chatLogBoxContent").append(str);
+    }
     setTimeout("BombermanClient.hideMessage('" + msgID + "')", 3000);
 }
 

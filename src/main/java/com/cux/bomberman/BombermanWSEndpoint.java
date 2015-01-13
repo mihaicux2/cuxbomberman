@@ -1,6 +1,7 @@
 package com.cux.bomberman;
 
 import com.cux.bomberman.util.BBase64;
+import com.cux.bomberman.util.BChatMessage;
 import com.cux.bomberman.util.BLogger;
 import com.cux.bomberman.util.BStringEncrypter;
 import com.cux.bomberman.world.AbstractBlock;
@@ -15,6 +16,8 @@ import com.cux.bomberman.world.generator.ItemGenerator;
 import com.cux.bomberman.world.generator.WorldGenerator;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.walls.AbstractWall;
+import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
@@ -342,6 +345,9 @@ public class BombermanWSEndpoint {
             case "map":
                 changeMapProtocol(peer, toProcess, roomNr);
                 break;
+            case "maps":
+                listMapsProtocol(peer);
+                break;
             case "help":
                 showHelpProtocol(peer);
                 break;
@@ -419,6 +425,9 @@ public class BombermanWSEndpoint {
                 break;
             case "detonatebomb":
                 detonateBombProtocol(peer, toProcess, roomNr);
+                break;
+            case "getchat":
+                exportChatProtocol(peer, roomNr, Integer.parseInt(toProcess));
                 break;
             default:
                 if (isAdmin(peer)) {
@@ -501,6 +510,8 @@ public class BombermanWSEndpoint {
 
         BStringEncrypter desEncrypter = new BStringEncrypter(BombermanWSEndpoint.passKey);
         String userIP = desEncrypter.decrypt(token.replace("__slash__", "/"));
+        
+//        System.out.println(userIP+"asd");
         
         this.checkBanned(peer, userIP);
         
@@ -686,9 +697,31 @@ public class BombermanWSEndpoint {
                 + "TYPE `stopBot <i>&lt;botName&gt;</i>` to stop the Search&Destroy protocol of a given bot \n"
                 + "TYPE `dropBomb <i>&lt;charName&gt;</i>` to force a given player to drop a bomb (if possible) \n"
                 + "TYPE `detonateBomb <i>&lt;charName&gt;</i>` to force a given player to detonate a bomb (if possible) \n"
+                + "TYPE `map <i>&lt;mapName&gt;</i>` to change the current map \n"
+                + "TYPE `maps` to get a list of all the current maps \n"
                 + "TYPE `help` to view this message again\n";
     }
 
+    /**
+     * Private method used to get the list of the available maps
+     *
+     * @return String containing the available maps
+     */
+    private String getMaps(){
+        String ret = "<b>Available maps</b>\n";
+        File dir = new File("maps");
+        File[] files = dir.listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String name) {
+                return name.toLowerCase().endsWith(".txt");
+            }
+        });
+        for (int i = 0; i < files.length; i++){
+            ret += (i+1)+". "+files[i].getName()+"\n";
+        }
+        return ret;
+    }
+    
     /**
      * Removes a bot from the game
      *
@@ -2051,6 +2084,10 @@ public class BombermanWSEndpoint {
         sendClearMessage("notadmin:[{}", peer);
     }
 
+    public void sendInvalidMapMessage(Session peer) {
+        sendClearMessage("invalidmap:[{}", peer);
+    }
+    
     public void sendStatusMessage(Session peer, String msg) {
         sendClearMessage("status:[" + msg, peer);
     }
@@ -2152,19 +2189,8 @@ public class BombermanWSEndpoint {
      * @param msg The message sent by the player
      */
     private void logChatMessage(BCharacter myChar, String msg) {
-        try {
-            String query = "INSERT INTO `chat_message` (id, user_id, message_time, message)"
-                    + "VALUES (NULL, ?, NOW(), ?)";
-            PreparedStatement st = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
-            st.setInt(1, myChar.getUserId());
-            st.setString(2, msg);
-            int affectedRows = st.executeUpdate();
-            if (affectedRows == 0) {
-                throw new SQLException("Cannot log chat message : `" + msg + "` from user `" + myChar.getName() + " ( " + myChar.getId() + " )" + "`");
-            }
-        } catch (SQLException ex) {
-            BLogger.getInstance().logException2(ex);
-        }
+        BChatMessage chatMsg = new BChatMessage(myChar.getUserId(), msg, myChar.roomIndex);
+        chatMsg.saveToDB();
     }
 
     /**
@@ -2399,11 +2425,21 @@ public class BombermanWSEndpoint {
         }
         if (mapName.length() == 0) {
             sendStatusMessage(peer, "Usage : `map <i>&lt;$mapName|<b>random</b>&gt;</i>`");
+            return;
         }
         if (mapName.trim().toLowerCase().equals("random")) {
             map.put(roomNr, WorldGenerator.getInstance().generateWorld(3000, 1800, 1200));
         } else {
-            map.put(roomNr, new World("maps/" + mapName + ".txt"));
+            
+            String mapPath = "maps/" + mapName + ".txt";
+            File f = new File(mapPath);
+            if(f.exists() && !f.isDirectory()) {
+                map.put(roomNr, new World(mapPath));
+            }
+            else{
+                sendInvalidMapMessage(peer);
+                return;
+            }
         }
         exportMap(peer);
         setCharPosition(roomNr, chars.get(peer.getId()));
@@ -2430,6 +2466,14 @@ public class BombermanWSEndpoint {
         sendStatusMessage(peer, getHelpMenu());
     }
 
+    public void listMapsProtocol(Session peer){
+        if (!isAdmin(peer)) {
+            sendNotAdminMessage(peer);
+            return;
+        }
+        sendStatusMessage(peer, getMaps());
+    }
+    
     /**
      * Public method used to add a bot to the game
      *
@@ -2853,4 +2897,36 @@ public class BombermanWSEndpoint {
         }
     }
 
+    public void exportChatProtocol(Session peer, int roomNr, int firstMessageID){
+        if (firstMessageID == 0 ) firstMessageID = Integer.MAX_VALUE;
+        try {
+            String query = "SELECT a.* FROM ("
+                    + " SELECT u.username, u.id, m.message_time, m.message, m.id as chat_id"
+                    + " FROM chat_message m JOIN user u ON m.user_id=u.id"
+                    + " WHERE room_nr=?"
+                    + "   AND m.id < ?"
+                    + " ORDER BY message_time DESC"
+                    + " LIMIT 100"
+                    + ") a"
+                    + " ORDER BY message_time ASC";
+//            BLogger.getInstance().log(BLogger.LEVEL_INFO, query);
+            PreparedStatement st2 = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
+            st2.setInt(1, roomNr);
+            st2.setInt(2, firstMessageID);
+            //System.out.println(st2.toString());
+            ResultSet ret = st2.executeQuery();
+            ArrayList<BChatMessage> chatLog = new ArrayList<BChatMessage>();
+            while (ret.next()){
+                BChatMessage chatMsg = new BChatMessage(ret.getInt("id"), ret.getString("message"), roomNr);
+                chatMsg.setTimestamp(ret.getString("message_time"));
+                chatMsg.setAuthor(ret.getString("username"));
+                chatMsg.setId(ret.getInt("chat_id"));
+                chatLog.add(chatMsg);
+            }
+            sendClearMessage("chatLog:["+chatLog.toString(), peer);
+        } catch (SQLException ex) {
+            BLogger.getInstance().logException2(ex);
+        }
+    }
+    
 }

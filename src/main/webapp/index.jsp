@@ -6,115 +6,7 @@
         <title>AtomicBomberman look-a-like: Java websocket implementation</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
-        <style>
-
-            body {
-                overflow:hidden;
-                margin:0px;
-                cursor:none;
-                -moz-user-select: -moz-none;
-                -khtml-user-select: none;
-                -webkit-user-select: none;
-                -o-user-select: none; 
-                -ms-user-select: none;
-                user-select: none;
-            }
-            #world{
-                width:2400px;
-                height:1300px;
-                border:1px solid #ccc;
-                position:relative;
-                background:#9ACD32;
-                -moz-user-select: -moz-none;
-                -khtml-user-select: none;
-                -webkit-user-select: none;
-                -o-user-select: none; 
-                -ms-user-select: none;
-                user-select: none;
-            }
-            #options{
-                position: fixed;
-                bottom:0px;
-                left:0px;
-                background-color: rgba(44, 100, 150, 0.9);
-                border: 2px solid #aacccc;
-                border-radius: 5px;
-                z-index: 9999;
-                cursor:pointer;
-            }
-
-            #chatBox{
-                position: fixed;
-                display: none;
-                bottom: 0px;
-                right: 0%;
-                width: 20%;
-                padding: 5px;
-                background-color: rgba(44, 100, 150, 0.5);
-                border: 2px solid #aacccc;
-                border-radius: 5px;
-                z-index: 9999;
-            }
-            #stats{
-                position: fixed;
-                display: none;
-                top: 20px;
-                left: 10%;
-                right: 10%;
-                width: 80%;
-                z-index: 9999;
-            }
-            #statsTable{
-                border-collapse: inherit;
-                border-spacing: 3px;
-            }
-            .dialogBox{
-                position: fixed;
-                display: none;
-                bottom: 25%;
-                top:25%;
-                left: 25%;
-                right: 25%;
-                width: 40%;
-                padding: 10px;
-                background-color: rgba(44, 100, 150, 0.5);
-                border: 2px solid #aacccc;
-                border-radius: 5px;
-                z-index: 9999;
-                color: #ffffff;
-            }
-            .messages{
-                position: fixed;
-                top: 20px;
-                left: 10%;
-                right: 10%;
-                width: 80%;
-                z-index: 9999;
-            }
-
-            .message{
-                background-color: rgba(217, 237, 247, 0.8) !important;
-                padding: 5px !important;
-            }
-            .header{
-                text-align: center;
-            }
-            .title{
-                font-size:30px;
-                color:#FFCC33;
-                font-weight: bold;
-            }
-            .subtitile{
-                font-size:20px;
-                font-weight: bold;
-            }
-            .consoleInput{
-                border:none;
-                width:50%;
-                margin-left:2px;
-                margin-right:5px;
-            }
-        </style>
+        <link rel="stylesheet" href="css/main.css">
     </head>
     <body>
 
@@ -228,6 +120,28 @@
             </div>
         </div>
 
+        <div id="chatBtn">
+            <div style="position:relative;">
+                <img src="images/utils/chatBtn.png" onclick="BombermanClient.showChatLogBox()" />
+            </div>
+        </div>
+        
+        <div class="modal fade" id="chatLogBox" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="myModalLabel">CHAT</h4>
+                    </div>
+                    <div class="modal-body" id="chatLogBoxContent">
+                        
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-danger" data-dismiss="modal" aria-hidden="true">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div class="modal fade" id="nameBox" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true" data-backdrop="static" data-keyboard="false">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -344,6 +258,25 @@
                     if (e.keyCode == 13) {
                         jQuery("#loginBtn").trigger("click");
                         e.preventDefault();
+                    }
+                });
+
+                jQuery("#chatLogBoxContent").scroll(function(e){
+                    if (BombermanClient.firstMessage == false) return;
+                    var target = e.currentTarget,
+                        scrollTop = target.scrollTop || document.getElementById("chatLogBoxContent").pageYOffset,
+                        scrollHeight = target.scrollHeight || document.getElementById("chatLogBoxContent").scrollHeight;
+//                    if (scrollHeight - scrollTop === $(target).innerHeight()) {
+//                      BombermanClient.log("End of scroll");
+//                    }
+                    if (scrollTop == undefined || scrollTop == 0){
+                        try {
+                            jQuery("#chatLogBoxContent").prepend("<div id='loadingImg'>Loading older messages</div>");
+                            BombermanClient.socket.send("getChat "+BombermanClient.firstMessage);
+//                            BombermanClient.log("getChat "+BombermanClient.firstMessage);
+                        } catch (ex) {
+                            BombermanClient.log(ex);
+                        }                        
                     }
                 });
 

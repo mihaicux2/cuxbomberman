@@ -7,6 +7,7 @@ USE `bomberman`;
 CREATE TABLE `chat_message`
 ( `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
+  `room_nr` int(11) NOT NULL,
   `message_time` DATETIME NOT NULL,
   `message` TEXT NOT NULL,
    PRIMARY KEY (`id`) 
