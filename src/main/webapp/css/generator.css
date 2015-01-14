@@ -1,0 +1,90 @@
+/*body {
+    overflow:hidden;
+    margin:0px;
+    -moz-user-select: -moz-none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -o-user-select: none; 
+    -ms-user-select: none;
+    user-select: none;
+}*/
+#world{
+    width:2400px;
+    height:1300px;
+    border:1px solid #ccc;
+    position:relative;
+    background:#9ACD32;
+    -moz-user-select: -moz-none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -o-user-select: none; 
+    -ms-user-select: none;
+    user-select: none;
+}
+.message{
+    background-color: rgba(217, 237, 247, 0.8) !important;
+    padding: 5px !important;
+}
+.header{
+    text-align: center;
+}
+.title{
+    font-size:30px;
+    color:#FFCC33;
+    font-weight: bold;
+}
+.subtitile{
+    font-size:20px;
+    font-weight: bold;
+}
+
+.our_table th,table td{
+	height: 30px;
+	width: 30px;
+	
+}
+.our_table td{
+    border: 1px solid #999;
+}
+
+ .our_table td.selected{
+     border: 2px solid #ff9900;
+ }
+
+.tool-btn{
+    width:30px;
+    height:30px;
+}
+
+.event-btn{
+    width:29px;
+    height:29px;
+}
+
+.brick{
+    background-image: url('../images/walls/brick.gif');
+}
+
+.grass{
+    background-image: url('../images/walls/grass.gif');
+}
+
+.steel{
+    background-image: url('../images/walls/steel.png');
+}
+
+.stone{
+    background-image: url('../images/walls/stone.gif');
+}
+
+.water{
+    background-image: url('../images/walls/water.jpg');
+}
+
+.event{
+    cursor: move;
+}
+
+.btn-crt{
+    border: 2px solid #f00 !important;
+}
