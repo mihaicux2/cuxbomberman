@@ -24,3 +24,16 @@ All you have to do is to open the project in NetBeans, Clean&Build the project a
 
 You are now ready to play with your friends this simple, yet classy and entertaining game.
 Just give them your IP address followed by *:8080/bomberman* and they will be ready to connect in no time.
+
+***screenshots***
+![InGame Action Screen](https://sourceforge.net/p/cuxbomberman/screenshot/in_game_action_screen.png)
+
+![Map Generator Tool](https://sourceforge.net/p/cuxbomberman/screenshot/tool_generator.png)
+
+![Admin options menu Screen](https://sourceforge.net/p/cuxbomberman/screenshot/admin_options_screen.png)
+
+![Wellcome Screen](https://sourceforge.net/p/cuxbomberman/screenshot/wellcome_screen.png)
+
+![Normal user options Screen](https://sourceforge.net/p/cuxbomberman/screenshot/normal_options_screen.png)
+
+![Login Screen](https://sourceforge.net/p/cuxbomberman/screenshot/login_screen.png)
