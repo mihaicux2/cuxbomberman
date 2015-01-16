@@ -38,7 +38,15 @@ CREATE TABLE `user`
   `admin` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`) 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
- 
+
+CREATE TABLE `login_history` (
+ `id` int(11) NOT NULL AUTO_INCREMENT,
+ `user_id` int(11) NOT NULL,
+ `ip` varchar(255) NOT NULL,
+ `login_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 INSERT INTO `user` (`id`, `email`, `username`, `password`, `admin`, `registered_at`) VALUES
 (NULL, 'admin1@cuxbomberman.localhost', 'bombermanadmin', MD5('bomberman'), 1, NOW());
 
