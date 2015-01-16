@@ -1,8 +1,12 @@
 package com.cux.bomberman.world.walls;
 
 /**
- *
- * @author mihaicux
+ * This class represents the "code" for the EMPTY wall
+ * (blank space)
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class EmptyWall extends AbstractWall{
 

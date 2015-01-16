@@ -10,8 +10,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- *
- * @author mihaicux
+ * This class is used as a general purpose logger throughout the whole
+ * application 
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public final class BLogger {
 

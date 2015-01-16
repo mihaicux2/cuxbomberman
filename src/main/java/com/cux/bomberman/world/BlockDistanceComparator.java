@@ -5,12 +5,18 @@ import com.cux.bomberman.world.walls.BrickWall;
 import java.util.Comparator;
 
 /**
- * This class is used in addition to a PriorityQueue, to store blocks depending on their distance<br />
- * to a given root node (closest node is first)
- * @author mihaicux
+ * This class is used in addition to a PriorityQueue, to store blocks depending
+ * on their distance to a given root node (closest node is first) 
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class BlockDistanceComparator  implements Comparator<AbstractBlock>{
 
+    /**
+     * Block used as a starting point or origin for comparison
+     */
     private AbstractBlock center;
     
     /**

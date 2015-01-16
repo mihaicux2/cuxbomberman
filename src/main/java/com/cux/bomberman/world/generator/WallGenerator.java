@@ -5,10 +5,11 @@ import com.cux.bomberman.world.walls.*;
 import java.util.Random;
 
 /**
- *
- * @author mihaicux
- * SINGLETON Pattern
+ * This class uses random to generate random walls
  * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class WallGenerator {
     

@@ -19,7 +19,13 @@ import java.util.logging.Logger;
 import javax.websocket.EndpointConfig;
 
 /**
- * @author mihaicux
+ * This is the second type of the game bots; it uses a simplified version of
+ * the Dijkstra Algorithm, calculating the next best move within a small part
+ * of the map
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class BMediumBot extends BBaseBot{
     

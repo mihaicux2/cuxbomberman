@@ -19,8 +19,12 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 
 /**
- *
- * @author mihaicux
+ * This class is used to represent the players of the game (bots and real 
+ * users) and it provides basic functionality for their actions
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class BCharacter extends AbstractBlock{
     
@@ -134,13 +138,20 @@ public class BCharacter extends AbstractBlock{
      */
     protected int userId = 0;
     
-    
     /**
      * Set to 1 if the current player has admin privileges
      */
     protected boolean isAdmin = false;
     
+    /**
+     * Store the user's/bot's last valid move
+     */
     protected String previousMove = null;
+    
+    /**
+     * Store the user ip address
+     */
+    protected String ip = null;
     
     /**
      * Static initialization of the player textures
@@ -427,6 +438,22 @@ public class BCharacter extends AbstractBlock{
     public void setName(String name) {
         this.name = name;
         this.saveToDB();
+    }
+    
+    /**
+     * Public getter for the ip property
+     * @return The requested property
+     */
+    public String getIp() {
+        return ip;
+    }
+
+    /**
+     * Public setter for the ip property
+     * @param ip The new value
+     */
+    public void setIp(String ip) {
+        this.ip = ip;
     }
     
     /**
@@ -980,13 +1007,27 @@ public class BCharacter extends AbstractBlock{
      * Public method used to update the login date for the character
      * @return 1 if the query run without errors
      */
-    public int logIn(){
+    public int storeLogIn(){
         try {
-            String query = "UPDATE `user` SET last_login=NOW() WHERE `id`=?";
-            PreparedStatement st = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(query);
-            st.setInt(1, this.userId);
-            int affectedRows = st.executeUpdate();
-            if (affectedRows == 0){
+            
+            String currentTime = BombermanWSEndpoint.getInstance().getMySQLDateTime();
+            
+            String insQuery = "INSERT INTO `login_history` SET user_id=?, ip=?, login_date=?";
+            PreparedStatement insSt = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(insQuery);
+            insSt.setInt(1, this.userId);
+            insSt.setString(2, this.ip);
+            insSt.setString(3, currentTime);
+            int insAffectedRows = insSt.executeUpdate();
+            if (insAffectedRows == 0){
+                throw new SQLException("Cannot save character. UserId : "+this.userId);
+            }
+            
+            String upQuery = "UPDATE `user` SET last_login=? WHERE `id`=?";
+            PreparedStatement upSt = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(upQuery);
+            upSt.setString(1, currentTime);
+            upSt.setInt(2, this.userId);
+            int upAffectedRows = upSt.executeUpdate();
+            if (upAffectedRows == 0){
                 throw new SQLException("Cannot save character. UserId : "+this.userId);
             }
             return 1;
@@ -1013,7 +1054,7 @@ public class BCharacter extends AbstractBlock{
                         + "`kills`=?,"
                         + "`deaths`=?,"
                         + "`user_id`=?,"
-                        + "`creation_time`=NOW();";
+                        + "`creation_time`='"+BombermanWSEndpoint.getInstance().getMySQLDateTime()+"';";
             }
             else{
                 query = "UPDATE `characters` SET "
@@ -1025,7 +1066,7 @@ public class BCharacter extends AbstractBlock{
                         + "`kills`=?,"
                         + "`deaths`=?,"
                         + "`user_id`=?,"
-                        + "`modification_time`=NOW()"
+                        + "`modification_time`='"+BombermanWSEndpoint.getInstance().getMySQLDateTime()+"'"
                         + "WHERE `id`=?";
             }
             PreparedStatement st = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(query);

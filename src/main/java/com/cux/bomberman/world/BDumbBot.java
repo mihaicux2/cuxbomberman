@@ -8,8 +8,12 @@ import java.util.logging.Logger;
 import javax.websocket.EndpointConfig;
 
 /**
- * It simply works based on total randomness
- * @author mihaicux
+ * This is the first type of the game bots; it simply works on total
+ * randomness, making it's intelligence practically null
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class BDumbBot extends BBaseBot{
 

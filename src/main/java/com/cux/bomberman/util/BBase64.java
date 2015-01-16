@@ -1,8 +1,12 @@
 package com.cux.bomberman.util;
 
 /**
- *
- * @author mihaicux
+ * The following class is used for encoding and decoding strings using the
+ * Base64 algorithm. 
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class BBase64 {
     private final static String base64chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

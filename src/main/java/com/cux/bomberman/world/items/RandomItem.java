@@ -1,8 +1,11 @@
 package com.cux.bomberman.world.items;
 
 /**
- *
- * @author mihaicux
+ * This class represents the "code" for the RANDOM item
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class RandomItem extends AbstractItem{
 

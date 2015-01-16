@@ -12,8 +12,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- *
- * @author mihaicux
+ * This class is the "code" representation for the playable
+ * worlds. It contains a matrix for all of it's building blocks
+ * (AbstractWall's)
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class World {
     
@@ -203,7 +208,7 @@ public class World {
     }
     
     /**
-     * Public method used to convert the character to JSON, to be sent to a client
+     * Public method used to convert the world to JSON, to be sent to a client
      * @return The JSON representation of the character
      */
     @Override

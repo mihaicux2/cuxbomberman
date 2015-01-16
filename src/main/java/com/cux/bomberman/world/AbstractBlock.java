@@ -1,8 +1,12 @@
 package com.cux.bomberman.world;
 
 /**
- *
- * @author mihaicux
+ * This class represents the "building blocks" for all of the game objects
+ * (characters/bots, walls, bombs, explosions)
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public abstract class AbstractBlock {
     

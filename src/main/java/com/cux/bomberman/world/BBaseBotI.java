@@ -1,8 +1,11 @@
 package com.cux.bomberman.world;
 
 /**
- *
- * @author mihaicux
+ * This is the base interface for all of the game bots
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public interface BBaseBotI {
     

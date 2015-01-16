@@ -7,8 +7,12 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 
 /**
- *
- * @author mihaicux
+ * This class is used to represent the bombs planted by any of the current
+ * game characters (bots & players)
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class BBomb extends AbstractBlock {
 

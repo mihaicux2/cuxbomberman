@@ -8,8 +8,13 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 
 /**
- *
- * @author mihaicux
+ * This class represents the base for all of the game's items;
+ * it provides methods for defining, changing and exporting
+ * all the extending items
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public abstract class AbstractItem extends AbstractBlock{
     
@@ -140,7 +145,7 @@ public abstract class AbstractItem extends AbstractBlock{
     }
     
     /**
-     * Public method used to convert the character to JSON, to be sent to a client
+     * Public method used to convert the item to JSON, to be sent to a client
      * @return The JSON representation of the character
      */
     @Override

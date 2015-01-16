@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.cux.bomberman.world.generator;
 
 import com.cux.bomberman.world.items.AbstractItem;
@@ -17,9 +11,11 @@ import com.cux.bomberman.world.items.TriggerItem;
 import java.util.Random;
 
 /**
- *
- * @author mihaicux
- * SINGLETON Pattern
+ * This class uses random to generate random items
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class ItemGenerator {
     

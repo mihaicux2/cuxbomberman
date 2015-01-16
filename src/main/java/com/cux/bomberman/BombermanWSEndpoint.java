@@ -52,10 +52,12 @@ import javax.websocket.server.ServerEndpoint;
 import javax.websocket.server.PathParam;
 
 /**
- *
- * Endpoint server
- *
- * @author mihaicux
+ * This is the main class of the project; it is the endpoint and acts as a 
+ * websockets server, maintaining and controlling all of the connecting clients
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 @ServerEndpoint(value = "/bombermanendpoint/{token}", configurator = BombermanHttpSessionConfigurator.class)
 public class BombermanWSEndpoint {
@@ -259,6 +261,9 @@ public class BombermanWSEndpoint {
      */
     private static final String DBPass = "bomberman_password";
 
+    /**
+     * Static constant. Used as a key passphrase for the encryption of the user IP
+     */
     public static final String passKey = "b0mb3rm4nCuxWSap"; // 128 bit key
     
     /**
@@ -391,7 +396,7 @@ public class BombermanWSEndpoint {
                 quitProtocol(peer, crtChar, config);
                 break;
             case "ip":
-                checkBanned(peer, toProcess);
+                checkBannedProtocol(peer, toProcess);
                 break;
             case "getip":
                 getIPProtocol(peer, toProcess);
@@ -513,7 +518,11 @@ public class BombermanWSEndpoint {
         
 //        System.out.println(userIP+"asd");
         
-        this.checkBanned(peer, userIP);
+        peer.getUserProperties().put("ip", userIP);
+        
+        if (this.isBanned(peer, userIP)){
+            this.sendBannedMessage(peer);
+        }
         
         /*
         // check user IP...
@@ -585,7 +594,7 @@ public class BombermanWSEndpoint {
                 return;
             }
 
-            query = "INSERT INTO `user` SET `email`=?, `username`=?, `password`=?, `registered_at`=NOW()";
+            query = "INSERT INTO `user` SET `email`=?, `username`=?, `password`=?, `registered_at`='"+this.getMySQLDateTime()+"'";
             PreparedStatement st = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
             st.setString(1, email);
             st.setString(2, user);
@@ -816,7 +825,8 @@ public class BombermanWSEndpoint {
         newChar.setHeight(World.wallDim);
         newChar.setUserId(user_id);
         newChar.restoreFromDB();
-        newChar.logIn();
+        newChar.setIp(peer.getUserProperties().get("ip").toString());
+        newChar.storeLogIn();
 
         charMapByName.put(username, peer.getId());
 
@@ -2084,10 +2094,21 @@ public class BombermanWSEndpoint {
         sendClearMessage("notadmin:[{}", peer);
     }
 
+    /**
+     * Public method used to send to a given admin the error message in case
+     * he/she requested an invalid map
+     * @param peer The connected peer
+     */
     public void sendInvalidMapMessage(Session peer) {
         sendClearMessage("invalidmap:[{}", peer);
     }
     
+    /**
+     * Public method used to send to a given admin the status message for the command
+     * that he/she requested for execution
+     * @param peer The connected peer
+     * @param msg The message to be sent
+     */
     public void sendStatusMessage(Session peer, String msg) {
         sendClearMessage("status:[" + msg, peer);
     }
@@ -2466,6 +2487,11 @@ public class BombermanWSEndpoint {
         sendStatusMessage(peer, getHelpMenu());
     }
 
+    /**
+     * Public method used to send to the requesting peer (if admin) a list
+     * of the current existing maps
+     * @param peer The connected peer
+     */
     public void listMapsProtocol(Session peer){
         if (!isAdmin(peer)) {
             sendNotAdminMessage(peer);
@@ -2825,7 +2851,7 @@ public class BombermanWSEndpoint {
     public void banIP(BCharacter admin, String ip) {
         try {
             String query = "INSERT INTO `banlist` VALUES("
-                    + " NULL, ?, ?, NOW()"
+                    + " NULL, ?, ?, '"+this.getMySQLDateTime()+"'"
                     + ")";
             PreparedStatement st2 = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
             System.out.println(st2.toString());
@@ -2879,24 +2905,32 @@ public class BombermanWSEndpoint {
      * @param peer The connected peer
      * @param ip The peer's IP address
      */
-    public void checkBanned(Session peer, String ip) {
-        peer.getUserProperties().put("ip", ip);
+    public boolean isBanned(Session peer, String ip) {
         if (ip.length() > 0) {
             try {
                 String query = "SELECT 1 FROM `banlist` WHERE `user_ip`=?";
                 PreparedStatement st2 = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
                 st2.setString(1, ip);
-                //System.out.println(st2.toString());
                 ResultSet ret = st2.executeQuery();
                 if (ret.next()) {
-                    sendBannedMessage(peer);
+                    return true;
                 }
             } catch (SQLException ex) {
                 BLogger.getInstance().logException2(ex);
+                return false;
             }
+            return false;
         }
+        return false;
     }
 
+    /**
+     * Public method used by the server to send the chat history to a given 
+     * connected peer
+     * @param peer The connected peer
+     * @param roomNr The room of the connected peer
+     * @param firstMessageID The ID of the last message (can be 0)
+     */
     public void exportChatProtocol(Session peer, int roomNr, int firstMessageID){
         if (firstMessageID == 0 ) firstMessageID = Integer.MAX_VALUE;
         try {
@@ -2927,6 +2961,27 @@ public class BombermanWSEndpoint {
         } catch (SQLException ex) {
             BLogger.getInstance().logException2(ex);
         }
+    }
+    
+    /**
+     * Public method used to see if a connected peer has access to the game
+     * @param peer The connected peer
+     * @param ip The peer's IP address
+     */
+    public void checkBannedProtocol(Session peer, String ip){
+        if (this.isBanned(peer, ip)){
+            this.sendBannedMessage(peer);
+        }
+    }
+    
+    /**
+     * Public method used to format the current datetime as a MySQL DATETIME String
+     * @return The datetime value as a MySQL DATETIME string
+     */
+    public String getMySQLDateTime(){
+        java.util.Date dt = new java.util.Date();
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        return sdf.format(dt);
     }
     
 }

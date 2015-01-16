@@ -11,8 +11,12 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 
 /**
- *
- * @author mihaicux
+ * This class extends the BBomb class, representing the next stage
+ * of it's base class; It is used to draw the bomb explosion
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class Explosion extends BBomb{
     
@@ -56,7 +60,7 @@ public class Explosion extends BBomb{
     }
     
     /**
-     * Public method used to convert the character to JSON, to be sent to a client
+     * Public method used to convert the explosion to JSON, to be sent to a client
      * @return The JSON representation of the character
      */
     @Override

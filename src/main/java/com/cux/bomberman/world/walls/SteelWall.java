@@ -1,8 +1,11 @@
 package com.cux.bomberman.world.walls;
 
 /**
- *
- * @author mihaicux
+ * This class represents the "code" for the STEEL wall
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class SteelWall extends AbstractWall{
 

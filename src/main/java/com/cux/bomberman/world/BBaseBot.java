@@ -10,8 +10,11 @@ import java.util.logging.Logger;
 import javax.websocket.EndpointConfig;
 
 /**
- *
- * @author mihaicux
+ * This class is used as a base wrapper for the game bots.
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI{
     
@@ -190,7 +193,7 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
      * @return 1
      */
     @Override
-    public int logIn(){
+    public int storeLogIn(){
         return 1;
     }
     
@@ -621,6 +624,10 @@ public abstract class BBaseBot extends BCharacter implements Runnable, BBaseBotI
         }
     }
     
+    /**
+     * Public method used to make the bot "sleep" (it's running thread will wait:> )
+     * @param ms The time in milliseconds to "sleep"
+     */
     public void sleep(int ms){
         try {
             Thread.sleep(ms);

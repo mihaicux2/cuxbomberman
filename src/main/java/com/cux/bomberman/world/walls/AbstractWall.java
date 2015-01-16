@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.cux.bomberman.world.walls;
 
 import com.cux.bomberman.util.BLogger;
@@ -15,8 +9,13 @@ import org.codehaus.jackson.map.ObjectWriter;
 
 
 /**
- *
- * @author mihaicux
+ * This class represents the base for all of the game's walls;
+ * it provides methods for defining, changing and exporting
+ * all the extending walls
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public abstract class AbstractWall extends AbstractBlock{
 
@@ -95,7 +94,7 @@ public abstract class AbstractWall extends AbstractBlock{
     }
     
     /**
-     * Public method used to convert the character to JSON, to be sent to a client
+     * Public method used to convert the wall to JSON, to be sent to a client
      * @return The JSON representation of the character
      */
     @Override

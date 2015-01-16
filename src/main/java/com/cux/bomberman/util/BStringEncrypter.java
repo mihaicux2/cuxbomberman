@@ -25,7 +25,6 @@ import java.io.IOException;
 
 
 /**
- * -----------------------------------------------------------------------------
  * The following example implements a class for encrypting and decrypting
  * strings using several Cipher algorithms. The class is created with a key and
  * can be used repeatedly to encrypt and decrypt strings using that key.
@@ -40,7 +39,6 @@ import java.io.IOException;
  * @version 1.0
  * @author  Jeffrey M. Hunter  (jhunter@idevelopment.info)
  * @author  http://www.idevelopment.info
- * -----------------------------------------------------------------------------
  */
 
 public class BStringEncrypter {

@@ -6,8 +6,12 @@ import javax.websocket.server.HandshakeRequest;
 import javax.websocket.server.ServerEndpointConfig;
 
 /**
- *
- * @author mihaicux
+ * This class is used as a session configurator for the servlet connection 
+ * protocol with the clients
+ * 
+ * @version 1.0
+ * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author  http://www.
  */
 public class BombermanHttpSessionConfigurator  extends ServerEndpointConfig.Configurator {
     
