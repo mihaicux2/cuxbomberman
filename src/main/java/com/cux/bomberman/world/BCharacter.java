@@ -462,8 +462,8 @@ public class BCharacter extends AbstractBlock{
      * @return 0 
      */
     public int addOrDropBomb(){
-        //if (state == "Normal") state = "Bomb";
-        //else if (state == "Bomb") state = "Normal";
+        if (state == "Normal") state = "Bomb";
+        else if (state == "Bomb") state = "Normal";
         return 0;
     }
     
@@ -1035,6 +1035,16 @@ public class BCharacter extends AbstractBlock{
             BLogger.getInstance().logException2(ex);
             return 0;
         }
+    }
+    
+    public int resetEvolution(){
+        this.setBombRange(1);
+        this.setDeaths(0);
+        this.setKills(0);
+        this.setMaxBombs(1);
+        this.setSpeed(1);
+        this.setTriggered(false);
+        return this.saveToDB();
     }
     
     /**

@@ -275,6 +275,9 @@ BombermanClient.init = function () {
                 case "notadmin":
                     BombermanClient.notAdmin();
                     break;
+                case "fullmap":
+                    BombermanClient.fullMap();
+                    break;
                 case "invalidmap":
                     BombermanClient.invalidMap();
                     break;
@@ -449,6 +452,10 @@ BombermanClient.makeAdmin = function () {
 
 BombermanClient.notAdmin = function () {
     BombermanClient.alert("You are not admin!");
+}
+
+BombermanClient.fullMap = function () {
+    BombermanClient.alert("The current map if full!");
 }
 
 BombermanClient.invalidMap = function () {

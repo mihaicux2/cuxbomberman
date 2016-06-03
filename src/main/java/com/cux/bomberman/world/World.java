@@ -76,6 +76,14 @@ public class World {
     }
     
     /**
+     * Public getter for the mapFile property
+     * @return The requester property
+     */
+    public String getMapFile(){
+        return mapFile;
+    }
+    
+    /**
      * Public setter for the WIDTH property
      * @param width The new value
      */

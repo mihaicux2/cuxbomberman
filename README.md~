@@ -19,7 +19,6 @@ If you decide to change these values, make sure to also change the code constant
 **DBPass** : found at line *262*<br />
 
 **The *MAPS* folder must be placed in GlassFish current domain config folder.<br />For me, this is located in */home/mihaicux/GlassFish_Server/glassfish/domains/domain1/config/***<br />
-**The next line of code can be found in *src/main/java/com/cux/bomberman/BombermanWSEndpoint.java*, at line *821***<br />
 ~~~~~~~
 map.put(mapNumber, new World("maps/firstmap.txt"));
 ~~~~~~~

@@ -48,7 +48,7 @@ CREATE TABLE `login_history` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO `user` (`id`, `email`, `username`, `password`, `admin`, `registered_at`) VALUES
-(NULL, 'admin1@cuxbomberman.localhost', 'bombermanadmin', MD5('bomberman'), 1, NOW());
+(NULL, 'admin1@cuxbomberman.localhost', 'bomberman_admin', MD5('bomberman_password'), 1, NOW());
 
 CREATE TABLE `banlist`
 ( `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -57,3 +57,15 @@ CREATE TABLE `banlist`
   `ban_time` DATETIME NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT  CHARSET=utf8;
+
+DELIMITER //
+
+CREATE PROCEDURE reset_users ()
+BEGIN
+
+UPDATE `characters` SET `speed`=1, `bomb_range`=1, `max_bombs`=1, `triggered`=1, `kills`=0, `deaths`=0;
+
+END;
+//
+
+DELIMITER ;
