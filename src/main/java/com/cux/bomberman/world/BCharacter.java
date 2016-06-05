@@ -462,8 +462,8 @@ public class BCharacter extends AbstractBlock{
      * @return 0 
      */
     public int addOrDropBomb(){
-        if (state == "Normal") state = "Bomb";
-        else if (state == "Bomb") state = "Normal";
+//        if (state == "Normal") state = "Bomb";
+//        else if (state == "Bomb") state = "Normal";
         return 0;
     }
     

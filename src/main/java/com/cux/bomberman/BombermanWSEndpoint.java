@@ -35,6 +35,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -91,7 +92,7 @@ public class BombermanWSEndpoint {
      * Indexed by peer map number.<br />
      * It is constantly changed/updated
      */
-    public static final Map<Integer, Set<BBomb>> bombs = Collections.synchronizedMap(new ConcurrentHashMap<Integer, Set<BBomb>>());
+    public static final Map<Integer, List<BBomb>> bombs = Collections.synchronizedMap(new ConcurrentHashMap<Integer, List<BBomb>>());
 
     /**
      * Static variable. Collection used to keep track of all the existing bombs
@@ -99,7 +100,7 @@ public class BombermanWSEndpoint {
      * Indexed by peer map number.<br />
      * It is constantly changed/updated
      */
-    private static final Map<Integer, Set<BBomb>> markedBombs = Collections.synchronizedMap(new ConcurrentHashMap<Integer, Set<BBomb>>());
+    private static final Map<Integer, List<BBomb>> markedBombs = Collections.synchronizedMap(new ConcurrentHashMap<Integer, List<BBomb>>());
 
     /**
      * Static variable. Collection used to keep track of all the connected
@@ -837,7 +838,8 @@ public class BombermanWSEndpoint {
         }
 
         if (markedBombs.isEmpty() || markedBombs.get(mapNumber) == null) {
-            markedBombs.put(mapNumber,  Collections.synchronizedSet(new HashSet<BBomb>()));
+//            markedBombs.put(mapNumber,  Collections.synchronizedSet(new HashSet<BBomb>()));
+            markedBombs.put(mapNumber, Collections.synchronizedList(new ArrayList<BBomb>()));
         }
 
         if (chars.isEmpty() || chars.get(mapNumber) == null){
@@ -853,7 +855,7 @@ public class BombermanWSEndpoint {
         }
 
         if (bombs.isEmpty() || bombs.get(mapNumber) == null) {
-            bombs.put(mapNumber, Collections.synchronizedSet(new HashSet<BBomb>()));
+            bombs.put(mapNumber, Collections.synchronizedList(new ArrayList<BBomb>()));
         }
 
         if (wallsChanged.isEmpty() || wallsChanged.get(mapNumber) == null) {
