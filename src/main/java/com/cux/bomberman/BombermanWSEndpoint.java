@@ -1373,6 +1373,7 @@ public class BombermanWSEndpoint {
         if (world == null) {
             return false;
         }
+        
         return (world.chars[i][j] != null && !world.chars[i][j].isEmpty());
     }
 
@@ -2021,8 +2022,7 @@ public class BombermanWSEndpoint {
      * @param sound The sound to be played
      */
     public void playSoundAll(int roomNr, String sound) {
-        Map<String, BCharacter> myChars = Collections.synchronizedMap(new HashMap<String, BCharacter>(chars.get(roomNr)));
-        for (Map.Entry pairs : myChars.entrySet()) {
+        for (Map.Entry pairs : chars.get(roomNr).entrySet()) {
             BCharacter crtChar = (BCharacter) pairs.getValue();
             if (peers.get(crtChar.getId()) == null) {
                 continue;
@@ -2278,8 +2278,7 @@ public class BombermanWSEndpoint {
 //        for (BCharacter crtChar : myChars) {
 //            sendMessage(msg, peers.get(crtChar.getId()));
 //        }
-        Map<String, BCharacter> myChars = Collections.synchronizedMap(new HashMap<String, BCharacter>(chars.get(roomNr)));
-        for (Map.Entry pairs : myChars.entrySet()) {
+        for (Map.Entry pairs : chars.get(roomNr).entrySet()) {
             BCharacter crtChar = (BCharacter) pairs.getValue();
             if (peers.get(crtChar.getId()) == null) {
                 continue;
@@ -2554,8 +2553,7 @@ public class BombermanWSEndpoint {
         setCharPosition(roomNr, chars.get(roomNr).get(peer.getId()));
         if (mapName.length() > 0) {
             if (chars.get(roomNr) != null && !chars.get(roomNr).isEmpty()) {
-                Map<String, BCharacter> myChars = Collections.synchronizedMap(new HashMap<String, BCharacter>(chars.get(roomNr)));
-                for (Map.Entry pairs : myChars.entrySet()) {
+                for (Map.Entry pairs : chars.get(roomNr).entrySet()) {
                     BCharacter crtChar = (BCharacter) pairs.getValue();
                     if (peers.get(crtChar.getId()) == null) {
                         continue;
@@ -2578,8 +2576,7 @@ public class BombermanWSEndpoint {
             return;
         }
         
-        Map<String, BCharacter> myChars = Collections.synchronizedMap(new HashMap<String, BCharacter>(chars.get(roomNr)));
-        for (Map.Entry pairs : myChars.entrySet()) {
+        for (Map.Entry pairs : chars.get(roomNr).entrySet()) {
             BCharacter crtChar = (BCharacter) pairs.getValue();
             if (peers.get(crtChar.getId()) == null) {
                 continue;
