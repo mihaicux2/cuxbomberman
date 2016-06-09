@@ -3,6 +3,7 @@ package com.cux.bomberman.world.generator;
 import com.cux.bomberman.world.items.AbstractItem;
 import com.cux.bomberman.world.items.EbolaItem;
 import com.cux.bomberman.world.items.FlameItem;
+import com.cux.bomberman.world.items.GoldItem;
 import com.cux.bomberman.world.items.RandomItem;
 import com.cux.bomberman.world.items.SkateItem;
 import com.cux.bomberman.world.items.SlowItem;
@@ -64,7 +65,8 @@ public class ItemGenerator {
         
         AbstractItem ret;
         
-        if      (rand % 7 == 0) ret = new RandomItem(initialX, initialY);
+        if      (rand % 8 == 0) ret = new RandomItem(initialX, initialY);
+        else if (rand % 7 == 0) ret = new GoldItem(initialX, initialY);
         else if (rand % 6 == 0) ret = new EbolaItem(initialX, initialY);
         else if (rand % 5 == 0) ret = new SpoogItem(initialX, initialY);
         else if (rand % 4 == 0) ret = new TriggerItem(initialX, initialY);

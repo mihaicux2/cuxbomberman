@@ -41,7 +41,7 @@ public abstract class AbstractBlock {
      * Getter for the X coordinate of the block
      * @return The X coordinate
      */
-    public int getPosX() {
+    public synchronized int getPosX() {
         return posX;
     }
 
@@ -49,15 +49,31 @@ public abstract class AbstractBlock {
      * Getter for the Y coordinate of the block
      * @return The Y coordinate
      */
-    public int getPosY() {
+    public synchronized int getPosY() {
         return posY;
     }
 
     /**
+     * Get the world matrix block column
+     * @return The block column
+     */
+    public synchronized int getBlockPosX(){
+        return (int) Math.ceil(posX / width);
+    }
+    
+    /**
+     * Get the world matrix block row
+     * @return The block row
+     */
+    public synchronized int getBlockPosY(){
+        return (int) Math.ceil(posY / height);
+    }
+    
+    /**
      * Getter for the width of the block
      * @return The width of the block
      */
-    public int getWidth() {
+    public synchronized int getWidth() {
         return width;
     }
 
@@ -65,40 +81,48 @@ public abstract class AbstractBlock {
      * Getter for the height of the block
      * @return The height of the block
      */
-    public int getHeight() {
+    public synchronized int getHeight() {
         return height;
     }
     
     /**
      * Setter for the X coordinate of the block
      * @param posX The new position
+     * @return The current object
      */
-    public void setPosX(int posX) {
+    public synchronized AbstractBlock setPosX(int posX) {
         this.posX = posX;
+        return this;
     }
 
     /**
      * Setter for the Y coordinate of the block
      * @param posY The new position
+     * @return The current object
      */
-    public void setPosY(int posY) {
+    public synchronized AbstractBlock setPosY(int posY) {
         this.posY = posY;
+        return this;
     }
 
     /**
      * Setter for the width of the block
      * @param width The new size
+     * @return The current object
      */
-    public void setWidth(int width) {
+    public synchronized AbstractBlock setWidth(int width) {
         this.width = width;
+        return this;
     }
     
     /**
      * Setter for the height of the block
      * @param height The new size
+     * @return The current object
      */
-    public void setHeight(int height) {
+    public synchronized AbstractBlock setHeight(int height) {
         this.height = height;
+        return this;
     }
     
     /**
@@ -108,6 +132,12 @@ public abstract class AbstractBlock {
      */
     public double distance(AbstractBlock o1){
         return Math.sqrt(Math.pow(Math.abs(this.posX - o1.posX), 2) + Math.pow(Math.abs(this.posY - o1.posY), 2));
+    }
+    
+    public int boundNumber(int input, int min, int max){
+        if (input < min) input = min;
+        if (input > max) input = max;
+        return input;
     }
     
 }

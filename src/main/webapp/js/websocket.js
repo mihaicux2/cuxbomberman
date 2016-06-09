@@ -37,7 +37,7 @@ var BombermanClient = {};
     BombermanClient.stackInit = false;
     BombermanClient.stackHead = 0;
     BombermanClient.firstMessage =false;
-    
+    BombermanClient.audioPlaying = false;
 }
 
 BombermanClient.get_random_color = function () {
@@ -206,7 +206,7 @@ BombermanClient.init = function () {
         BombermanClient.socket.onmessage = function (msg) {
             var op = msg.data.substr(0, msg.data.indexOf(":["));
             var toProc = msg.data.substr(msg.data.indexOf(":[") + 2);
-            //console.log(op);
+//            console.log(op);
             //socket.close();
             //var x = JSON.parse(toProc);
             switch (op) {
@@ -286,6 +286,10 @@ BombermanClient.init = function () {
                     break;
                 case "chatLog":
                     BombermanClient.writeChatLog(toProc);
+                    break;
+                case "removed":
+                    BombermanClient.socket.close();
+                    BombermanClient.renderMap("");
                     break;
             }
         }
@@ -467,7 +471,7 @@ BombermanClient.showLogInFailed = function () {
 }
 
 BombermanClient.showRegisterFailed = function () {
-    BombermanClient.alert("Login Failed");
+    BombermanClient.alert("Registration Failed");
 }
 
 BombermanClient.alreadyTaken = function () {
@@ -639,16 +643,25 @@ BombermanClient.log = function (msg) {
 }
 
 BombermanClient.playSound = function (file) {
-    var audio = document.getElementById("sound_" + file);
-    if (audio == undefined) {
-        jQuery('<audio id="sound_' + file + '" src="' + file + '" />').appendTo('body');
-        audio = document.getElementById("sound_" + file);
-    }
-    audio = document.getElementById("sound_" + file);
-    if (audio.paused == false)
-        return;
-    //audio.volume = .3;
+//    var audio = document.getElementById("sound_" + file);
+//    if (audio == undefined) {
+//        jQuery('<audio id="sound_' + file + '" src="' + file + '" />').appendTo('body');
+//        audio = document.getElementById("sound_" + file);
+//    }
+//    audio = document.getElementById("sound_" + file);
+//    if (audio.paused == false)
+//        return;
+//    //audio.volume = .3;
+//    audio.play();
+
+    if (BombermanClient.audioPlaying == true) return;
+
+    var audio = new Audio(file);
+    audio.addEventListener('ended', function(e){
+        BombermanClient.audioPlaying = false;
+    });
     audio.play();
+    BombermanClient.audioPlaying = true;
 }
 
 BombermanClient.stopSound = function (file) {
@@ -898,7 +911,10 @@ BombermanClient.renderChars = function (toProc) {
             BombermanClient.stats[x.id]["name"] = x.name;
 
             if (x.id == BombermanClient.charID) {
-                BombermanClient.currentPlayer = x;
+                if (typeof(BombermanClient.currentPlayer.id) == "undefined"){
+                    BombermanClient.currentPlayer = x;
+                }
+                BombermanClient.walking = x.walking;
                 jQuery("#adminConsoleSpan").html(BombermanClient.currentPlayer.name + "@cuxBomberman:~$ ");
             }
 
@@ -919,19 +935,17 @@ BombermanClient.renderChars = function (toProc) {
                     ob.find("canvas").hide();
                     ob.find("img").show();
                 }
+                // "stop" image only if character is not walking and it's state is "Normal" or "Bomb"
+                if (!x.walking && (x.state == "Normal" || x.state == "Bomb")) {
+                    ob.find("canvas")[0].getContext("2d").clearRect(0, 0, x.width, x.height);
+                    ob.find("canvas")[0].getContext("2d").drawImage(ob.find("img")[0], 0, 0, x.width, x.height);
+                    ob.find("img").hide();
+                    ob.find("canvas").show();
+                }
                 else {
-                    // "stop" image only if character is not walking and it's state is "Normal" or "Bomb"
-                    if (!x.walking && (x.state == "Normal" || x.state == "Bomb")) {
-                        ob.find("canvas")[0].getContext("2d").clearRect(0, 0, x.width, x.height);
-                        ob.find("canvas")[0].getContext("2d").drawImage(ob.find("img")[0], 0, 0, x.width, x.height);
-                        ob.find("img").hide();
-                        ob.find("canvas").show();
-                    }
-                    else {
-                        if (ob.find("img").css("display") == "none") {
-                            ob.find("canvas").hide();
-                            ob.find("img").show();
-                        }
+                    if (ob.find("img").css("display") == "none") {
+                        ob.find("canvas").hide();
+                        ob.find("img").show();
                     }
                 }
             }
@@ -1049,41 +1063,43 @@ BombermanClient.changeName = function () {
 }
 
 BombermanClient.updateStatus = function () {
-    BombermanClient.walking = false;
-    if (BombermanClient.MOVE_UP) {
-        try {
-            BombermanClient.socket.send("up");
-        } catch (ex) {
-            BombermanClient.log(ex);
-        } // request info about the other users
-        BombermanClient.walking = true;
-    }
+//    BombermanClient.walking = false;
+    if (!BombermanClient.walking){
+        if (BombermanClient.MOVE_UP) {
+            try {
+                BombermanClient.socket.send("up");
+            } catch (ex) {
+                BombermanClient.log(ex);
+            } // request info about the other users
+            BombermanClient.walking = true;
+        }
 
-    else if (BombermanClient.MOVE_DOWN) {
-        try {
-            BombermanClient.socket.send("down");
-        } catch (ex) {
-            BombermanClient.log(ex);
-        } // request info about the other users
-        BombermanClient.walking = true;
-    }
+        else if (BombermanClient.MOVE_DOWN) {
+            try {
+                BombermanClient.socket.send("down");
+            } catch (ex) {
+                BombermanClient.log(ex);
+            } // request info about the other users
+            BombermanClient.walking = true;
+        }
 
-    else if (BombermanClient.MOVE_LEFT) {
-        try {
-            BombermanClient.socket.send("left");
-        } catch (ex) {
-            BombermanClient.log(ex);
-        } // request info about the other users
-        BombermanClient.walking = true;
-    }
+        else if (BombermanClient.MOVE_LEFT) {
+            try {
+                BombermanClient.socket.send("left");
+            } catch (ex) {
+                BombermanClient.log(ex);
+            } // request info about the other users
+            BombermanClient.walking = true;
+        }
 
-    else if (BombermanClient.MOVE_RIGHT) {
-        try {
-            BombermanClient.socket.send("right");
-        } catch (ex) {
-            BombermanClient.log(ex);
-        } // request info about the other users
-        BombermanClient.walking = true;
+        else if (BombermanClient.MOVE_RIGHT) {
+            try {
+                BombermanClient.socket.send("right");
+            } catch (ex) {
+                BombermanClient.log(ex);
+            } // request info about the other users
+            BombermanClient.walking = true;
+        }
     }
 
     if (BombermanClient.DETONATE) {

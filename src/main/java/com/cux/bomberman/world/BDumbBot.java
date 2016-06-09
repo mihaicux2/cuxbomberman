@@ -38,13 +38,13 @@ public class BDumbBot extends BBaseBot{
         // random moves
         int rand = r.nextInt(1000000);
         if (rand % 5 == 0) {
-            this.moveUp();
+            this.move("up");
         } else if (rand % 4 == 0) {
-            this.moveLeft();
+            this.move("left");
         } else if (rand % 3 == 0) {
-            this.moveDown();
+            this.move("down");
         } else if (rand % 2 == 0) {
-            this.moveRight();
+            this.move("right");
         } 
         
         // a new bomb, maby? :D

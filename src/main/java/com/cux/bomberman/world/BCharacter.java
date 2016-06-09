@@ -11,191 +11,203 @@ import java.sql.SQLException;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 import javax.websocket.EndpointConfig;
 import javax.websocket.Session;
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 
 /**
- * This class is used to represent the players of the game (bots and real 
- * users) and it provides basic functionality for their actions
- * 
+ * This class is used to represent the players of the game (bots and real users)
+ * and it provides basic functionality for their actions
+ *
  * @version 1.0
- * @author  Mihail Cuculici (mihai.cuculici@gmail.com)
- * @author  http://www.
+ * @author Mihail Cuculici (mihai.cuculici@gmail.com)
+ * @author http://www.
  */
-public class BCharacter extends AbstractBlock{
-    
+public class BCharacter extends AbstractBlock {
+
     /**
      * The player name
      */
     protected String name;
-    
+
     /**
      * A list of all textures a player can hage
      */
     protected static final HashMap<String, Integer> textures = new HashMap<>(); // direction+state, texture = int(.gif)
-    
+
     /**
      * Associations for the player textures
      */
     public int crtTexture = 2; // can also be {1, 3, 4, 14, 15, 16, 17, 20, 22, 23, 24}
-    
+
     /**
      * A player state can be as follows: Normal, Bomb, Blow, Win and Trapped
      */
     protected String state = "Normal"; // can also be "Bomb", "Blow", "Win" and "Trapped"
-    
+
     /**
-     * A player direction can be as follows: Right, Up, Left, Down
+     * A player direction can be as follows: right, up, left, down
      */
-    protected String direction = "Right"; // can also be "Up", "Down" and "Left"
-    
+    protected String direction = "right"; // can also be "up", "down" and "left"
+
     /**
      * The id of the player (associated peed ID)
      */
     protected String id;
-    
+
     /**
      * The maximum range an exploding bomb can reach
      */
     protected int bombRange = 1;
-    
+
     /**
      * The moving speed of the player
      */
     protected int speed = 1; // first gear :)
-    
+
     /**
      * The number of simultaneous bombs a player cand drop
      */
-    protected int maxBombs = 1; 
-    
+    protected int maxBombs = 1;
+
     /**
      * Check to see if the player is moving or stopped
      */
-    protected boolean walking = false;
-    
+    public boolean walking = false;
+
     /**
      * Check to see if the player can detonate bombs with a trigger
      */
     protected boolean triggered = false; // checks if the character has a trigger for the "planted" bombs
-    
+
     /**
      * Stores the room to which the player is connected
      */
     public int roomIndex;
-    
+
     /**
      * Number of kills the player made
      */
     protected int kills = 0;
-    
+
     /**
      * Numbers of player deaths
      */
     protected int deaths = 0;
-    
+
     /**
-     * Stores the number of seconds that passed since the player entered the game
+     * Stores the number of seconds that passed since the player entered the
+     * game
      */
     public long connectionTime = 0; // in seconds
-    
+
     /**
      * Stores the date when the player entered the game
      */
     public Date creationTime;
-    
+
     /**
      * If true, this property will make the player drop bombs unwillingly
      */
     protected boolean dropBombs = false;
-    
+
     /**
      * Checks to see if the player is ready to play the game
      */
     public boolean ready = false;
-    
+
     /**
      * The number of planted, unexploded bombs of the player
      */
     protected int plantedBombs = 0;
-    
+
     /**
      * The database id of the player (from the table `characters`)
      */
     protected int dbId = 0;
-    
+
     /**
      * The information about the player, stored in the cookies
      */
     protected EndpointConfig config = null;
-    
+
     /**
      * The database id of the player (from the table `user`)
      */
     protected int userId = 0;
-    
+
     /**
-     * Set to 1 if the current player has admin privileges
+     * Set to true if the current player has admin privileges
      */
     protected boolean isAdmin = false;
-    
+
     /**
      * Store the user's/bot's last valid move
      */
     protected String previousMove = null;
-    
+
     /**
      * Store the user ip address
      */
     protected String ip = null;
-    
+
+    /**
+     * The player session connection
+     */
+    protected Session peer = null;
+
+    /**
+     * Set to true if the current player can blow any type of walls
+     */
+    protected boolean gold = false;
+
     /**
      * Static initialization of the player textures
      */
     static {
         // walk in normal state
-        textures.put("walkUpNormal", 1);
-        textures.put("walkRightNormal", 2);
-        textures.put("walkDownNormal", 3);
-        textures.put("walkLeftNormal", 4);
-        
+        textures.put("walkupNormal", 1);
+        textures.put("walkrightNormal", 2);
+        textures.put("walkdownNormal", 3);
+        textures.put("walkleftNormal", 4);
+
         // walk with a bomb
-        textures.put("walkUpBomb", 14);
-        textures.put("walkRightBomb", 16);
-        textures.put("walkDownBomb", 17);
-        textures.put("walkLeftBomb", 15);
-        
+        textures.put("walkupBomb", 14);
+        textures.put("walkrightBomb", 16);
+        textures.put("walkdownBomb", 17);
+        textures.put("walkleftBomb", 15);
+
         // walk while trapped
-        textures.put("walkUpTrapped", 20);
-        textures.put("walkRightTrapped", 24);
-        textures.put("walkDownTrapped", 22);
-        textures.put("walkLeftTrapped", 23);
-        
-         // walk while blow
-        textures.put("walkUpBlow", 18);
-        textures.put("walkRightBlow", 18);
-        textures.put("walkDownBlow", 18);
-        textures.put("walkLeftBlow", 18);
-        
+        textures.put("walkupTrapped", 20);
+        textures.put("walkrightTrapped", 24);
+        textures.put("walkdownTrapped", 22);
+        textures.put("walkleftTrapped", 23);
+
+        // walk while blow
+        textures.put("walkupBlow", 18);
+        textures.put("walkrightBlow", 18);
+        textures.put("walkdownBlow", 18);
+        textures.put("walkleftBlow", 18);
+
         // walk while win
-        textures.put("walkUpWin", 10);
-        textures.put("walkRightWin", 10);
-        textures.put("walkDownWin", 10);
-        textures.put("walkLeftWin", 10);
+        textures.put("walkupWin", 10);
+        textures.put("walkrightWin", 10);
+        textures.put("walkdownWin", 10);
+        textures.put("walkleftWin", 10);
     }
-    
+
     /**
      * Public constructor of the current class
+     *
      * @param id - the id of the connected peer
      * @param name - the name of the connected peer
      * @param roomIndex - the room associated with the player
      * @param config - the config information (restored from cookies)
      */
-    public BCharacter(String id, String name, int roomIndex, EndpointConfig config){
+    public BCharacter(String id, String name, int roomIndex, EndpointConfig config) {
         this.id = id;
         this.name = name;
         this.roomIndex = roomIndex;
@@ -205,58 +217,74 @@ public class BCharacter extends AbstractBlock{
 
     /**
      * Increase the number of bombs a player can drop simultaneously
+     *
+     * @return The current object
      */
-    public void incPlantedBombs(){
-        if (this.plantedBombs < this.maxBombs){
+    public synchronized BCharacter incPlantedBombs() {
+        if (this.plantedBombs < this.maxBombs) {
             this.plantedBombs++;
 //            System.out.println("BCharacter.inc - " + this.getId()+" : am pus " + this.getPlantedBombs());
         }
+        return this;
     }
-    
+
     /**
      * Decrease the number of bombs a player can drop simultaneously
+     *
+     * @return The current object
      */
-    public void decPlantedBombs(){
-        if (this.plantedBombs > 0){
+    public synchronized BCharacter decPlantedBombs() {
+        if (this.plantedBombs > 0) {
             this.plantedBombs--;
 //            System.out.println("BCharacter.dec - " + this.getId()+" : am pus " + this.getPlantedBombs());
         }
+        return this;
     }
-    
+
     /**
      * Check if the current player has admin privileges
+     *
      * @return true if the user has admin privileges
      */
-    public boolean getIsAdmin(){
+    public boolean getIsAdmin() {
         return this.isAdmin;
     }
-    
+
     /**
      * Gives/revokes admin privileges on the current player
+     *
      * @param isAdmin - the new value for the <b>isAdmin</b> property
+     * @return The current object
      */
-    public void setIsAdmin(boolean isAdmin){
+    public synchronized BCharacter setIsAdmin(boolean isAdmin) {
         this.isAdmin = isAdmin;
+        return this;
     }
-    
+
     /**
      * Get the number of bombs a player can drop simultaneously
+     *
      * @return the number of bombs a player can drop
      */
-    public int getPlantedBombs(){
+    public synchronized int getPlantedBombs() {
         return this.plantedBombs;
     }
-    
+
     /**
      * Set the number of bombs a player can drop simultaneously
-     * @param plantedBombs - the new number of bombs that can be dropped in the same time
+     *
+     * @param plantedBombs - the new number of bombs that can be dropped in the
+     * same time
+     * @return The current object
      */
-    public void setPlantedBombs(int plantedBombs){
+    public synchronized BCharacter setPlantedBombs(int plantedBombs) {
         this.plantedBombs = plantedBombs;
+        return this;
     }
-    
+
     /**
      * Public getter for the id property
+     *
      * @return The requested property
      */
     public String getId() {
@@ -265,15 +293,19 @@ public class BCharacter extends AbstractBlock{
 
     /**
      * Public setter for the id property
+     *
      * @param id The new value
+     * @return The current object
      */
-    public void setId(String id) {
+    public BCharacter setId(String id) {
         this.id = id;
         this.saveToDB();
+        return this;
     }
-    
+
     /**
      * Public getter for the userId property
+     *
      * @return The requested property
      */
     public int getUserId() {
@@ -282,31 +314,33 @@ public class BCharacter extends AbstractBlock{
 
     /**
      * Public setter for the usedId property
+     *
      * @param userId The new value
+     * @return The current object
      */
-    public void setUserId(int userId) {
+    public BCharacter setUserId(int userId) {
         this.userId = userId;
-        if (this.dbId == 0){
+        if (this.dbId == 0) {
             try {
                 String query = "SELECT id FROM `characters` WHERE `user_id`=?";
-                PreparedStatement st = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(query);
+                PreparedStatement st = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
                 st.setInt(1, this.userId);
                 ResultSet rs = st.executeQuery();
-                if(rs.next())
-                {
+                if (rs.next()) {
                     this.dbId = rs.getInt("id");
-                }
-                else{
+                } else {
                     this.saveToDB();
                 }
             } catch (SQLException ex) {
                 BLogger.getInstance().logException2(ex);
             }
         }
+        return this;
     }
-    
+
     /**
      * Public getter for the dbId property
+     *
      * @return The requested property
      */
     public int getDbId() {
@@ -315,116 +349,147 @@ public class BCharacter extends AbstractBlock{
 
     /**
      * Public setter for the dbId property
+     *
      * @param dbId he new value
+     * @return The current object
      */
-    public void setDbId(int dbId) {
+    public BCharacter setDbId(int dbId) {
         this.dbId = dbId;
         this.saveToDB();
+        return this;
     }
-    
+
     /**
      * Public getter for the ready property
+     *
      * @return The requested property
      */
-    public boolean getReady(){
+    public boolean getReady() {
         return this.ready;
     }
-    
+
     /**
      * Public setter for the ready property
+     *
      * @param ready The new value
+     * @return The current object
      */
-    public void setReady(boolean ready){
+    public BCharacter setReady(boolean ready) {
         this.ready = ready;
+        return this;
     }
-    
+
     /**
      * Public getter for the maxBombs property
+     *
      * @return The requested property
      */
-    public int getMaxBombs() {
+    public synchronized int getMaxBombs() {
         return maxBombs;
     }
 
     /**
      * Public setter for the maxBombs property
+     *
      * @param maxBombs The new value
+     * @return The current object
      */
-    public void setMaxBombs(int maxBombs) {
+    public synchronized BCharacter setMaxBombs(int maxBombs) {
         this.maxBombs = maxBombs;
         this.saveToDB();
+        return this;
     }
-    
+
     /**
-     * Public method used to tell if a bomb is detonated by a trigger or explodes after<br />
+     * Public method used to tell if a bomb is detonated by a trigger or
+     * explodes after<br />
      * a given amount of time (it's lifetime)
+     *
      * @return The requester property
      */
-    public boolean isTriggered() {
+    public synchronized boolean isTriggered() {
         return triggered;
     }
 
     /**
      * Public setter for the triggered property
+     *
      * @param triggered The new value
+     * @return The current object
      */
-    public void setTriggered(boolean triggered) {
+    public synchronized BCharacter setTriggered(boolean triggered) {
         this.triggered = triggered;
         this.saveToDB();
+        return this;
     }
-    
+
     /**
      * Public getter for the walking property
+     *
      * @return The requester property
      */
-    public boolean isWalking() {
+    public synchronized boolean isWalking() {
         return walking;
     }
 
     /**
      * Public setter for the walking property
+     *
      * @param walking The new value
+     * @return The current object
      */
-    public void setWalking(boolean walking) {
+    public synchronized BCharacter setWalking(boolean walking) {
         this.walking = walking;
+        return this;
     }
 
     /**
      * Public getter for the bombRange property
+     *
      * @return The requested property
      */
-    public int getBombRange() {
+    public synchronized int getBombRange() {
         return bombRange;
     }
 
     /**
      * Public setter for the bombRange property
+     *
      * @param bombRange The new value
+     * @return The current object
      */
-    public void setBombRange(int bombRange) {
+    public synchronized BCharacter setBombRange(int bombRange) {
         this.bombRange = bombRange;
         this.saveToDB();
+        return this;
     }
 
     /**
      * Public getter for the speed property
+     *
      * @return The requested property
      */
-    public int getSpeed() {
+    public synchronized int getSpeed() {
         return speed;
     }
 
     /**
      * Public setter for the speed property
+     *
      * @param speed The new value
+     * @return The current object
      */
-    public void setSpeed(int speed) {
-        if (speed > 9) speed = 9;
+    public synchronized BCharacter setSpeed(int speed) {
+        if (speed > 9) {
+            speed = 9;
+        }
         this.speed = speed;
+        return this;
     }
 
     /**
      * Public getter for the name property
+     *
      * @return The requested property
      */
     public String getName() {
@@ -433,15 +498,19 @@ public class BCharacter extends AbstractBlock{
 
     /**
      * Public setter for the name property
+     *
      * @param name The new value
+     * @return The current object
      */
-    public void setName(String name) {
+    public BCharacter setName(String name) {
         this.name = name;
         this.saveToDB();
+        return this;
     }
-    
+
     /**
      * Public getter for the ip property
+     *
      * @return The requested property
      */
     public String getIp() {
@@ -450,238 +519,301 @@ public class BCharacter extends AbstractBlock{
 
     /**
      * Public setter for the ip property
+     *
      * @param ip The new value
+     * @return The current object
      */
-    public void setIp(String ip) {
+    public BCharacter setIp(String ip) {
         this.ip = ip;
+        return this;
     }
-    
+
+    /**
+     * Get the session of the current player
+     *
+     * @return the player connection session
+     */
+    public synchronized Session getPeer() {
+        return this.peer;
+    }
+
+    /**
+     * Set the session for the current player
+     *
+     * @param peer - the session for the current player connection
+     * @return The current object
+     */
+    public synchronized BCharacter setPeer(Session peer) {
+        this.peer = peer;
+        return this;
+    }
+
+    /**
+     * Public getter for the config property
+     *
+     * @return The requested property
+     */
+    public EndpointConfig getConfig() {
+        return config;
+    }
+
+    /**
+     * Public setter for the config property
+     *
+     * @param config The new value
+     * @return The current object
+     */
+    public BCharacter setConfig(EndpointConfig config) {
+        this.config = config;
+        return this;
+    }
+
+    /**
+     * Public getter for the gold property
+     *
+     * @return The requested property
+     */
+    public synchronized boolean getGold() {
+        return this.gold;
+    }
+
+    /**
+     * Public setter for the gold property
+     *
+     * @param gold The new value
+     * @return The current object
+     */
+    public synchronized BCharacter setGold(boolean gold) {
+        this.gold = gold;
+        return this;
+    }
+
     /**
      * Public method used to change the state of the character
      * <br />(uncomment to make the original drop bomb movement (2 buttons ;))))
-     * @return 0 
+     *
+     * @return 0
      */
-    public int addOrDropBomb(){
+    public synchronized int addOrDropBomb() {
 //        if (state == "Normal") state = "Bomb";
 //        else if (state == "Bomb") state = "Normal";
         return 0;
     }
-    
+
     /**
      * Public method used to change the state of the character
+     *
      * @return 0
      */
-    public int makeTrapped(){
+    public synchronized int makeTrapped() {
         state = "Trapped";
         return 0;
     }
-    
+
     /**
      * Public method used to change the state of the character
+     *
      * @return 0
      */
-    public int makeFree(){
+    public synchronized int makeFree() {
         state = "Normal";
         return 0;
     }
 
     /**
      * Public getter for the crtTexture property
+     *
      * @return The requested property
      */
-    public int getCrtTexture() {
+    public synchronized int getCrtTexture() {
         return crtTexture;
     }
 
     /**
      * Public setter for the crtTexture property
+     *
      * @param crtTexture The new value
+     * @return The current object
      */
-    public void setCrtTexture(int crtTexture) {
+    public synchronized BCharacter setCrtTexture(int crtTexture) {
         this.crtTexture = crtTexture;
+        return this;
     }
 
     /**
      * Public getter for the state property
+     *
      * @return The requested property
      */
-    public String getState() {
+    public synchronized String getState() {
         return state;
     }
 
     /**
      * Public setter for the state property
+     *
      * @param state The new value
+     * @return The current object
      */
-    public void setState(String state) {
+    public synchronized BCharacter setState(String state) {
         this.state = state;
+        return this;
     }
 
     /**
      * Public getter for the direction property
+     *
      * @return The requested property
      */
-    public String getDirection() {
+    public synchronized String getDirection() {
         return direction;
     }
 
     /**
      * Public setter for the direction property
+     *
      * @param direction The new value
+     * @return The current object
      */
-    public void setDirection(String direction) {
+    public synchronized BCharacter setDirection(String direction) {
         this.direction = direction;
+        return this;
     }
-    
+
     /**
      * Public getter for the kills property
+     *
      * @return The requested property
      */
-    public int getKills(){
+    public synchronized int getKills() {
         return this.kills;
     }
-    
+
     /**
      * Public setter for the kills property
+     *
      * @param kills The new value
+     * @return The current object
      */
-    public void setKills(int kills){
+    public synchronized BCharacter setKills(int kills) {
         this.kills = kills;
         this.saveToDB();
+        return this;
     }
-    
+
     /**
      * Public getter for the deaths property
+     *
      * @return The requested property
      */
-    public int getDeaths(){
+    public synchronized int getDeaths() {
         return this.deaths;
     }
-    
+
     /**
      * Public setter for the deaths property
+     *
      * @param deaths The new value
+     * @return The current object
      */
-    public void setDeaths(int deaths){
+    public synchronized BCharacter setDeaths(int deaths) {
         this.deaths = deaths;
         this.saveToDB();
+        return this;
     }
-    
+
     /**
      * Public method used to reset the character's score
+     *
+     * @return The current object
      */
-    public void resetScore(){
+    public BCharacter resetScore() {
         this.kills = 0;
         this.deaths = 0;
+        return this;
     }
-    
+
     /**
      * Public method used to increase the number of deaths for the character
+     *
+     * @return The current object
      */
-    public void incDeaths(){
+    public synchronized BCharacter incDeaths() {
         this.deaths++;
         this.saveToDB();
+        return this;
     }
-    
+
     /**
      * Public method used to increase the number of kills for the character
+     *
+     * @return The current object
      */
-    public void incKills(){
+    public synchronized BCharacter incKills() {
         this.kills++;
         this.saveToDB();
+        return this;
     }
-    
+
     /**
      * Public method used to decrease the number of kills for the character
+     *
+     * @return The current object
      */
-    public void decKills(){
+    public synchronized BCharacter decKills() {
         this.kills--;
         this.saveToDB();
+        return this;
     }
-    
+
     /**
      * Public method used to for the character to take a random move
      */
-    public void moveRandom(){
+    public void moveRandom() {
         //if (previousMove == null){
-            Random r = new Random();
-            int rand = r.nextInt(100000);
-            if      (rand % 4 == 0) previousMove = "left";
-            else if (rand % 3 == 0) previousMove = "down";
-            else if (rand % 2 == 0) previousMove = "up";
-            else                    previousMove = "right";
+        Random r = new Random();
+        int rand = r.nextInt(100000);
+        if (rand % 4 == 0) {
+            previousMove = "left";
+        } else if (rand % 3 == 0) {
+            previousMove = "down";
+        } else if (rand % 2 == 0) {
+            previousMove = "up";
+        } else {
+            previousMove = "right";
+        }
         //}
         move(previousMove);
     }
-    
+
     /**
      * Public method used to make the character walk to a given direction
+     *
      * @param direction The movement direction
      */
-    public void move(String direction){
-        switch (direction){
-            case "left":
-                moveLeft();
-                break;
-            case "down":
-                moveDown();
-                break;
-            case "right":
-                moveRight();
-                break;
-            case "up":
-            default:
-                moveUp();
-                break;
+    public synchronized void move(String direction) {
+        this.setDirection(direction);
+        if (this.isWalking()) {
+            return;
         }
+        this.IAmWalking(direction);
     }
-    
+
     /**
-     * Public method used to make the character to walk up
-     */
-    public void moveUp(){
-        this.IAmWalking(this, "up");
-    }
-    
-    /**
-     * Public method used to make the character to walk down
-     */
-    public void moveDown(){
-        this.IAmWalking(this, "down");
-    }
-    
-    /**
-     * Public method used to make the character to walk left
-     */
-    public void moveLeft(){
-        this.IAmWalking(this, "left");
-    }
-    
-    /**
-     * Public method used to make the character to walk right
-     */
-    public void moveRight(){
-        this.IAmWalking(this, "right");
-    }
-    
-    /**
-     * This method is used to make a character walk towards a given direction for exactly a block distance
-     * @param myChar The current character
+     * This method is used to make a character walk towards a given direction
+     * for exactly a block distance
+     *
      * @param direction The walking direction
      */
-    protected synchronized void IAmWalking(final BCharacter myChar, final String direction){
-        myChar.setWalking(true);
-        new Thread(new Runnable(){
+    protected synchronized void IAmWalking(final String direction) {
+        this.setWalking(true);
+        new Thread(new Runnable() {
             @Override
             public synchronized void run() {
-                
-                myChar.setWalking(true);
-                
-                int x = myChar.posX / World.wallDim;
-                int y = myChar.posY / World.wallDim;
+                int x = BCharacter.this.getBlockPosX();
+                int y = BCharacter.this.getBlockPosY();
                 int x2 = x;
                 int y2 = y;
-                //BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.id);
                 switch (direction) {
                     case "up":
                         y2--;
@@ -692,109 +824,125 @@ public class BCharacter extends AbstractBlock{
                     case "left":
                         x2--;
                         break;
-                    default:
+                    default: // right
                         x2++;
                         break;
                 }
-                
-                BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
-                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x][y].remove(myChar.id);
-                BombermanWSEndpoint.map.get(myChar.roomIndex).chars[x2][y2].put(myChar.id, myChar);
-                
-                for (int i = 0; i < World.wallDim; i++){
-                    if (!myChar.isWalking()){
-                        myChar.posX = (myChar.posX / World.wallDim) * World.wallDim;
-                        myChar.posY = (myChar.posY / World.wallDim) * World.wallDim;
+
+                x = BCharacter.this.boundNumber(x, 0, BombermanWSEndpoint.map.get(BCharacter.this.roomIndex).getWorldWidth() - 1);
+                y = BCharacter.this.boundNumber(y, 0, BombermanWSEndpoint.map.get(BCharacter.this.roomIndex).getWorldHeight() - 1);
+                x2 = BCharacter.this.boundNumber(x2, 0, BombermanWSEndpoint.map.get(BCharacter.this.roomIndex).getWorldWidth() - 1);
+                y2 = BCharacter.this.boundNumber(y2, 0, BombermanWSEndpoint.map.get(BCharacter.this.roomIndex).getWorldHeight() - 1);
+
+                BombermanWSEndpoint.charsChanged.put(BCharacter.this.roomIndex, true);
+
+                synchronized (BombermanWSEndpoint.map) {
+                    BombermanWSEndpoint.map.get(BCharacter.this.roomIndex).chars[x][y].remove(BCharacter.this.id);
+                    BombermanWSEndpoint.map.get(BCharacter.this.roomIndex).chars[x2][y2].add(BCharacter.this.id);
+                }
+
+                for (int i = 0; i < World.wallDim; i++) {
+                    if (!BCharacter.this.isWalking()) {
+                        BCharacter.this.posX = (BCharacter.this.getBlockPosX()) * World.wallDim;
+                        BCharacter.this.posY = (BCharacter.this.getBlockPosY()) * World.wallDim;
                         break;
                     }
-                    switch(direction){
+                    switch (direction) {
                         case "up":
-                            myChar.posY--;
+                            BCharacter.this.posY--;
                             break;
                         case "down":
-                            myChar.posY++;
+                            BCharacter.this.posY++;
                             break;
                         case "left":
-                            myChar.posX--;
+                            BCharacter.this.posX--;
                             break;
                         case "right":
-                            myChar.posX++;
+                            BCharacter.this.posX++;
                             break;
                     }
                     try {
-                        //Thread.sleep(10);
-                        Thread.sleep(10-speed);
+                        Thread.sleep(10 - BCharacter.this.speed);
                     } catch (InterruptedException ex) {
                         BLogger.getInstance().logException2(ex);
                     }
-                    BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
+                    BombermanWSEndpoint.charsChanged.put(BCharacter.this.roomIndex, true);
                 }
-                
-                myChar.posX = (myChar.posX / World.wallDim) * World.wallDim;
-                myChar.posY = (myChar.posY / World.wallDim) * World.wallDim;
-                
-                myChar.setWalking(false);
-                BombermanWSEndpoint.charsChanged.put(myChar.roomIndex, true);
+
+                BCharacter.this.posX = (BCharacter.this.getBlockPosX()) * World.wallDim;
+                BCharacter.this.posY = (BCharacter.this.getBlockPosY()) * World.wallDim;
+
+                BCharacter.this.setWalking(false);
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException ex) {
+                    BLogger.getInstance().logException2(ex);
+                }
+                BombermanWSEndpoint.charsChanged.put(BCharacter.this.roomIndex, true);
             }
         }).start();
     }
-    
+
     /**
-     * Public method used to calculate the linear distance between 2 given points
+     * Public method used to calculate the linear distance between 2 given
+     * points
+     *
      * @param x1 The X coordinate of the first point
      * @param y1 The Y coordinate of the first point
      * @param x2 The X coordinate of the second point
      * @param y2 The Y coordinate of the second point
      * @return The calculated distance
      */
-    public double getDistance(int x1, int y1, int x2, int y2){
-        return Math.sqrt((x2-x1) * (x2-x1) + (y2-y1)*(y2-y1) );
+    public double getDistance(int x1, int y1, int x2, int y2) {
+        return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
     }
-    
+
     /**
      * Public method used to tell if the character hits a given block
+     *
      * @param block The block to be checked
      * @return TRUE if the character hits the given block
      */
-    public boolean hits(AbstractBlock block){ 
+    public synchronized boolean hits(AbstractBlock block) {
         
-       boolean ret = false; 
+        boolean ret = false;
         
-       int x1 = this.posX;
-       int x2 = x1 + this.width;
-       int y1 = this.posY;
-       int y2 = y1 + this.height;
-       
-       int x11 = block.getPosX();
-       int x12 = x11 + block.getWidth();
-       int y11 = block.getPosY();
-       int y12 = y11 + block.getHeight();
-       if ("Right".equals(this.direction) && x2 >= x11 && x2 < x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) ret = true;
-       if ("Left".equals(this.direction) && x1 > x11 && x1 <= x12 && ((y1 >= y11 && y1 < y12) || (y2 > y11 && y2 <= y12))) ret = true;
-       if ("Up".equals(this.direction) && y1 > y11 && y1 <= y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) ret = true;
-       if ("Down".equals(this.direction) && y2 >= y11 && y2 < y12 && ((x1 >= x11 && x1 < x12) || (x2 > x11 && x2 <= x12))) ret = true;
-       
-       if (ret == true && AbstractItem.class.isAssignableFrom(block.getClass())){
-           this.attachEvent((AbstractItem)block);
-           BombermanWSEndpoint.items.get(this.roomIndex).remove((AbstractItem)block);
-           BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[(block.getPosX() / World.wallDim)][block.getPosY() / World.wallDim] = null;
-           try{
-               BombermanWSEndpoint.items.get(this.roomIndex).remove((AbstractItem)block); // eliminate the item
-           } catch (ConcurrentModificationException ex) {
-               BLogger.getInstance().logException2(ex);
-           }
-           BombermanWSEndpoint.itemsChanged.put(this.roomIndex, true);
-           ret = false; // return false ;)
-       }
-       
-       return ret;
+        int blockBlockX = block.getBlockPosX();
+        int blockBlockY = block.getBlockPosY();
+        int charBlockX  = this.getBlockPosX();
+        int charBlockY  = this.getBlockPosY();
+        
+        if ("right".equals(this.direction) && (blockBlockY == charBlockY) && (charBlockX+1 == blockBlockX)) ret=true;
+        if ("left".equals(this.direction) && (blockBlockY == charBlockY) && (charBlockX-1 == blockBlockX)) ret=true;
+        if ("up".equals(this.direction) && (blockBlockX == charBlockX) && (charBlockY-1 == blockBlockY)) ret=true;
+        if ("down".equals(this.direction) && (blockBlockX == charBlockX) && (charBlockY+1 == blockBlockY)) ret=true;
+        
+        if (ret == true && AbstractItem.class.isAssignableFrom(block.getClass())) {
+            this.attachEvent((AbstractItem) block);
+            BombermanWSEndpoint.items.get(this.roomIndex).remove((AbstractItem) block);
+            BombermanWSEndpoint.map.get(this.roomIndex).blockMatrix[(block.getBlockPosX())][block.getBlockPosY()] = null;
+            while (true) {
+                try {
+                    BombermanWSEndpoint.items.get(this.roomIndex).remove(((AbstractItem) block).itemId); // eliminate the item
+                    break;
+                } catch (ConcurrentModificationException ex) {
+                    BLogger.getInstance().logException2(ex);
+                }
+            }
+            BombermanWSEndpoint.itemsChanged.put(this.roomIndex, true);
+            ret=false;
+        }
+        
+        return ret;
     }
     
     /**
-     * Public method used to attach an event to the character (in item is picked up)
+     * Public method used to attach an event to the character (in item is picked
+     * up)
+     *
      * @param item The picked up item
      */
-    public void attachEvent(AbstractItem item){
+    public synchronized void attachEvent(AbstractItem item) {
         item.setCreationTime(new Date());
         switch (item.getName()) {
             case "trigger":
@@ -818,46 +966,52 @@ public class BCharacter extends AbstractBlock{
                 this.setMaxBombs(this.getMaxBombs() + item.getScale());
                 this.cycleEbola(this);
                 break;
+            case "gold":
+                this.setGold(true);
+                break;
             case "random":
                 this.attachEvent(ItemGenerator.getInstance().generateRandomItem(BombermanWSEndpoint.map.get(this.roomIndex).getWidth(), BombermanWSEndpoint.map.get(this.roomIndex).getHeight()));
                 break;
         }
-        if (item.isTimed()){
+        if (item.isTimed()) {
             cycleEvent(this, item);
         }
     }
-    
+
     /**
      * Public getter for the dropBombs property
+     *
      * @return The requested property
      */
-    public boolean dropsBombs(){
+    public synchronized boolean dropsBombs() {
         return this.dropBombs;
     }
-    
+
     /**
-     * This method is used to revert the character properties back to their original state
+     * This method is used to revert the character properties back to their
+     * original state
+     *
      * @param myChar The current character
      * @param item The picked up item
      */
-    protected void cycleEvent(final BCharacter myChar, final AbstractItem item){
-        new Thread(new Runnable(){
+    protected synchronized void cycleEvent(final BCharacter myChar, final AbstractItem item) {
+        new Thread(new Runnable() {
             @Override
-            public void run() {
+            public synchronized void run() {
                 try {
-                    Thread.sleep(1000*item.getLifeTime());
-                    switch(item.getName()){
+                    Thread.sleep(1000 * item.getLifeTime());
+                    switch (item.getName()) {
                         case "trigger":
                             myChar.setTriggered(false);
                             break;
                         case "skate":
-                            myChar.setSpeed(myChar.getSpeed()-item.getScale());
+                            myChar.setSpeed(myChar.getSpeed() - item.getScale());
                             break;
                         case "slow":
-                            myChar.setSpeed(myChar.getSpeed()+item.getScale());
+                            myChar.setSpeed(myChar.getSpeed() + item.getScale());
                             break;
                         case "flame":
-                            myChar.setBombRange(myChar.getBombRange()-item.getScale());
+                            myChar.setBombRange(myChar.getBombRange() - item.getScale());
                             break;
                         case "spoog":
                             myChar.setMaxBombs(myChar.getMaxBombs() - item.getScale());
@@ -867,6 +1021,9 @@ public class BCharacter extends AbstractBlock{
                             myChar.setSpeed(myChar.getSpeed() + item.getScale());
                             myChar.setMaxBombs(myChar.getMaxBombs() - item.getScale());
                             break;
+                        case "gold":
+                            myChar.setGold(false);
+                            break;
                     }
                 } catch (InterruptedException ex) {
                     BLogger.getInstance().logException2(ex);
@@ -874,23 +1031,36 @@ public class BCharacter extends AbstractBlock{
             }
         }).start();
     }
-    
+
     /**
-     * This method is used to force the character to drop bombs and walk very slow
+     * This method is used to force the character to drop bombs and walk very
+     * slow
+     *
      * @param myChar The infected character
      */
-    public void cycleEbola(final BCharacter myChar){
-        new Thread(new Runnable(){
+    public synchronized void cycleEbola(final BCharacter myChar) {
+        new Thread(new Runnable() {
             @Override
             public synchronized void run() {
-                while (myChar.dropsBombs()){
+                while (myChar.dropsBombs()) {
                     try {
-                        for (Map.Entry pairs : BombermanWSEndpoint.peers.entrySet()) {
-                            Session peer = (Session) pairs.getValue();
-                            if (peer.getId() == null ? myChar.getId() == null : peer.getId().equals(myChar.getId())){
-                                BombermanWSEndpoint.getInstance().onMessage("bomb", peer, myChar.config);
-                                break;
-                            }
+//                        Iterator<Map.Entry<String, BCharacter>> it = BombermanWSEndpoint.chars.get(myChar.roomIndex).entrySet().iterator();
+//                        while (it.hasNext()){
+//                            Map.Entry<String, BCharacter> pair = it.next();
+//                            BCharacter crtChar = pair.getValue();
+//                            Session peer = crtChar.getPeer();
+//                            if (peer == null){
+//                                ((BBaseBot)crtChar).dropBomb();
+//                            }
+//                            else{
+//                                BombermanWSEndpoint.getInstance().onMessage("bomb", peer, crtChar.config);
+//                            }
+//                        }
+                        Session peer = myChar.getPeer();
+                        if (peer == null) {
+                            ((BBaseBot) myChar).dropBomb();
+                        } else {
+                            BombermanWSEndpoint.getInstance().onMessage("bomb", peer, myChar.config);
                         }
                         Thread.sleep(800); // almost 1 bomb per second
                     } catch (InterruptedException ex) {
@@ -900,62 +1070,111 @@ public class BCharacter extends AbstractBlock{
             }
         }).start();
     }
-    
+
     /**
-     * This method is used to make the character to enlarge the distance to a given block
+     * This method is used to make the character to enlarge the distance to a
+     * given block
+     *
      * @param block The block to avoid
      */
-    public void stepBack(AbstractBlock block){
-        
-        if ("Right".equals(this.direction)) this.posX--;
-        if ("Left".equals(this.direction)) this.posX++;
-        if ("Down".equals(this.direction)) this.posY--;
-        if ("Up".equals(this.direction)) this.posY++;
-        
+    public synchronized void stepBack(AbstractBlock block) {
+
+        if ("right".equals(this.direction)) {
+            this.posX--;
+        }
+        if ("left".equals(this.direction)) {
+            this.posX++;
+        }
+        if ("down".equals(this.direction)) {
+            this.posY--;
+        }
+        if ("up".equals(this.direction)) {
+            this.posY++;
+        }
+
 //        if (this.posX + this.width > block.getPosX()) this.posX++;
 //        else this.posX--;
 //        
 //        if (this.posY + this.height > block.getPosY()) this.posY++;
 //        else this.posY--;
     }
-    
+
     /**
      * Check if the character walks towards a given block
+     *
      * @param block The block to be tested
      * @return TRUE if the character is getting closer to the given block
      */
-    public boolean walksTo(AbstractBlock block){
-        if ("Right".equals(this.direction) && this.posX + this.width <= block.getPosX()) return true;
-        if ("Left".equals(this.direction) && this.posX >= block.getPosX() + block.getWidth()) return true;
-        if ("Down".equals(this.direction) && this.posY +this.height <= block.getPosY()) return true;
-        return "Up".equals(this.direction) && this.posY >= block.getPosY() + block.getHeight();
+    public synchronized boolean walksTo(AbstractBlock block) {
+        
+        int blockBlockX = block.getBlockPosX();
+        int blockBlockY = block.getBlockPosY();
+        int charBlockX  = this.getBlockPosX();
+        int charBlockY  = this.getBlockPosY();
+        
+        if ("right".equals(this.direction) && charBlockX <= blockBlockX) {
+            return true;
+        }
+        if ("left".equals(this.direction) && blockBlockX >= blockBlockX) {
+            return true;
+        }
+        if ("down".equals(this.direction) && blockBlockY <=blockBlockY) {
+            return true;
+        }
+        return "up".equals(this.direction) && blockBlockY >= blockBlockY;
     }
-    
+
+    abstract class MixIn {
+
+        @JsonIgnore
+        abstract Session getPeer();
+
+        @JsonIgnore
+        abstract int getBombRange();
+
+        @JsonIgnore
+        abstract int getSpeed();
+
+        @JsonIgnore
+        abstract int getMaxBombs();
+
+        @JsonIgnore
+        abstract boolean isTriggered();
+
+        @JsonIgnore
+        abstract EndpointConfig getConfig();
+    }
+
     /**
-     * Public method used to convert the character to JSON, to be sent to a client
+     * Public method used to convert the character to JSON, to be sent to a
+     * client
+     *
      * @return The JSON representation of the character
      */
     @Override
-    public String toString(){
-        this.crtTexture = textures.get("walk"+this.direction+this.state);
+    public String toString() {
+        this.crtTexture = textures.get("walk" + this.direction + this.state);
         Date now = new Date();
         this.connectionTime = (now.getTime() - this.creationTime.getTime()) / 1000;
-        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.getSerializationConfig().addMixInAnnotations(BCharacter.class, BCharacter.MixIn.class);
+        ObjectWriter ow = objectMapper.writer().withDefaultPrettyPrinter();
         try {
             return ow.writeValueAsString(this);
         } catch (IOException ex) {
-           // Logger.getLogger(AbstractWall.class.getName()).log(Level.SEVERE, null, ex);
+            // Logger.getLogger(AbstractWall.class.getName()).log(Level.SEVERE, null, ex);
             return ex.getMessage();
-           // return "";
+            // return "";
         }
     }
-    
+
     /**
      * Overwritten method used to create a copy of the current character
+     *
      * @return a clone of the current object
      */
     @Override
-    public BCharacter clone(){
+    public synchronized BCharacter clone() {
         BCharacter ret = new BCharacter(this.id, this.name, this.roomIndex, this.config);
         ret.posX = this.posX;
         ret.posY = this.posY;
@@ -972,23 +1191,22 @@ public class BCharacter extends AbstractBlock{
         ret.maxBombs = this.maxBombs;
         ret.walking = this.walking;
         ret.roomIndex = this.roomIndex;
-        
         return ret;
     }
-    
+
     /**
      * Public method used to restore the character properties from the database
      */
-    public void restoreFromDB(){
+    public synchronized void restoreFromDB() {
         try {
-            if (this.dbId == 0){
+            if (this.dbId == 0) {
                 this.saveToDB();
             }
             String query = "SELECT * FROM `characters` WHERE `user_id`=?";
             PreparedStatement st = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
             st.setInt(1, userId);
             ResultSet ret = st.executeQuery();
-            if (ret.next()){
+            if (ret.next()) {
                 this.setDbId(ret.getInt("id"));
                 this.setName(ret.getString("name"));
                 this.setSpeed(ret.getInt("speed"));
@@ -1002,33 +1220,34 @@ public class BCharacter extends AbstractBlock{
             BLogger.getInstance().logException2(ex);
         }
     }
-    
+
     /**
      * Public method used to update the login date for the character
+     *
      * @return 1 if the query run without errors
      */
-    public int storeLogIn(){
+    public int storeLogIn() {
         try {
-            
+
             String currentTime = BombermanWSEndpoint.getInstance().getMySQLDateTime();
-            
+
             String insQuery = "INSERT INTO `login_history` SET user_id=?, ip=?, login_date=?";
-            PreparedStatement insSt = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(insQuery);
+            PreparedStatement insSt = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(insQuery);
             insSt.setInt(1, this.userId);
             insSt.setString(2, this.ip);
             insSt.setString(3, currentTime);
             int insAffectedRows = insSt.executeUpdate();
-            if (insAffectedRows == 0){
-                throw new SQLException("Cannot save character. UserId : "+this.userId);
+            if (insAffectedRows == 0) {
+                throw new SQLException("Cannot save character. UserId : " + this.userId);
             }
-            
+
             String upQuery = "UPDATE `user` SET last_login=? WHERE `id`=?";
-            PreparedStatement upSt = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(upQuery);
+            PreparedStatement upSt = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(upQuery);
             upSt.setString(1, currentTime);
             upSt.setInt(2, this.userId);
             int upAffectedRows = upSt.executeUpdate();
-            if (upAffectedRows == 0){
-                throw new SQLException("Cannot save character. UserId : "+this.userId);
+            if (upAffectedRows == 0) {
+                throw new SQLException("Cannot save character. UserId : " + this.userId);
             }
             return 1;
         } catch (SQLException ex) {
@@ -1036,8 +1255,8 @@ public class BCharacter extends AbstractBlock{
             return 0;
         }
     }
-    
-    public int resetEvolution(){
+
+    public synchronized int resetEvolution() {
         this.setBombRange(1);
         this.setDeaths(0);
         this.setKills(0);
@@ -1046,15 +1265,16 @@ public class BCharacter extends AbstractBlock{
         this.setTriggered(false);
         return this.saveToDB();
     }
-    
+
     /**
      * Public method used to store the character properties in the database
+     *
      * @return 1 if the query run without errors
      */
-    public int saveToDB(){
+    public int saveToDB() {
         try {
             String query;
-            if (this.dbId == 0){
+            if (this.dbId == 0) {
                 query = "INSERT INTO `characters` SET "
                         + "`name`=?,"
                         + "`speed`=?,"
@@ -1064,9 +1284,8 @@ public class BCharacter extends AbstractBlock{
                         + "`kills`=?,"
                         + "`deaths`=?,"
                         + "`user_id`=?,"
-                        + "`creation_time`='"+BombermanWSEndpoint.getInstance().getMySQLDateTime()+"';";
-            }
-            else{
+                        + "`creation_time`='" + BombermanWSEndpoint.getInstance().getMySQLDateTime() + "';";
+            } else {
                 query = "UPDATE `characters` SET "
                         + "`name`=?,"
                         + "`speed`=?,"
@@ -1076,29 +1295,28 @@ public class BCharacter extends AbstractBlock{
                         + "`kills`=?,"
                         + "`deaths`=?,"
                         + "`user_id`=?,"
-                        + "`modification_time`='"+BombermanWSEndpoint.getInstance().getMySQLDateTime()+"'"
+                        + "`modification_time`='" + BombermanWSEndpoint.getInstance().getMySQLDateTime() + "'"
                         + "WHERE `id`=?";
             }
-            PreparedStatement st = (PreparedStatement)BombermanWSEndpoint.con.prepareStatement(query);
+            PreparedStatement st = (PreparedStatement) BombermanWSEndpoint.con.prepareStatement(query);
             st.setString(1, this.name);
-            st.setInt(2, this.speed);
+//            st.setInt(2, this.speed);
+            st.setInt(2, 1);
             st.setInt(3, this.bombRange);
             st.setInt(4, this.maxBombs);
             st.setInt(5, this.triggered ? 1 : 0);
             st.setInt(6, this.kills);
             st.setInt(7, this.deaths);
             st.setInt(8, this.userId);
-            if (this.dbId != 0){
+            if (this.dbId != 0) {
                 st.setInt(9, this.dbId);
             }
             int affectedRows = st.executeUpdate();
-            if (affectedRows == 0){
+            if (affectedRows == 0) {
                 throw new SQLException("Cannot save character");
-            }
-            else{
+            } else {
                 ResultSet rs = st.getGeneratedKeys();
-                if(rs.next())
-                {
+                if (rs.next() && this.dbId == 0) {
                     this.dbId = rs.getInt(1);
                 }
             }
@@ -1108,5 +1326,5 @@ public class BCharacter extends AbstractBlock{
             return 0;
         }
     }
-    
+
 }

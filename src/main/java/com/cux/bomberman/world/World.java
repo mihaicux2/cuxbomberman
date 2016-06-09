@@ -7,9 +7,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 /**
  * This class is the "code" representation for the playable
@@ -23,6 +21,11 @@ import java.util.Set;
 public class World {
     
     /**
+     * The block width
+     */
+    public final static int wallDim = 30; // width = height
+    
+    /**
      * The default world width
      */
     private int WIDTH = 660;
@@ -33,9 +36,14 @@ public class World {
     private int HEIGHT = 510;
     
     /**
-     * The block width
+     * The default world width (in blocks numbers)
      */
-    public final static int wallDim = 30; // width = height
+    private int worldWidth = WIDTH > 0 && wallDim > 0 ? WIDTH/wallDim : 1;
+    
+    /**
+     * The default world height (in blocks numbers)
+     */
+    private int worldHeight = HEIGHT > 0 && wallDim > 0 ? HEIGHT/wallDim: 1;
     
     /**
      * The file containing the map
@@ -43,21 +51,15 @@ public class World {
     private String mapFile;
     
     /**
-     * List of the walls,<br />
-     * Used for iteration
-     */
-    public ArrayList<AbstractWall> walls = new ArrayList<>();
-    
-    /**
      * Matrix with all the blocks on the map<br />
      * Used for mapping and collisions
      */
-    public AbstractBlock[][] blockMatrix = new AbstractBlock[100][100];
+    public AbstractBlock[][] blockMatrix = null;
     
     /**
-     * Matrix with all the characters in the map
+     * Matrix with all the characters in the map ()
      */
-    public HashMap<String, BCharacter>[][] chars = new HashMap[100][100];
+    public List<String>[][] chars = null;
     
     /**
      * Public getter for the WIDTH property
@@ -73,6 +75,22 @@ public class World {
      */
     public int getHeight(){
         return HEIGHT;
+    }
+    
+    /**
+     * Public getter for the worldWidth property
+     * @return The requester property
+     */
+    public int getWorldWidth(){
+        return worldWidth;
+    }
+    
+    /**
+     * Public getter for the worldHeight property
+     * @return The requester property
+     */
+    public int getWorldHeight(){
+        return worldHeight;
     }
     
     /**
@@ -100,19 +118,39 @@ public class World {
     }
     
     /**
+     * Public setter for the worldWidth property
+     * @param worldWidth The new value
+     */
+    public void setWorldWidth(int worldWidth){
+        this.worldWidth = worldWidth;
+    }
+    
+    /**
+     * Public setter for the worldHeight property
+     * @param worldHeight The new value
+     */
+    public void setWorldHeight(int worldHeight){
+        this.worldHeight = worldHeight;
+    }
+    
+    /**
      * Public constructor (simple)
      */
     public World(){
-        for (int i = 0; i < 100; i++){
-            for (int j = 0; j < 100; j++){
-                chars[i][j] = new HashMap<String, BCharacter>();
+        
+        this.blockMatrix = new AbstractBlock[worldWidth+1][worldHeight+1];
+        this.chars = new ArrayList[worldWidth+1][worldHeight+1];
+        
+        for (int i = 0; i <= worldWidth; i++){
+            for (int j = 0; j <= worldHeight; j++){
+                this.chars[i][j] = new ArrayList<String>();
             }
         }        
     }
     
 //    public void addWall(AbstractWall wall){
 //        this.walls.add(wall);
-//        this.blockMatrix[wall.getPosX()/World.wallDim][wall.getPosX()/World.wallDim] = wall;
+//        this.blockMatrix[wall.getBlockPosX()][wall.getBlockPosX()] = wall;
 //    }
     
     /**
@@ -121,31 +159,36 @@ public class World {
      */
     public World(String map){
         this.mapFile = map;
-        for (int i = 0; i < 100; i++){
-            for (int j = 0; j < 100; j++){
-                chars[i][j] = new HashMap<String, BCharacter>();
-            }
-        }
+        
         try(BufferedReader input = new BufferedReader(new FileReader(map))) {
             String line; //not declared within while loop
             Boolean firstLine = true;
             String first = line = input.readLine();
             String[] dims = line.split("x");
-            this.WIDTH = Integer.parseInt(dims[0]) * World.wallDim;
+            this.worldWidth  = Integer.parseInt(dims[0]);
+            this.worldHeight = Integer.parseInt(dims[1]);
+            this.WIDTH = worldWidth * World.wallDim;
             if (this.WIDTH == 0) this.WIDTH = 660;
-            this.HEIGHT = Integer.parseInt(dims[1]) * World.wallDim;
+            this.HEIGHT = worldHeight * World.wallDim;
             if (this.HEIGHT == 0) this.WIDTH = 510;
+            
+            this.blockMatrix = new AbstractBlock[worldWidth+1][worldHeight+1];
+            this.chars = new ArrayList[worldWidth+1][worldHeight+1];
+            
+            for (int i = 0; i <= worldWidth; i++){
+                for (int j = 0; j <= worldHeight; j++){
+                    this.chars[i][j] = new ArrayList<String>();
+                }
+            }
+            
             AbstractWall wall;
-            int x1 = this.WIDTH / World.wallDim,
-                y1 = this.HEIGHT / World.wallDim,
-                x,
-                y;
+            int x, y;
             //System.out.println(x1+", "+y1);
-            for (int i = 0; i < y1; i++){
+            for (int i = 0; i < worldHeight; i++){
                 y = i * World.wallDim;
                 line = input.readLine();
                 if (line == null) break;
-                for (int j = 0; j < x1; j++){
+                for (int j = 0; j < worldWidth; j++){
                     wall = null;
                     x = j * World.wallDim;
                     switch(line.charAt(j)){
@@ -172,9 +215,7 @@ public class World {
                         wall.setHeight(World.wallDim);
                         wall.setWidth(World.wallDim);
                         wall.wallId = java.util.UUID.randomUUID().toString();
-                        this.walls.add(wall);
-                        this.blockMatrix[j][i] = wall;
-                        
+                        this.blockMatrix[j][i] = wall;                        
                     }   
                 }
                 //System.out.println();
@@ -191,28 +232,76 @@ public class World {
      * @param myChar The character to be tested
      * @return TRUE if such a collision is found
      */
-    public synchronized boolean HasMapCollision(BCharacter myChar){
-        if ((myChar.getPosX() == 0 && "Left".equals(myChar.getDirection())) ||
-            (myChar.getPosY()== 0 && "Up".equals(myChar.getDirection())) || 
-            (myChar.getPosX()+myChar.getWidth() == this.WIDTH && "Right".equals(myChar.getDirection())) ||
-            (myChar.getPosY()+myChar.getHeight() == this.HEIGHT && "Down".equals(myChar.getDirection())))
+    public boolean hasMapCollision(BCharacter myChar){
+        
+        int x = myChar.getBlockPosX();
+        int y = myChar.getBlockPosY();
+        
+        // map bounds
+        if ((x < 1 && "left".equals(myChar.getDirection())) ||
+            (y < 1 && "up".equals(myChar.getDirection())) || 
+            (x >= this.worldWidth-1 && "right".equals(myChar.getDirection())) ||
+            (y >= this.worldHeight-1 && "down".equals(myChar.getDirection())))
         {
+//            BLogger.getInstance().log(BLogger.LEVEL_FINE, "map margin");
             //myChar.stepBack(null);
             return true;
         }
         
-        int x1 = myChar.getPosX()/World.wallDim;
-        int y1 = myChar.getPosY()/World.wallDim;
+        if (x > 0 && blockMatrix[x-1][y] != null && myChar.hits(blockMatrix[x-1][y]) && myChar.walksTo(blockMatrix[x-1][y])) return true;
+        if (y > 0 && blockMatrix[x][y-1] != null && myChar.hits(blockMatrix[x][y-1]) && myChar.walksTo(blockMatrix[x][y-1])) return true;
+        if (blockMatrix[x+1][y] != null && myChar.hits(blockMatrix[x+1][y]) && myChar.walksTo(blockMatrix[x+1][y])) return true;
+        if (blockMatrix[x][y+1] != null && myChar.hits(blockMatrix[x][y+1]) && myChar.walksTo(blockMatrix[x][y+1])) return true;
         
-        //if (blockMatrix[x1][y1] != null && myChar.hits(blockMatrix[x1][y1]) && myChar.walksTo(blockMatrix[x1][y1])) return true;
-        if (x1 > 0 && blockMatrix[x1-1][y1] != null && myChar.hits(blockMatrix[x1-1][y1]) && myChar.walksTo(blockMatrix[x1-1][y1])) return true;
-        if (y1 > 0 && blockMatrix[x1][y1-1] != null && myChar.hits(blockMatrix[x1][y1-1]) && myChar.walksTo(blockMatrix[x1][y1-1])) return true;
-        if (x1 > 0 && y1 > 0 && blockMatrix[x1-1][y1-1] != null && myChar.hits(blockMatrix[x1-1][y1-1]) && myChar.walksTo(blockMatrix[x1-1][y1-1])) return true;
-        if (x1 < 99 && blockMatrix[x1+1][y1] != null && myChar.hits(blockMatrix[x1+1][y1]) && myChar.walksTo(blockMatrix[x1+1][y1])) return true;
-        if (y1 < 99 && blockMatrix[x1][y1+1] != null && myChar.hits(blockMatrix[x1][y1+1]) && myChar.walksTo(blockMatrix[x1][y1+1])) return true;
-        if (x1 < 99 && y1 < 99 && blockMatrix[x1+1][y1+1] != null && myChar.hits(blockMatrix[x1+1][y1+1]) && myChar.walksTo(blockMatrix[x1+1][y1+1])) return true;
-        if (x1 > 0 && y1 < 99 && blockMatrix[x1-1][y1+1] != null && myChar.hits(blockMatrix[x1-1][y1+1]) && myChar.walksTo(blockMatrix[x1-1][y1+1])) return true;
-        return x1 < 99 && y1 > 0 && blockMatrix[x1+1][y1-1] != null && myChar.hits(blockMatrix[x1+1][y1-1]) && myChar.walksTo(blockMatrix[x1+1][y1-1]);
+        return false;
+    }
+    
+    /**
+     * Public synchronized method used to check if a wall exists in a
+     * given position
+     *
+     * @param i The x coordinate of the checked position
+     * @param j The y coordinate of the checked position
+     * @return True if there is a wall at the given position
+     */
+    public synchronized boolean wallExists(int i, int j) {
+        if (i < 0 || j < 0 || i >= this.worldWidth || j >= this.worldHeight) {
+            return false;
+        }
+        try {
+            AbstractBlock x = this.blockMatrix[i][j];
+            if (x == null) {
+                return false;
+            }
+            return AbstractWall.class.isAssignableFrom(x.getClass());
+        } catch (ArrayIndexOutOfBoundsException e) {
+            BLogger.getInstance().logException2(e);
+            return false;
+        }
+    }
+    
+     /**
+     * Public synchronized method used to check if a bomb exists in a
+     * given position
+     *
+     * @param i The x coordinate of the checked position
+     * @param j The y coordinate of the checked position
+     * @return True if there is a bomb at the given position
+     */
+    public synchronized boolean bombExists(int i, int j) {
+        if (i < 0 || j < 0 || i >= this.worldWidth || j >= this.worldHeight) {
+            return false;
+        }
+        try {
+            AbstractBlock x = this.blockMatrix[i][j];
+            if (x == null) {
+                return false;
+            }
+            return BBomb.class.isAssignableFrom(x.getClass());
+        } catch (ArrayIndexOutOfBoundsException e) {
+            BLogger.getInstance().logException2(e);
+            return false;
+        }
     }
     
     /**
@@ -222,14 +311,17 @@ public class World {
     @Override
     public String toString(){
         
-//        ArrayList<AbstractWall> walls2 = (ArrayList<AbstractWall>)walls.clone();
-        Set<AbstractWall> walls2 = Collections.synchronizedSet(new HashSet<AbstractWall>(walls));
-        
         String ret = "";
         ret += this.WIDTH+"x"+this.HEIGHT+"[#walls#]";
-        for (AbstractWall wall : walls2){
-            ret += wall.toString()+"[#wallSep#]";
+        
+        for (int i = 0; i < worldWidth; i++){
+            for (int j = 0; j < worldHeight; j++){
+                if (this.blockMatrix[i][j] != null){
+                    ret += this.blockMatrix[i][j].toString()+"[#wallSep#]";
+                }
+            }
         }
+        
         return ret;
     }
     

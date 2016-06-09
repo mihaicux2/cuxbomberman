@@ -49,11 +49,17 @@ public abstract class AbstractItem extends AbstractBlock{
     protected int scale = 1; // used for speed, bomb range, etc.
     
     /**
+     * The id of the item
+     */
+    public String itemId;
+    
+    /**
      * Public constructor
      * @param name The name of the item
      */
     protected AbstractItem(String name){
         this.name = name;
+        this.itemId = java.util.UUID.randomUUID().toString();
     }
 
     /**

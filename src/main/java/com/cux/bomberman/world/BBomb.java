@@ -3,6 +3,7 @@ package com.cux.bomberman.world;
 import com.cux.bomberman.util.BLogger;
 import java.io.IOException;
 import java.util.Date;
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 
@@ -43,6 +44,8 @@ public class BBomb extends AbstractBlock {
      */
     protected boolean volatileB = true;
     
+    public String objId;
+    
     /**
      * Public constructor used to setup a bomb instance
      * @param owner The character that planted the bomb
@@ -51,12 +54,13 @@ public class BBomb extends AbstractBlock {
 //        this.owner = owner.clone();        
         this.owner = owner;        
         this.ownerOrig = owner.clone();
-        this.posX = (owner.getPosX()/World.wallDim)*World.wallDim;
-        this.posY = (owner.getPosY()/World.wallDim)*World.wallDim;
+        this.posX = (owner.getBlockPosX())*World.wallDim;
+        this.posY = (owner.getBlockPosY())*World.wallDim;
         this.creationTime = new Date();
         if (this.owner.isTriggered()){
             this.volatileB = false;
         }
+        this.objId = java.util.UUID.randomUUID().toString();
     }
     
     /**
@@ -131,13 +135,23 @@ public class BBomb extends AbstractBlock {
         this.volatileB = volatileB;
     }   
     
+    abstract class MixIn {
+        @JsonIgnore abstract BCharacter getOwner();
+        @JsonIgnore abstract BCharacter getOwnerOrig();
+        @JsonIgnore abstract Date getCreationTime();
+        @JsonIgnore abstract double getLifeTime();
+        @JsonIgnore abstract String getCharId();
+    }
+    
     /**
      * Public method used to export the bomb for the client
      * @return The JSON representation of the bomb
      */
     @Override
     public String toString(){
-        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.getSerializationConfig().addMixInAnnotations(BBomb.class, BBomb.MixIn.class);
+        ObjectWriter ow = objectMapper.writer().withDefaultPrettyPrinter();
         try {
             return ow.writeValueAsString(this);
         } catch (IOException ex) {

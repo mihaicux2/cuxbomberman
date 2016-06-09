@@ -11,11 +11,8 @@ import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.websocket.EndpointConfig;
 
 /**
@@ -106,8 +103,8 @@ public class BMediumBot extends BBaseBot{
          */
         
         // current bot position
-        int x = this.posX / World.wallDim;
-        int y = this.posY / World.wallDim;
+        int x = this.getBlockPosX();
+        int y = this.getBlockPosY();
         
         // bounding box for the search range
         int xMin = Math.max(0, x - searchRange);
@@ -156,14 +153,14 @@ public class BMediumBot extends BBaseBot{
                     neighbours.put(block, new LinkedList<SimpleEntry<AbstractBlock, String>>());
                 }
 
-                HashMap<String, BCharacter>[][] chars = BombermanWSEndpoint.map.get(this.roomIndex).chars;
+                ArrayList<String>[][] chars = (ArrayList<String>[][]) BombermanWSEndpoint.map.get(this.roomIndex).chars;
                 if (chars[i][j] != null && !chars[i][j].isEmpty()) {
                     if (chars[i][j].size() == 1 && i == x && j == y) {
                         blocks[i - xMin][j - yMin] = 5; // myself (to be read with irish accent)
                     } else {
-                        for (Map.Entry pairs : chars[i][j].entrySet()) {
-                            BCharacter nearChar = (BCharacter) pairs.getValue();
-                            if (!nearChar.getId().equals(this.getId())) {
+                        for (String charId : chars[i][j]) {
+                            BCharacter nearChar = BombermanWSEndpoint.chars.get(this.roomIndex).get(charId);
+                            if (nearChar != null && !nearChar.getId().equals(this.getId())) {
                                 nearChars.add(blocks2[i - xMin][j - yMin]);
                                 blocks[i - xMin][j - yMin] = 4;
                                 break;
@@ -322,8 +319,8 @@ public class BMediumBot extends BBaseBot{
                 if (neighbs != null) {
                     while (!neighbs.isEmpty()) {
                         crtBlock = neighbs.poll().getKey();
-                        x2 = crtBlock.getPosX() / World.wallDim;
-                        y2 = crtBlock.getPosY() / World.wallDim;
+                        x2 = crtBlock.getBlockPosX();
+                        y2 = crtBlock.getBlockPosY();
 
                         if (blocks[x2 - xMin][y2 - yMin] == 5 || blocks[x2 - xMin][y2 - yMin] == 4 || blocks[x2 - xMin][y2 - yMin] == 0) {
                             foundNeighbour = true;
@@ -396,8 +393,8 @@ public class BMediumBot extends BBaseBot{
         if (road == null || road.isEmpty()) return false;
         
         // current bot position
-        int x = this.posX / World.wallDim;
-        int y = this.posY / World.wallDim;
+        int x = this.getBlockPosX();
+        int y = this.getBlockPosY();
         
         for (String dir : road) {
             if (dir.equals("self")) continue;
@@ -439,8 +436,8 @@ public class BMediumBot extends BBaseBot{
     public ArrayList<String> META_Dijkstra(AbstractBlock source, AbstractBlock dest, HashMap<AbstractBlock, Queue<SimpleEntry<AbstractBlock, String>>> neighbours){
         HashMap<String, ArrayList<String>> road = new HashMap<>();
         ArrayList<AbstractBlock> vizited = new ArrayList<>();
-        int x = source.getPosX()/World.wallDim,
-            y = source.getPosY()/World.wallDim;
+        int x = source.getBlockPosX(),
+            y = source.getBlockPosY();
         
         if (neighbours.containsKey(source)/* && neighbours.containsKey(dest)*/){
             Queue<SimpleEntry<AbstractBlock, String>> queue = new LinkedList<>();
@@ -452,7 +449,7 @@ public class BMediumBot extends BBaseBot{
                 // return the first found path (because we use BFS graph search, the first found path is also the shortest)
                 if (vizited.contains(dest)){ // stop computing any other routes
                     //System.out.println("found");
-                    String key = x+"_"+y+"_"+dest.getPosX()/World.wallDim+"_"+dest.getPosY()/World.wallDim;
+                    String key = x+"_"+y+"_"+dest.getBlockPosX()+"_"+dest.getBlockPosY();
                     //return road.get(key);
                     if (!isRoadDangerous(road.get(key))){
                         return road.get(key);
@@ -466,7 +463,7 @@ public class BMediumBot extends BBaseBot{
                 crtBlock = queue.poll();
                 
                 // will be used to store the distance from source to the current node
-                String key = source.getPosX()/World.wallDim+"_"+source.getPosY()/World.wallDim+"_"+crtBlock.getKey().getPosX()/World.wallDim+"_"+crtBlock.getKey().getPosY()/World.wallDim;
+                String key = source.getBlockPosX()+"_"+source.getBlockPosY()+"_"+crtBlock.getKey().getBlockPosX()+"_"+crtBlock.getKey().getBlockPosY();
                 if(!road.containsKey(key)){
                     road.put(key, new ArrayList<String>());
                     //System.out.println("key : "+key);
@@ -484,7 +481,7 @@ public class BMediumBot extends BBaseBot{
                             queue.add(neighb);
                             vizited.add(neighb.getKey());
                             // will be used to store the distance to the current node to is's neighbours
-                            String key2 = crtBlock.getKey().getPosX()/World.wallDim+"_"+crtBlock.getKey().getPosY()/World.wallDim + "_" + neighb.getKey().getPosX()/World.wallDim+"_"+neighb.getKey().getPosY()/World.wallDim;
+                            String key2 = crtBlock.getKey().getBlockPosX()+"_"+crtBlock.getKey().getBlockPosY() + "_" + neighb.getKey().getBlockPosX()+"_"+neighb.getKey().getBlockPosY();
                             if (!road.containsKey(key2)){
                                 road.put(key2, new ArrayList<String>());
                                 //System.out.println("key2 : "+key2);
@@ -496,7 +493,7 @@ public class BMediumBot extends BBaseBot{
                             road.get(key2).add(neighb.getValue());
                             
                             // will be used to store the distance from the source node to the current's node neighbours
-                            String key3 = source.getPosX()/World.wallDim+"_"+source.getPosY()/World.wallDim+"_"+neighb.getKey().getPosX()/World.wallDim+"_"+neighb.getKey().getPosY()/World.wallDim;
+                            String key3 = source.getBlockPosX()+"_"+source.getBlockPosY()+"_"+neighb.getKey().getBlockPosX()+"_"+neighb.getKey().getBlockPosY();
                             if (!key2.equals(key3)){
                                 if (!road.containsKey(key3)){
                                     road.put(key3, new ArrayList<String>());
@@ -521,7 +518,7 @@ public class BMediumBot extends BBaseBot{
         }
         
         if (vizited.contains(dest)){
-            String key = x+"_"+y+"_"+dest.getPosX()/World.wallDim+"_"+dest.getPosY()/World.wallDim;
+            String key = x+"_"+y+"_"+dest.getBlockPosX()+"_"+dest.getBlockPosY();
             if (!isRoadDangerous(road.get(key))){
                 return road.get(key);
             }

@@ -59,20 +59,20 @@ public class Explosion extends BBomb{
         this.directions = directions;
     }
     
-    /**
-     * Public method used to convert the explosion to JSON, to be sent to a client
-     * @return The JSON representation of the character
-     */
-    @Override
-    public String toString(){
-        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-        try {
-            return ow.writeValueAsString(this);
-        } catch (IOException ex) {
-            BLogger.getInstance().logException2(ex);
-            return ex.getMessage();
-           // return "";
-        }
-    }
+//    /**
+//     * Public method used to convert the explosion to JSON, to be sent to a client
+//     * @return The JSON representation of the character
+//     */
+//    @Override
+//    public String toString(){
+//        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+//        try {
+//            return ow.writeValueAsString(this);
+//        } catch (IOException ex) {
+//            BLogger.getInstance().logException2(ex);
+//            return ex.getMessage();
+//           // return "";
+//        }
+//    }
     
 }
